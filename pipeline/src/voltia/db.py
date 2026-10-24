@@ -5,6 +5,7 @@ The same code runs on PostgreSQL (production) and SQLite (tests and local develo
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Iterable, Mapping
 from datetime import UTC, date, datetime, timedelta
@@ -192,6 +193,131 @@ def read_series(engine: Engine, series: Iterable[str] | None = None) -> pd.DataF
     wide = long.pivot(index="day", columns="series", values="value").sort_index()
     wide.columns.name = None
     return wide
+
+
+def json_safe(value: Any) -> Any:
+    """Replace NaN and infinities (invalid JSON) with None, recursively."""
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, Mapping):
+        return {str(k): json_safe(v) for k, v in value.items()}
+    if isinstance(value, list | tuple):
+        return [json_safe(v) for v in value]
+    return value
+
+
+def insert_model_run(
+    engine: Engine,
+    run_id: str,
+    trained_at: datetime,
+    data_start: date,
+    data_end: date,
+    metrics: Mapping[str, Any],
+    params: Mapping[str, Any],
+) -> None:
+    """Record a training run. Writing the same run_id again replaces it."""
+    row = {
+        "run_id": run_id,
+        "trained_at": trained_at,
+        "data_start": data_start,
+        "data_end": data_end,
+        "metrics": json_safe(metrics),
+        "params": json_safe(params),
+    }
+    with engine.begin() as conn:
+        _upsert(conn, "model_runs", [row], ["run_id"])
+
+
+def run_exists(engine: Engine, run_id: str) -> bool:
+    with engine.connect() as conn:
+        table = _table(conn, "model_runs")
+        return (
+            conn.execute(select(table.c.run_id).where(table.c.run_id == run_id)).first() is not None
+        )
+
+
+def upsert_forecasts(engine: Engine, run_id: str, frame: pd.DataFrame, keep_runs: int = 10) -> int:
+    """Replace the forecasts of `run_id` for the targets in `frame`, then prune old runs.
+
+    `frame` has columns target, day, horizon, p10, p50, p90 and drivers (list or None).
+    Only the forecasts of the `keep_runs` most recent runs are kept.
+    """
+    rows = [
+        {
+            "run_id": run_id,
+            "target": str(t),
+            "day": d,
+            "horizon": int(h),
+            "p10": float(lo),
+            "p50": float(mid),
+            "p90": float(hi),
+            "drivers": json_safe(drv),
+        }
+        for t, d, h, lo, mid, hi, drv in zip(
+            frame["target"],
+            _as_dates(frame["day"]),
+            frame["horizon"],
+            frame["p10"],
+            frame["p50"],
+            frame["p90"],
+            frame["drivers"],
+            strict=True,
+        )
+    ]
+    with engine.begin() as conn:
+        table = _table(conn, "forecasts")
+        targets = sorted({r["target"] for r in rows})
+        conn.execute(delete(table).where(table.c.run_id == run_id, table.c.target.in_(targets)))
+        written = _upsert(conn, "forecasts", rows, ["run_id", "target", "day"])
+        _prune_forecasts(conn, keep_runs)
+    return written
+
+
+def _prune_forecasts(conn: Connection, keep_runs: int) -> int:
+    runs = _table(conn, "model_runs")
+    forecasts = _table(conn, "forecasts")
+    recent = (
+        select(runs.c.run_id)
+        .order_by(runs.c.trained_at.desc(), runs.c.run_id.desc())
+        .limit(keep_runs)
+    )
+    result = conn.execute(delete(forecasts).where(forecasts.c.run_id.not_in(recent)))
+    return int(result.rowcount or 0)
+
+
+def upsert_anomalies(
+    engine: Engine, frame: pd.DataFrame, targets: Iterable[str] | None = None
+) -> int:
+    """Replace the anomalies of `targets` (default: those in `frame`) in one transaction.
+
+    `frame` has columns target, day, severity, direction, method and detail (dict). Days of
+    those targets that are no longer flagged are removed, so reruns converge to one state.
+    """
+    rows = [
+        {
+            "target": str(t),
+            "day": d,
+            "severity": float(sev),
+            "direction": str(direction),
+            "method": str(method),
+            "detail": json_safe(detail),
+        }
+        for t, d, sev, direction, method, detail in zip(
+            frame["target"],
+            _as_dates(frame["day"]),
+            frame["severity"],
+            frame["direction"],
+            frame["method"],
+            frame["detail"],
+            strict=True,
+        )
+    ]
+    replaced = sorted({str(t) for t in (frame["target"] if targets is None else targets)})
+    with engine.begin() as conn:
+        table = _table(conn, "anomalies")
+        if replaced:
+            conn.execute(delete(table).where(table.c.target.in_(replaced)))
+        return _upsert(conn, "anomalies", rows, ["target", "day"])
 
 
 def table_counts(engine: Engine, names: Iterable[str]) -> Mapping[str, int]:
