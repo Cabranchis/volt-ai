@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+/*
+ * VoltIA design tokens. See docs/design-system.md.
+ * Light is the default; dark follows the OS unless the visitor chose a theme (data-theme).
+ * Chart colours are validated sets (docs/design-system.md, "Data colours").
+ */
+:root {
+  color-scheme: light;
+  --bg: #f7f6f2;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --border: #dedcd5;
+  --text: #0b0b0b;
+  --text-muted: #52514e;
+  --text-faint: #6b6a65;
+  --accent: #e2a400;
+  --accent-text: #7a5600;
+  --on-accent: #1a1300;
+  --focus: #2a78d6;
+
+  --good: #006300;
+  --serious: #8f3a14;
+  --critical: #b02a2a;
+
+  --c-demand: #6250d6;
+  --c-price: #eb6834;
+  --c-water: #2a78d6;
+  --c-thermal: #e34948;
+  --c-wind: #1baf7a;
+  --c-solar: #eda100;
+  --c-cogen: #e87ba4;
+  --c-other: #9a9990;
+  --c-ref: #52514e;
+  --c-nino: #e34948;
+  --c-nina: #2a78d6;
+  --c-mid: #f0efec;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --bg: #121316;
+    --surface: #1a1a19;
+    --surface-2: #17171a;
+    --border: #2c2c30;
+    --text: #f0efec;
+    --text-muted: #c3c2b7;
+    --text-faint: #9a9990;
+    --accent: #f0b429;
+    --accent-text: #f0b429;
+    --on-accent: #1a1300;
+    --focus: #6da7ec;
+
+    --good: #4cc24c;
+    --serious: #ec835a;
+    --critical: #ef6a6a;
+
+    --c-demand: #9085e9;
+    --c-price: #d95926;
+    --c-water: #3987e5;
+    --c-thermal: #e66767;
+    --c-wind: #199e70;
+    --c-solar: #c98500;
+    --c-cogen: #d55181;
+    --c-other: #6b6a65;
+    --c-ref: #c3c2b7;
+    --c-nino: #e66767;
+    --c-nina: #3987e5;
+    --c-mid: #383835;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121316;
+  --surface: #1a1a19;
+  --surface-2: #17171a;
+  --border: #2c2c30;
+  --text: #f0efec;
+  --text-muted: #c3c2b7;
+  --text-faint: #9a9990;
+  --accent: #f0b429;
+  --accent-text: #f0b429;
+  --on-accent: #1a1300;
+  --focus: #6da7ec;
+
+  --good: #4cc24c;
+  --serious: #ec835a;
+  --critical: #ef6a6a;
+
+  --c-demand: #9085e9;
+  --c-price: #d95926;
+  --c-water: #3987e5;
+  --c-thermal: #e66767;
+  --c-wind: #199e70;
+  --c-solar: #c98500;
+  --c-cogen: #d55181;
+  --c-other: #6b6a65;
+  --c-ref: #c3c2b7;
+  --c-nino: #e66767;
+  --c-nina: #3987e5;
+  --c-mid: #383835;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-ink: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-text);
+  --color-on-accent: var(--on-accent);
+  --color-focus: var(--focus);
+  --color-good: var(--good);
+  --color-serious: var(--serious);
+  --color-critical: var(--critical);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Fixed scale, ratio about 1.2 (product UI: no fluid type). */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.35rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.6rem;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 2rem;
+  --text-2xl: 2rem;
+  --text-2xl--line-height: 2.4rem;
+
+  --radius-panel: 12px;
+}
+
+html {
+  background: var(--bg);
+  scrollbar-color: var(--border) transparent;
+  scrollbar-width: thin;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  caret-color: var(--accent-text);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 38%, transparent);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Interactive elements get a short, state-only transition. */
+a,
+button,
+[role="tab"] {
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out,
+    color 160ms ease-out;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    color-mix(in oklab, var(--surface-2) 70%, var(--border)) 50%,
+    var(--surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-wave 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+@keyframes skeleton-wave {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* The one authored moment: the forecast area wipes in once, left to right. */
+@keyframes reveal-x {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.reveal-x {
+  animation: reveal-x 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
