@@ -15,7 +15,7 @@ runner = CliRunner()
 def local_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     path = tmp_path / "cli.sqlite"
     monkeypatch.setenv("VOLTIA_LOCAL_DB", str(path))
-    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "")  # an empty env var beats pipeline/.env
     get_settings.cache_clear()
     return path
 
