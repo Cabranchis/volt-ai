@@ -18,7 +18,7 @@ def tiny_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     path = tmp_path / "ml.sqlite"
     monkeypatch.setenv("VOLTIA_LOCAL_DB", str(path))
     monkeypatch.setenv("VOLTIA_MODELS_DIR", str(tmp_path / "models"))
-    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "")  # an empty env var beats pipeline/.env
     get_settings.cache_clear()
     engine = db.make_engine(f"sqlite:///{path.as_posix()}")
     db.migrate(engine)
@@ -55,7 +55,7 @@ def test_predict_without_models_fails_cleanly(tiny_db: Path) -> None:
 
 def test_train_without_data_fails_cleanly(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("VOLTIA_LOCAL_DB", str(tmp_path / "empty.sqlite"))
-    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "")  # an empty env var beats pipeline/.env
     get_settings.cache_clear()
     result = runner.invoke(app, ["train"])
     assert result.exit_code == 1

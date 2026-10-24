@@ -22,8 +22,17 @@ _BATCH = 5_000
 
 
 def make_engine(url: str | None = None) -> Engine:
-    """Create an engine. SQLite connections enforce foreign keys."""
-    engine = create_engine(url or get_settings().resolved_database_url, future=True)
+    """Create an engine. SQLite connections enforce foreign keys.
+
+    Hosted Postgres (Neon) closes idle connections, and a backfill idles for minutes while it
+    downloads from XM. `pool_pre_ping` replaces a dead pooled connection before it is used.
+    """
+    engine = create_engine(
+        url or get_settings().resolved_database_url,
+        future=True,
+        pool_pre_ping=True,
+        pool_recycle=240,
+    )
     if engine.dialect.name == "sqlite":
 
         @event.listens_for(engine, "connect")

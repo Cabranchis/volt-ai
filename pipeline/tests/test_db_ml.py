@@ -112,3 +112,10 @@ def test_negative_severity_is_rejected(engine: Engine) -> None:
     )
     with pytest.raises(IntegrityError):
         db.upsert_anomalies(engine, bad)
+
+
+def test_postgres_engine_survives_idle_connections() -> None:
+    """Neon drops idle connections; the pool must check before reuse (nothing connects)."""
+    engine = db.make_engine("postgresql+psycopg://u:p@localhost:1/x")
+    assert engine.pool._pre_ping is True
+    assert engine.pool._recycle == 240
