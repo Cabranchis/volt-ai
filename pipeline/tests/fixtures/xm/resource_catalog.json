@@ -1,0 +1,198 @@
+{
+ "Metric": {
+  "Id": "ListadoRecursos",
+  "Name": "Listado Recursos con atributos por Sistema"
+ },
+ "Items": [
+  {
+   "Date": "2026-10-24",
+   "ListEntities": [
+    {
+     "Id": "Sistema",
+     "Values": {
+      "Code": "2QBW",
+      "Name": "EL POPAL",
+      "Type": "HIDRAULICA",
+      "Disp": "NO DESPACHADO CENTRALMENTE",
+      "RecType": "NORMAL",
+      "CompanyCode": "ISGG",
+      "EnerSource": "AGUA",
+      "OperStartdate": "2014-03-31",
+      "State": "OPERACION"
+     }
+    }
+   ]
+  },
+  {
+   "Date": "2026-10-24",
+   "ListEntities": [
+    {
+     "Id": "Sistema",
+     "Values": {
+      "Code": "2QRL",
+      "Name": "LA REBUSCA",
+      "Type": "HIDRAULICA",
+      "Disp": "NO DESPACHADO CENTRALMENTE",
+      "RecType": "GEN. DISTRIBUIDA",
+      "CompanyCode": "HZEG",
+      "EnerSource": "AGUA",
+      "OperStartdate": "2014-07-24",
+      "State": "OPERACION"
+     }
+    }
+   ]
+  },
+  {
+   "Date": "2026-10-24",
+   "ListEntities": [
+    {
+     "Id": "Sistema",
+     "Values": {
+      "Code": "2S6Q",
+      "Name": "AUTOG YAGUARITO 1",
+      "Type": "TERMICA",
+      "Disp": "NO DESPACHADO CENTRALMENTE",
+      "RecType": "AUTOGENERADOR",
+      "CompanyCode": "EMSG",
+      "EnerSource": "BIOGAS",
+      "OperStartdate": "2016-03-22",
+      "State": "OPERACION"
+     }
+    }
+   ]
+  },
+  {
+   "Date": "2026-10-24",
+   "ListEntities": [
+    {
+     "Id": "Sistema",
+     "Values": {
+      "Code": "2S6S",
+      "Name": "AUTOG ARGOS YUMBO 1",
+      "Type": "TERMICA",
+      "Disp": "NO DESPACHADO CENTRALMENTE",
+      "RecType": "NORMAL",
+      "CompanyCode": "DEPG",
+      "EnerSource": "CARBON",
+      "OperStartdate": "2016-03-20",
+      "State": "OPERACION"
+     }
+    }
+   ]
+  },
+  {
+   "Date": "2026-10-24",
+   "ListEntities": [
+    {
+     "Id": "Sistema",
+     "Values": {
+      "Code": "2TYI",
+      "Name": "AUTOG CELSIA SOLAR YUMBO",
+      "Type": "SOLAR",
+      "Disp": "NO DESPACHADO CENTRALMENTE",
+      "RecType": "AUTOGENERADOR",
+      "CompanyCode": "EPSG",
+      "EnerSource": "RAD SOLAR",
+      "OperStartdate": "2017-09-03",
+      "State": "PRUEBAS"
+     }
+    }
+   ]
+  },
+  {
+   "Date": "2026-10-24",
+   "ListEntities": [
+    {
+     "Id": "Sistema",
+     "Values": {
+      "Code": "2UP2",
+      "Name": "COGENERADOR MANUELITA 2",
+      "Type": "COGENERADOR",
+      "Disp": "NO DESPACHADO CENTRALMENTE",
+      "RecType": "COGENERADOR",
+      "CompanyCode": "EEPG",
+      "EnerSource": "BAGAZO",
+      "OperStartdate": "2024-12-06",
+      "State": "OPERACION"
+     }
+    }
+   ]
+  },
+  {
+   "Date": "2026-10-24",
+   "ListEntities": [
+    {
+     "Id": "Sistema",
+     "Values": {
+      "Code": "2VJS",
+      "Name": "CELSIA SOLAR BOLIVAR",
+      "Type": "SOLAR",
+      "Disp": "NO DESPACHADO CENTRALMENTE",
+      "RecType": "NORMAL",
+      "CompanyCode": "EPSG",
+      "EnerSource": "RAD SOLAR",
+      "OperStartdate": "2019-02-03",
+      "State": "PRUEBAS"
+     }
+    }
+   ]
+  },
+  {
+   "Date": "2026-10-24",
+   "ListEntities": [
+    {
+     "Id": "Sistema",
+     "Values": {
+      "Code": "3EE4",
+      "Name": "PARQUE EOLICO GUAJIRA I",
+      "Type": "EOLICA",
+      "Disp": "NO DESPACHADO CENTRALMENTE",
+      "RecType": "NORMAL",
+      "CompanyCode": "ISGG",
+      "EnerSource": "VIENTO",
+      "OperStartdate": "2022-04-30",
+      "State": "PRUEBAS"
+     }
+    }
+   ]
+  },
+  {
+   "Date": "2026-10-24",
+   "ListEntities": [
+    {
+     "Id": "Sistema",
+     "Values": {
+      "Code": "3EXH",
+      "Name": "PARQUE EÓLICO WESP01",
+      "Type": "EOLICA",
+      "Disp": "NO DESPACHADO CENTRALMENTE",
+      "RecType": "NORMAL",
+      "CompanyCode": "ISGG",
+      "EnerSource": "VIENTO",
+      "OperStartdate": "2022-08-31",
+      "State": "PRUEBAS"
+     }
+    }
+   ]
+  },
+  {
+   "Date": "2026-10-24",
+   "ListEntities": [
+    {
+     "Id": "Sistema",
+     "Values": {
+      "Code": "CAS1",
+      "Name": "CENTRAL CASTILLA 1",
+      "Type": "COGENERADOR",
+      "Disp": "NO DESPACHADO CENTRALMENTE",
+      "RecType": "COGENERADOR",
+      "CompanyCode": "RPEG",
+      "EnerSource": "BAGAZO",
+      "OperStartdate": "2004-08-15",
+      "State": "OPERACION"
+     }
+    }
+   ]
+  }
+ ]
+}
