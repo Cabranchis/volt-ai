@@ -15,6 +15,8 @@ import {
 
 type Sql = ReturnType<typeof postgres>;
 
+// Timestamps are stored as naive UTC. Every SELECT converts them with AT TIME ZONE 'UTC', so the driver
+// returns the right instant whatever the server's own time zone is.
 const iso = (value: Date | string): string =>
   value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 
@@ -55,7 +57,7 @@ export function createPostgresRepository(sql: Sql): Repository {
 
     async forecast(target) {
       const rows = await sql`
-        SELECT r.run_id, r.trained_at, to_char(f.day, 'YYYY-MM-DD') AS day,
+        SELECT r.run_id, r.trained_at AT TIME ZONE 'UTC' AS trained_at, to_char(f.day, 'YYYY-MM-DD') AS day,
                f.horizon, f.p10, f.p50, f.p90, f.drivers
         FROM forecasts f
         JOIN (SELECT run_id, trained_at FROM model_runs ORDER BY trained_at DESC LIMIT 1) r
@@ -93,7 +95,7 @@ export function createPostgresRepository(sql: Sql): Repository {
 
     async modelRun() {
       const rows = await sql`
-        SELECT run_id, trained_at, to_char(data_start, 'YYYY-MM-DD') AS data_start,
+        SELECT run_id, trained_at AT TIME ZONE 'UTC' AS trained_at, to_char(data_start, 'YYYY-MM-DD') AS data_start,
                to_char(data_end, 'YYYY-MM-DD') AS data_end, metrics, params
         FROM model_runs ORDER BY trained_at DESC LIMIT 1`;
       const r = rows[0];
@@ -110,7 +112,7 @@ export function createPostgresRepository(sql: Sql): Repository {
 
     async briefing(lang) {
       const rows = await sql`
-        SELECT to_char(day, 'YYYY-MM-DD') AS day, lang, body, source, created_at
+        SELECT to_char(day, 'YYYY-MM-DD') AS day, lang, body, source, created_at AT TIME ZONE 'UTC' AS created_at
         FROM briefings WHERE lang = ${lang} ORDER BY day DESC LIMIT 1`;
       const r = rows[0];
       return r ? briefingSchema.parse({ ...r, createdAt: iso(r.created_at) }) : null;
@@ -130,7 +132,7 @@ export function createPostgresRepository(sql: Sql): Repository {
 
     async health() {
       const datasets = await sql`
-        SELECT dataset, to_char(last_day, 'YYYY-MM-DD') AS last_day, status, updated_at, detail
+        SELECT dataset, to_char(last_day, 'YYYY-MM-DD') AS last_day, status, updated_at AT TIME ZONE 'UTC' AS updated_at, detail
         FROM ingest_log ORDER BY dataset`;
       const series = await sql`
         SELECT series, to_char(MAX(day), 'YYYY-MM-DD') AS last_day
