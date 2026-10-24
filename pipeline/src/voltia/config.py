@@ -21,6 +21,7 @@ class Settings(BaseSettings):
         default=None, description="PostgreSQL URL; SQLite is used if unset"
     )
     voltia_local_db: Path = Field(default=REPO_ROOT / "pipeline" / "data" / "voltia.sqlite")
+    voltia_models_dir: Path = Field(default=REPO_ROOT / "pipeline" / "models_store")
     google_generative_ai_api_key: str | None = None
 
     xm_base_url: str = "https://servapibi.xm.com.co"
@@ -28,6 +29,8 @@ class Settings(BaseSettings):
     history_start: str = "2018-01-01"
     hourly_retention_days: int = 90
     revision_window_days: int = 7
+    ml_threads: int = Field(default=2, description="LightGBM threads; fixed for reproducibility")
+    keep_forecast_runs: int = 10
 
     @property
     def resolved_database_url(self) -> str:

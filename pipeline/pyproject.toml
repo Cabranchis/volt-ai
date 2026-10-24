@@ -64,7 +64,10 @@ plugins = ["pandera.mypy"]
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["shap.*", "lightgbm.*", "statsmodels.*", "holidays.*", "sklearn.*", "google.*"]
+module = [
+  "shap.*", "lightgbm.*", "statsmodels.*", "holidays.*", "sklearn.*", "google.*", "scipy.*",
+  "dateutil.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
