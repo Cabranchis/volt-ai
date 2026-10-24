@@ -1,0 +1,65 @@
+[
+ {
+  "latitude": 4.7451673,
+  "longitude": -74.10025,
+  "generationtime_ms": 0.08153915405273438,
+  "utc_offset_seconds": -18000,
+  "timezone": "America/Bogota",
+  "timezone_abbreviation": "GMT-5",
+  "elevation": 2558.0,
+  "daily_units": {
+   "time": "iso8601",
+   "temperature_2m_mean": "°C",
+   "precipitation_sum": "mm"
+  },
+  "daily": {
+   "time": [
+    "2026-09-01",
+    "2026-09-02",
+    "2026-09-03"
+   ],
+   "temperature_2m_mean": [
+    16.3,
+    15.9,
+    16.0
+   ],
+   "precipitation_sum": [
+    1.5,
+    4.7,
+    2.5
+   ]
+  }
+ },
+ {
+  "latitude": 6.2214413,
+  "longitude": -75.55185,
+  "generationtime_ms": 0.036597251892089844,
+  "utc_offset_seconds": -18000,
+  "timezone": "America/Bogota",
+  "timezone_abbreviation": "GMT-5",
+  "elevation": 1483.0,
+  "location_id": 1,
+  "daily_units": {
+   "time": "iso8601",
+   "temperature_2m_mean": "°C",
+   "precipitation_sum": "mm"
+  },
+  "daily": {
+   "time": [
+    "2026-09-01",
+    "2026-09-02",
+    "2026-09-03"
+   ],
+   "temperature_2m_mean": [
+    21.9,
+    22.1,
+    22.4
+   ],
+   "precipitation_sum": [
+    3.7,
+    1.1,
+    0.0
+   ]
+  }
+ }
+]

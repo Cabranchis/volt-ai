@@ -29,9 +29,9 @@ VoltIA turns the public data of Colombia's electricity market (XM) into forecast
 
 | ID | Requirement |
 | --- | --- |
-| FR-01 | The pipeline ingests from XM: system demand (`DemaReal`), spot price (`PrecBolsNaci`), generation by resource (`Gene`), emissions (`EmisionesCO2Eq`), inflows (`AporEner`, `PorcApor`) and reservoir volume (`PorcVoluUtilDiar`, `VoluUtilDiarEner`). |
+| FR-01 | The pipeline ingests from XM: national demand (`DemaSIN`), spot price (`PrecBolsNaci`), generation for the system and by resource (`Gene`), inflows (`AporEner`, `PorcApor`, `AporEnerMediHist`) and reservoir volume (`PorcVoluUtilDiar`, `VoluUtilDiarEner`). `DemaReal` is not used: for the system entity it covers only part of the load (57 GWh/day against 248 GWh/day for `DemaSIN`). |
 | FR-02 | The pipeline ingests exogenous data: daily weather for Bogotá, Medellín, Cali and Barranquilla (Open-Meteo), the NOAA ONI index, and Colombian public holidays. |
-| FR-03 | Every ingested batch is validated against a schema (types, ranges, no gaps) before it is stored. Invalid batches are rejected and reported, never partly stored. |
+| FR-03 | Every ingested batch is validated against a schema (types, plausible ranges, duplicates, gaps of more than 3 consecutive days) before it is stored. Invalid batches are rejected and reported, never partly stored. Days that XM has not finished settling are held back, not stored: hourly days need all 24 hours, and a demand day must reconcile with that day's total generation (see ADR 0009). |
 | FR-04 | Loading is idempotent: running the same day twice produces the same database. |
 | FR-05 | The backfill covers 2018-01-01 to today, respecting XM's 31-day window per request. |
 | FR-06 | Demand is forecast 30 days ahead and spot price 14 days ahead, as P10, P50 and P90. |
@@ -50,7 +50,7 @@ VoltIA turns the public data of Colombia's electricity market (XM) into forecast
 | NFR-01 | Cost is zero: free tiers only, no card required. | Deployment guide lists each service and its free limit. |
 | NFR-02 | Largest Contentful Paint under 2.5 s on a mid-range mobile profile. | Lighthouse in the verification phase. |
 | NFR-03 | Accessibility WCAG 2.2 AA, light and dark themes, keyboard navigable, charts with text alternatives. | Lighthouse and axe in Playwright. |
-| NFR-04 | The web app connects with a read-only database role. | Test that a write with that role fails. |
+| NFR-04 | The web app connects with a database role that can only read the data tables. Its single write permission is on `rate_limits`, which the chat limiter needs. | Test that a write to a data table with that role fails. |
 | NFR-05 | Strict security headers (CSP, frame, referrer, permissions policies). No secret in the repository. | Header test and secret scan before every commit. |
 | NFR-06 | The chat endpoint is rate limited per client and caps input size and tool calls per request. | Unit test of the limiter and of the tool argument schemas. |
 | NFR-07 | Reproducible builds: lockfiles for Python and Node, pinned CI actions. | CI installs from lockfiles only. |

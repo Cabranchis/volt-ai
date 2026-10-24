@@ -7,7 +7,7 @@ Working notes for the turn-based workflow (Claude and Codex share the repo throu
 | Phase | Description | Status |
 | --- | --- | --- |
 | 1 | Scaffolding, docs, quality tooling | done |
-| 2 | Data: migrations, sources, validation, backfill | pending |
+| 2 | Data: migrations, sources, validation, backfill | done |
 | 3 | ML: features, baselines, LightGBM, backtest, SHAP, anomalies | pending |
 | 4 | Web: pages, charts, i18n, REST API | pending |
 | 5 | AI: typed tools, chat, daily briefing | pending |
@@ -27,3 +27,10 @@ Working notes for the turn-based workflow (Claude and Codex share the repo throu
 - Create the PostgreSQL database (Neon or Supabase) and give the two connection strings.
 - Optional: Google AI Studio key for Gemini.
 - Decide when to create the GitHub repository and push. Nothing is pushed without an explicit request.
+
+## Notes from phase 2
+
+- Real backfill 2018-01-01 to 2026-10-21 loaded into `pipeline/data/voltia.sqlite` (gitignored): 54 789 daily rows, 18 series, 3 216 days each.
+- Demand is `DemaSIN`, not `DemaReal` (ADR 0009 explains the unsettled newest day).
+- PostgreSQL migration path (`0002_roles.pg.sql`, `psycopg` URL normalisation) is written but has not been run: there is no PostgreSQL here. First run happens when the owner provides the Neon or Supabase URL.
+- Phase 3 plan: features only from information available at forecast time (calendar, holidays, ONI, lags); weather enters as lags, so the backtest is not flattered by future weather.
