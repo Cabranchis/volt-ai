@@ -43,7 +43,7 @@ type ChatEvent =
   | { t: "text"; d: string }
   | { t: "tool"; name: string }
   | { t: "notice"; code: "offline" }
-  | { t: "error"; code: "model" }
+  | { t: "error"; code: "model"; reason?: string }
   | { t: "done" };
 
 const bogotaToday = (): string =>
@@ -58,8 +58,8 @@ function eventStream(produce: (send: (event: ChatEvent) => void) => Promise<void
       try {
         await produce(send);
         send({ t: "done" });
-      } catch {
-        send({ t: "error", code: "model" });
+      } catch (error) {
+        send({ t: "error", code: "model", reason: error instanceof ModelFailure ? error.reason : undefined });
       } finally {
         controller.close();
       }
@@ -82,6 +82,18 @@ function sameOrigin(request: Request): boolean {
   } catch {
     return false;
   }
+}
+
+/** A failure whose reason is safe to send to the browser: a finish reason or an HTTP status, never provider text. */
+class ModelFailure extends Error {
+  constructor(readonly reason: string) {
+    super(reason);
+  }
+}
+
+function statusOf(error: unknown): string {
+  const status = (error as { statusCode?: unknown } | null)?.statusCode;
+  return typeof status === "number" ? `provider status ${status}` : "provider error";
 }
 
 export async function POST(request: Request) {
@@ -142,10 +154,18 @@ export async function POST(request: Request) {
       abortSignal: request.signal,
       timeout: { totalMs: 25_000 },
     });
+    let answered = false;
+    let finish = "no finish event";
     for await (const part of result.fullStream) {
-      if (part.type === "text-delta") send({ t: "text", d: part.text });
-      else if (part.type === "tool-call") send({ t: "tool", name: part.toolName });
-      else if (part.type === "error") throw new Error("model stream error");
+      if (part.type === "text-delta") {
+        if (part.text) answered = true;
+        send({ t: "text", d: part.text });
+      } else if (part.type === "tool-call") send({ t: "tool", name: part.toolName });
+      else if (part.type === "error") throw new ModelFailure(statusOf(part.error));
+      else if (part.type === "abort") finish = "aborted";
+      else if (part.type === "finish") finish = String(part.finishReason);
     }
+    // A stream that ends without any text is a failure, not an empty answer.
+    if (!answered) throw new ModelFailure(`empty answer, finish: ${finish}`);
   });
 }

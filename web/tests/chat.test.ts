@@ -184,4 +184,20 @@ describe("with a language model", () => {
     expect(text).toContain('"t":"error"');
     expect(text).not.toContain("secret-api-key-leak");
   });
+
+  it("treats a stream that ends without any text as a failure and says why", async () => {
+    holder.model = new MockLanguageModelV4({
+      doStream: async () => ({
+        stream: simulateReadableStream({
+          chunks: [
+            { type: "finish", finishReason: { unified: "other", raw: undefined }, logprobs: undefined, usage },
+          ],
+        }),
+      }),
+    });
+    const list = await events(await POST(request(ask("hi"))));
+    const failure = list.find((e) => e.t === "error");
+    expect(failure?.reason).toMatch(/^empty answer, finish: /);
+    expect(list.some((e) => e.t === "text")).toBe(false);
+  });
 });
