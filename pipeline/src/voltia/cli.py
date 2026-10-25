@@ -14,6 +14,7 @@ from sqlalchemy import Engine
 
 from voltia import db
 from voltia.anomalies import detect_all
+from voltia.briefing import LANGS, build_facts, polish, template
 from voltia.config import Settings, get_settings
 from voltia.features import TARGETS
 from voltia.forecast import TrainedTarget, forecast_target, load_models, save_models
@@ -228,6 +229,40 @@ def anomalies() -> None:
                 f"  {pd.Timestamp(day).date()} {direction:<4} severity={severity:.1f} "
                 f"deviation={detail['deviation_pct']:+.1f}%"
             )
+
+
+@app.command()
+def brief(
+    model: Annotated[str, typer.Option(help="Gemini model used to polish the text")] = (
+        "gemini-flash-lite-latest"
+    ),
+) -> None:
+    """Write today's briefing (ES and EN). Uses Gemini if a key is set, else the template."""
+    settings = get_settings()
+    engine = _engine(settings)
+    history = db.read_series(engine)
+    next_week: float | None = None
+    with engine.connect() as conn:
+        row = conn.exec_driver_sql(
+            "SELECT f.p50 FROM forecasts f JOIN model_runs r ON r.run_id = f.run_id "
+            "WHERE f.target = 'demand_kwh' AND f.horizon = 7 "
+            "ORDER BY r.trained_at DESC LIMIT 1"
+        ).first()
+        if row is not None:
+            next_week = float(row[0])
+    facts = build_facts(history, next_week)
+    if facts is None:
+        typer.echo("no demand data; run `voltia backfill` first")
+        raise typer.Exit(code=1)
+    rows: dict[str, tuple[str, str]] = {}
+    for lang in LANGS:
+        text = template(facts, lang)
+        polished = None
+        if settings.google_generative_ai_api_key:
+            polished = polish(text, lang, settings.google_generative_ai_api_key, model)
+        rows[lang] = (polished, "gemini") if polished else (text, "template")
+        typer.echo(f"[{lang}] ({rows[lang][1]}) {rows[lang][0]}")
+    db.upsert_briefings(engine, facts.day, rows)
 
 
 if __name__ == "__main__":

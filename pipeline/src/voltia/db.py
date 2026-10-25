@@ -329,6 +329,16 @@ def upsert_anomalies(
         return _upsert(conn, "anomalies", rows, ["target", "day"])
 
 
+def upsert_briefings(engine: Engine, day: date, rows: Mapping[str, tuple[str, str]]) -> None:
+    """Upsert the briefing of `day`, one row per language: {lang: (body, source)}."""
+    records = [
+        {"day": day, "lang": lang, "body": body, "source": source, "created_at": utcnow()}
+        for lang, (body, source) in rows.items()
+    ]
+    with engine.begin() as conn:
+        _upsert(conn, "briefings", records, ["day", "lang"])
+
+
 def table_counts(engine: Engine, names: Iterable[str]) -> Mapping[str, int]:
     safe = [n for n in names if re.fullmatch(r"[a-z_]+", n)]
     out: dict[str, int] = {}

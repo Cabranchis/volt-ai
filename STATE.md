@@ -8,11 +8,11 @@ Working notes for the turn-based workflow (Claude and Codex share the repo throu
 | --- | --- | --- |
 | 1 | Scaffolding, docs, quality tooling | done |
 | 2 | Data: migrations, sources, validation, backfill | done |
-| 3 | ML: features, baselines, LightGBM, backtest, SHAP, anomalies | pending |
-| 4 | Web: pages, charts, i18n, REST API | pending |
-| 5 | AI: typed tools, chat, daily briefing | pending |
-| 6 | CI/CD and deployment | pending |
-| 7 | Polish and final review | pending |
+| 3 | ML: features, baselines, LightGBM, backtest, SHAP, anomalies | done |
+| 4 | Web: pages, charts, i18n, REST API | done |
+| 5 | AI: typed tools, chat, daily briefing | done (briefing verified with the template; Gemini polish verified with mocks, live run pending quota) |
+| 6 | CI/CD and deployment | done: CI green, Vercel live at https://voltia-xi-five.vercel.app/es; daily pipeline workflow not yet run (needs secrets) |
+| 7 | Polish and final review | in progress: runbook, README, deep review, Lighthouse |
 
 ## Environment
 
@@ -20,17 +20,12 @@ Working notes for the turn-based workflow (Claude and Codex share the repo throu
 - Python 3.12 through uv. The uv cache and interpreters are in `D:\Jarvis\uv` (`UV_CACHE_DIR`, `UV_PYTHON_INSTALL_DIR`).
 - Node 20.18, npm 10.8.
 - No Docker, no Vercel CLI.
+- Database: Neon (pooled URL). Owner URL in `pipeline/.env`; the web uses the `voltia_ro` role (`DATABASE_URL_READONLY`).
+- Remote: `https://github.com/Cabranchis/voltia` (personal account; the academic account is `mcabranchiz`).
 
 ## Open items for the owner
 
-- Create the Vercel account (sign in with GitHub).
-- Create the PostgreSQL database (Neon or Supabase) and give the two connection strings.
-- Optional: Google AI Studio key for Gemini.
-- Decide when to create the GitHub repository and push. Nothing is pushed without an explicit request.
-
-## Notes from phase 2
-
-- Real backfill 2018-01-01 to 2026-10-21 loaded into `pipeline/data/voltia.sqlite` (gitignored): 54 789 daily rows, 18 series, 3 216 days each.
-- Demand is `DemaSIN`, not `DemaReal` (ADR 0009 explains the unsettled newest day).
-- PostgreSQL migration path (`0002_roles.pg.sql`, `psycopg` URL normalisation) is written but has not been run: there is no PostgreSQL here. First run happens when the owner provides the Neon or Supabase URL.
-- Phase 3 plan: features only from information available at forecast time (calendar, holidays, ONI, lags); weather enters as lags, so the backtest is not flattered by future weather.
+- Add the GitHub Actions secrets `DATABASE_URL` (owner URL) and, optionally, `GOOGLE_GENERATIVE_AI_API_KEY`, then run the `Daily pipeline` workflow once (`workflow_dispatch`).
+- Delete `web/.env.vercel` (only needed to import variables into Vercel).
+- Review the Dependabot pull requests: #1, #4, #5, #6 pass CI; #2 (vite 8) and #3 (plugin-react 6) fail CI and need the toolchain upgraded together.
+- The Gemini free tier is shared across models and was exhausted by testing; the chat falls back to Flash-Lite and then to the offline analyst.

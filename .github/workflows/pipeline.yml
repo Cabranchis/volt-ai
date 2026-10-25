@@ -61,3 +61,7 @@ jobs:
       - name: Status
         if: always()
         run: uv run voltia status
+      - name: Daily briefing (template if there is no Gemini key)
+        env:
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+        run: uv run voltia brief
