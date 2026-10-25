@@ -107,3 +107,24 @@ describe("per-client limit on the open-ended endpoints", () => {
     expect(other.status).toBe(200);
   });
 });
+
+describe("GET /api/v1/forecasts/{target}?format=csv", () => {
+  it("downloads the forecast as a spreadsheet-friendly file", async () => {
+    const res = await forecasts(get("/api/v1/forecasts/demand?format=csv"), { params: Promise.resolve({ target: "demand" }) } as never);
+    expect([200, 404]).toContain(res.status);
+    if (res.status === 200) {
+      expect(res.headers.get("content-type")).toContain("text/csv");
+      expect(res.headers.get("content-disposition")).toContain("voltia-demand-forecast.csv");
+      const bytes = new Uint8Array(await res.clone().arrayBuffer());
+      expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]); // a BOM, so Excel reads UTF-8
+      const text = await res.text();
+      expect(text.startsWith("date,horizon,p10,p50,p90\r\n")).toBe(true);
+      expect(text.trim().split("\r\n").length).toBeGreaterThan(1);
+    }
+  });
+
+  it("rejects an unknown format", async () => {
+    const res = await forecasts(get("/api/v1/forecasts/demand?format=xml"), { params: Promise.resolve({ target: "demand" }) } as never);
+    expect([400, 404]).toContain(res.status);
+  });
+});

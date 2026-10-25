@@ -31,10 +31,11 @@ export const en = {
     noDataBody: "The pipeline has not produced this yet. The status of each dataset is at /api/v1/health.",
     showTable: "Show data table",
     hideTable: "Hide data table",
+    downloadCsv: "Download CSV",
     date: "Date",
     source: "Source",
     github: "Source code",
-    dataThrough: "Data through {date}",
+    dataThrough: "Settled market data through {date}",
     sourcePostgres: "Live database",
     sourceFixtures: "Demo snapshot",
     snapshotNote:

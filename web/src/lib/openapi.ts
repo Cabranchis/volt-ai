@@ -48,11 +48,22 @@ export const openApiDocument = {
       get: {
         summary: "Latest forecast",
         description: "P10, P50 and P90 per day from the latest training run, with the main drivers of each day.",
-        parameters: [{ name: "target", in: "path", required: true, schema: { type: "string", enum: ["demand", "price"] } }],
+        parameters: [
+          { name: "target", in: "path", required: true, schema: { type: "string", enum: ["demand", "price"] } },
+          {
+            name: "format",
+            in: "query",
+            description: "`csv` downloads date, horizon, p10, p50 and p90 as a spreadsheet-friendly file.",
+            schema: { type: "string", enum: ["json", "csv"], default: "json" },
+          },
+        ],
         responses: {
           "200": {
             description: "Forecast",
-            content: { "application/json": { schema: { $ref: "#/components/schemas/Forecast" } } },
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/Forecast" } },
+              "text/csv": { schema: { type: "string" } },
+            },
           },
           "404": problemResponse("Unknown target or no forecast yet"),
         },

@@ -81,6 +81,7 @@ export function ForecastPanel({
         rows={rows}
         showLabel={dict.common.showTable}
         hideLabel={dict.common.hideTable}
+        csv={{ href: `/api/v1/forecasts/${color}?format=csv`, label: dict.common.downloadCsv }}
       />
     </Panel>
   );

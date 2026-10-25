@@ -164,6 +164,7 @@ export function TimeSeriesChart({
             color: tokens.faint,
             fontSize: 11,
             interval: monthTickRule(span),
+            hideOverlap: true,
             formatter: (value: string) => formatDate(value, locale, span > 300 ? "month" : "short"),
           },
         },

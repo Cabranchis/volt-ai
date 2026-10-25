@@ -25,7 +25,16 @@ export function ChartLegend({ items }: { items: readonly LegendItem[] }) {
 function Key({ item }: { item: LegendItem }) {
   const style = { background: item.color };
   if (item.kind === "area") {
-    return <span aria-hidden="true" className="h-3 w-5 rounded-[3px] opacity-30" style={style} />;
+    return (
+      <span
+        aria-hidden="true"
+        className="h-3 w-5 rounded-[3px] border"
+        style={{
+          background: `color-mix(in srgb, ${item.color} 24%, transparent)`,
+          borderColor: `color-mix(in srgb, ${item.color} 50%, transparent)`,
+        }}
+      />
+    );
   }
   if (item.kind === "bar") {
     return <span aria-hidden="true" className="h-3 w-3 rounded-[3px]" style={style} />;

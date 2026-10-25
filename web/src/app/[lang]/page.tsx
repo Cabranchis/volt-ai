@@ -211,6 +211,7 @@ export default async function OverviewPage() {
                   rows={demandRows}
                   showLabel={dict.common.showTable}
                   hideLabel={dict.common.hideTable}
+                  csv={{ href: "/api/v1/forecasts/demand?format=csv", label: dict.common.downloadCsv }}
                 />
               </>
             ) : (
@@ -266,6 +267,7 @@ export default async function OverviewPage() {
                   rows={priceRows}
                   showLabel={dict.common.showTable}
                   hideLabel={dict.common.hideTable}
+                  csv={{ href: "/api/v1/forecasts/price?format=csv", label: dict.common.downloadCsv }}
                 />
               </>
             ) : (

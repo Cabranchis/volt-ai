@@ -33,10 +33,11 @@ export const es: Dictionary = {
     noDataBody: "El pipeline todavía no ha generado esto. El estado de cada conjunto de datos está en /api/v1/health.",
     showTable: "Mostrar tabla de datos",
     hideTable: "Ocultar tabla de datos",
+    downloadCsv: "Descargar CSV",
     date: "Fecha",
     source: "Fuente",
     github: "Código fuente",
-    dataThrough: "Datos hasta el {date}",
+    dataThrough: "Mercado liquidado hasta el {date}",
     sourcePostgres: "Base de datos en vivo",
     sourceFixtures: "Instantánea de demostración",
     snapshotNote:

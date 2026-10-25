@@ -39,6 +39,32 @@ export function jsonResponse(data: unknown, init: { status?: number; cache?: boo
   });
 }
 
+/**
+ * A CSV download for spreadsheets: comma-separated, "." decimals, a byte-order mark so Excel
+ * reads the file as UTF-8. Cells that start with a formula character are neutralised.
+ */
+export function csvResponse(
+  filename: string,
+  header: readonly string[],
+  rows: readonly (readonly (string | number | null)[])[],
+): Response {
+  const cell = (value: string | number | null): string => {
+    if (value === null) return "";
+    const text = String(value);
+    const safe = /^[=+\-@\t\r]/.test(text) && typeof value === "string" ? `'${text}` : text;
+    return /[",\n\r]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
+  };
+  const body = [header, ...rows].map((row) => row.map(cell).join(",")).join("\r\n");
+  return new Response(`﻿${body}\r\n`, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": CACHE_CONTROL,
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
 export function problem(status: number, title: string, detail?: string): Response {
   return Response.json(
     { type: "about:blank", title, status, ...(detail ? { detail } : {}) },

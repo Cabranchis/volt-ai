@@ -28,6 +28,18 @@ export function formatSigned(value: number, locale: Locale, decimals = 1): strin
 }
 
 /**
+ * The calendar day of an ISO value. A bare date is already one; a timestamp ("...T01:37:00Z") is
+ * read in Colombian time, because the market and its readers live there: a run at 01:37 UTC is
+ * still the evening of the previous day in Bogotá, and must not show tomorrow's date.
+ */
+function calendarDay(iso: string): string {
+  if (iso.length <= 10) return iso;
+  const instant = new Date(iso);
+  if (Number.isNaN(instant.getTime())) return iso.slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(instant);
+}
+
+/**
  * ISO calendar dates (YYYY-MM-DD) are shown as the same calendar day for everyone,
  * so they are formatted in UTC to avoid shifting by the viewer's time zone.
  */
@@ -36,7 +48,7 @@ export function formatDate(
   locale: Locale,
   style: "short" | "medium" | "long" | "month" = "medium",
 ): string {
-  const date = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  const date = new Date(`${calendarDay(iso)}T00:00:00Z`);
   const options: Intl.DateTimeFormatOptions =
     style === "short"
       ? { day: "numeric", month: "short", timeZone: "UTC" }

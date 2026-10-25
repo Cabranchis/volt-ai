@@ -63,10 +63,14 @@ export function ForecastChart({
       const show = (v: number | null | undefined) =>
         v === null || v === undefined ? "" : formatNumber(v / scale, locale, decimals);
       const span = assembled.dates.length;
+      const upper = assembled.lower.map((low, i) => {
+        const w = assembled.width[i];
+        return low === null || low === undefined || w === null || w === undefined ? null : low + w;
+      });
 
       return {
         ...baseOption(tokens, reducedMotion),
-        grid: { left: 4, right: 16, top: 30, bottom: 8, containLabel: true },
+        grid: { left: 4, right: 16, top: 38, bottom: 8, containLabel: true },
         tooltip: {
           ...baseOption(tokens, reducedMotion).tooltip,
           formatter: (params: unknown) => {
@@ -98,6 +102,7 @@ export function ForecastChart({
             color: tokens.faint,
             fontSize: 11,
             interval: monthTickRule(span),
+            hideOverlap: true,
             formatter: (value: string) => formatDate(value, locale, span > 300 ? "month" : "short"),
           },
         },
@@ -124,7 +129,7 @@ export function ForecastChart({
               symbol: "none",
               animation: false,
               lineStyle: { color: tokens.ref, type: "dashed", width: 1 },
-              label: { formatter: labels.lastObserved, color: tokens.muted, fontSize: 11, position: "insideStartTop" },
+              label: { formatter: labels.lastObserved, color: tokens.muted, fontSize: 11, position: "end", rotate: 0, distance: 8, align: "right" },
               data: [{ xAxis: assembled.lastObservedIndex }],
             },
           },
@@ -136,8 +141,19 @@ export function ForecastChart({
             stack: "band",
             showSymbol: false,
             silent: true,
-            lineStyle: { opacity: 0 },
+            lineStyle: { width: 1, color: withAlpha(seriesColor, 0.5) },
             areaStyle: { opacity: 0 },
+            tooltip: { show: false },
+            z: 1,
+          },
+          {
+            // Upper edge of the band, drawn as a hairline so the interval reads as a shape.
+            name: "band-upper",
+            type: "line",
+            data: upper,
+            showSymbol: false,
+            silent: true,
+            lineStyle: { width: 1, color: withAlpha(seriesColor, 0.5) },
             tooltip: { show: false },
             z: 1,
           },
@@ -149,7 +165,7 @@ export function ForecastChart({
             showSymbol: false,
             silent: true,
             lineStyle: { opacity: 0 },
-            areaStyle: { color: withAlpha(seriesColor, 0.16) },
+            areaStyle: { color: withAlpha(seriesColor, 0.24) },
             z: 1,
           },
           {

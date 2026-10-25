@@ -23,6 +23,7 @@ export default defineConfig({
     port: PORT,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { VOLTIA_DATA_SOURCE: "fixtures" },
+    // Empty values beat web/.env.local, so tests never read the real database or spend the Gemini quota.
+    env: { VOLTIA_DATA_SOURCE: "fixtures", GOOGLE_GENERATIVE_AI_API_KEY: "", DATABASE_URL_READONLY: "" },
   },
 });

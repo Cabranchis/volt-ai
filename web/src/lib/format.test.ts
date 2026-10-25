@@ -32,6 +32,11 @@ describe("dates", () => {
     expect(formatDate("2026-01-01", "en", "short")).toBe("Jan 1");
   });
 
+  it("reads a timestamp in Bogotá time, so a late-evening run is not dated tomorrow", () => {
+    expect(formatDate("2026-10-25T01:37:00.000Z", "en")).toBe("Oct 24, 2026");
+    expect(formatDate("2026-10-25T05:00:00.000Z", "en")).toBe("Oct 25, 2026");
+  });
+
   it("does arithmetic on calendar days across month and year ends", () => {
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
     expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
