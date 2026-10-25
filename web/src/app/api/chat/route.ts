@@ -93,7 +93,9 @@ class ModelFailure extends Error {
 
 function statusOf(error: unknown): string {
   const status = (error as { statusCode?: unknown } | null)?.statusCode;
-  return typeof status === "number" ? `provider status ${status}` : "provider error";
+  if (typeof status === "number") return `provider status ${status}`;
+  const name = (error as { name?: unknown } | null)?.name;
+  return typeof name === "string" && /^[A-Za-z_]{1,48}$/.test(name) ? `provider error ${name}` : "provider error";
 }
 
 export async function POST(request: Request) {
