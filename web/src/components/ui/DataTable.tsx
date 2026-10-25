@@ -31,18 +31,8 @@ export function DataTable({
 }: Props) {
   return (
     <div className="relative mt-4 border-t border-line pt-3">
-      {csv ? (
-        <a
-          href={csv.href}
-          download
-          className="btn-glass absolute right-0 top-2.5 z-10 inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-xs font-medium text-muted hover:text-ink"
-        >
-          <Download aria-hidden="true" size={14} strokeWidth={2} />
-          {csv.label}
-        </a>
-      ) : null}
       <details className="group">
-        <summary className="flex cursor-pointer select-none list-none items-center gap-1.5 rounded py-1.5 text-sm font-medium text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
+        <summary className="flex cursor-pointer select-none list-none items-center gap-1.5 min-h-9 rounded py-1.5 text-sm font-medium text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
           <ChevronRight aria-hidden="true" size={14} strokeWidth={2} className="transition-transform group-open:rotate-90 motion-reduce:transition-none" />
           <span className="group-open:hidden">{showLabel}</span>
           <span className="hidden group-open:inline">{hideLabel}</span>
@@ -86,6 +76,16 @@ export function DataTable({
           </table>
         </div>
       </details>
+      {csv ? (
+        <a
+          href={csv.href}
+          download
+          className="btn-glass mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 text-xs font-medium text-muted hover:text-ink sm:absolute sm:right-0 sm:top-3 sm:z-10 sm:mt-0 sm:min-h-9"
+        >
+          <Download aria-hidden="true" size={14} strokeWidth={2} />
+          {csv.label}
+        </a>
+      ) : null}
     </div>
   );
 }

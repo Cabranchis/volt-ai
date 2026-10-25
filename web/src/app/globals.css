@@ -476,19 +476,22 @@ button,
  * writes --edge-proximity and --cursor-angle; everything else is CSS. Hover devices only.
  */
 @media (hover: hover) and (pointer: fine) {
-  :where(.glow, .btn-glass, .btn-primary) {
-    position: relative;
-    isolation: isolate;
-    --edge-proximity: 0;
-    --cursor-angle: 45deg;
-    --edge-sensitivity: 30;
-    --color-sensitivity: calc(var(--edge-sensitivity) + 20);
-    --cone-spread: 25;
-    --glow-a: var(--accent);
-    --glow-b: var(--c-demand);
-    --glow-c: var(--c-water);
-    --glow-border: 2px;
-    --glow-reach: 170px;
+  /* Base layer, so utilities such as .absolute still win over the default position. */
+  @layer base {
+    :where(.glow, .btn-glass, .btn-primary) {
+      position: relative;
+      isolation: isolate;
+      --edge-proximity: 0;
+      --cursor-angle: 45deg;
+      --edge-sensitivity: 30;
+      --color-sensitivity: calc(var(--edge-sensitivity) + 20);
+      --cone-spread: 25;
+      --glow-a: var(--accent);
+      --glow-b: var(--c-demand);
+      --glow-c: var(--c-water);
+      --glow-border: 2px;
+      --glow-reach: 170px;
+    }
   }
 
   :is(.btn-glass, .btn-primary) {
