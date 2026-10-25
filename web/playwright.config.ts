@@ -16,6 +16,8 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     channel: process.env.PW_CHANNEL || undefined,
     trace: "retain-on-failure",
+    // Entrance animations are covered by the reduced-motion rule, so axe never sees a half-faded page.
+    reducedMotion: "reduce",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], channel: process.env.PW_CHANNEL || undefined } }],
   webServer: {
