@@ -20,7 +20,7 @@ export interface Stat {
  */
 export function StatStrip({ stats }: { stats: readonly Stat[] }) {
   return (
-    <dl className="grid grid-cols-1 divide-y divide-line glass-strong rounded-panel sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
+    <dl className="grid grid-cols-1 divide-y divide-line glass-strong glow rounded-panel sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
       {stats.map((stat, index) => (
         <div
           key={stat.label}

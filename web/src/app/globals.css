@@ -488,6 +488,11 @@ button,
     --glow-b: var(--c-demand);
     --glow-c: var(--c-water);
     --glow-border: 2px;
+    --glow-reach: 170px;
+  }
+
+  :is(.btn-glass, .btn-primary) {
+    --glow-reach: 56px;
   }
 
   :is(.glow, .btn-glass, .btn-primary)::before,
@@ -499,11 +504,6 @@ button,
     pointer-events: none;
     z-index: -1;
     opacity: 0;
-    transition: opacity 0.6s ease-in-out;
-  }
-  :is(.glow, .btn-glass, .btn-primary):hover::before,
-  :is(.glow, .btn-glass, .btn-primary):hover::after {
-    transition-duration: 0.2s;
   }
 
   /* the mesh-gradient border: a ring (content-box xor border-box) cut to the pointer's cone */
@@ -533,7 +533,7 @@ button,
     -webkit-mask-composite: source-in, xor, source-over;
     opacity: 0;
   }
-  :is(.glow, .btn-glass, .btn-primary):hover::before {
+  :is(.glow, .btn-glass, .btn-primary)::before {
     opacity: calc((var(--edge-proximity) - var(--color-sensitivity)) / (100 - var(--color-sensitivity)));
   }
 
@@ -545,15 +545,9 @@ button,
       inset 0 0 12px 0 color-mix(in srgb, var(--glow-a) 50%, transparent),
       inset 0 0 28px 0 color-mix(in srgb, var(--glow-b) 40%, transparent),
       inset 0 0 56px 4px color-mix(in srgb, var(--glow-b) 26%, transparent);
-    mask-image: conic-gradient(
-      from var(--cursor-angle) at center,
-      black 2.5%,
-      transparent 14%,
-      transparent 86%,
-      black 97.5%
-    );
+    mask-image: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), black 0, transparent var(--glow-reach));
   }
-  :is(.glow, .btn-glass, .btn-primary):hover::after {
+  :is(.glow, .btn-glass, .btn-primary)::after {
     opacity: calc((var(--edge-proximity) - var(--edge-sensitivity)) / (100 - var(--edge-sensitivity)));
   }
 }
@@ -563,4 +557,13 @@ button,
   :is(.glow, .btn-glass, .btn-primary)::after {
     display: none;
   }
+}
+
+/* The analyst's text box shows the plain text caret and no focus ring. */
+textarea:focus-visible {
+  outline: none;
+}
+textarea {
+  caret-color: auto;
+  cursor: text;
 }

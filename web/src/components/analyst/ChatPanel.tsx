@@ -234,7 +234,7 @@ export function ChatPanel({ locale, dict }: Props) {
         <label htmlFor={inputId} className="sr-only">
           {dict.placeholder}
         </label>
-        <div className="glass-strong flex items-end gap-2 rounded-panel p-2 focus-within:ring-2 focus-within:ring-focus">
+        <div className="glass-strong flex cursor-text items-end gap-2 rounded-panel p-2">
           <textarea
             id={inputId}
             value={input}
