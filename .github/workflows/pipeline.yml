@@ -32,6 +32,7 @@ jobs:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - name: Check the database secret exists
+        working-directory: .  # pipeline/ does not exist until checkout has run
         run: |
           if [ -z "$DATABASE_URL" ]; then
             echo "::error::Secret DATABASE_URL is not set. See docs/deployment.md, step 2."
