@@ -1,6 +1,6 @@
 # STATE
 
-Working notes for the turn-based workflow (Claude and Codex share the repo through git commits).
+Working notes for the project: current status, environment and open items.
 
 ## Status
 
