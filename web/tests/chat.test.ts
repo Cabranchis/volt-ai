@@ -3,7 +3,9 @@ import { MockLanguageModelV4 } from "ai/test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const holder = vi.hoisted(() => ({ model: null as unknown }));
-vi.mock("@/lib/ai/model", () => ({ getChatModel: () => holder.model }));
+vi.mock("@/lib/ai/model", () => ({
+  getChatModels: () => (Array.isArray(holder.model) ? holder.model : holder.model ? [holder.model] : []),
+}));
 
 import { POST } from "@/app/api/chat/route";
 
@@ -199,5 +201,18 @@ describe("with a language model", () => {
     const failure = list.find((e) => e.t === "error");
     expect(failure?.reason).toMatch(/^empty answer, finish: /);
     expect(list.some((e) => e.t === "text")).toBe(false);
+  });
+
+  it("falls back to the next model when the first one is overloaded, before any text went out", async () => {
+    const overloaded = new MockLanguageModelV4({
+      doStream: async () => {
+        throw Object.assign(new Error("high demand"), { statusCode: 503 });
+      },
+    });
+    holder.model = [overloaded, toolThenAnswer()];
+    const list = await events(await POST(request(ask("What is the demand?"))));
+    expect(list.some((e) => e.t === "error")).toBe(false);
+    expect(joinedText(list).length).toBeGreaterThan(0);
+    expect(overloaded.doStreamCalls).toHaveLength(1);
   });
 });

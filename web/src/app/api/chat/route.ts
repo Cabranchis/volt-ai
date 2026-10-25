@@ -1,8 +1,8 @@
-import { isStepCount, streamText, type ModelMessage } from "ai";
+import { isStepCount, streamText, type LanguageModel, type ModelMessage } from "ai";
 import { z } from "zod";
 import { problem } from "@/lib/api";
 import { answerOffline } from "@/lib/ai/offline";
-import { getChatModel } from "@/lib/ai/model";
+import { getChatModels } from "@/lib/ai/model";
 import {
   MAX_MESSAGE_CHARS,
   MAX_MESSAGES,
@@ -132,11 +132,11 @@ export async function POST(request: Request) {
   }
   const global = await limiter.hit("chat:global", DAILY_LIMIT, 86_400);
 
-  const model = getChatModel();
+  const models = getChatModels();
   const question = messages.at(-1)?.content ?? "";
 
   // No key, or the day's quota for the language model is spent: answer from fixed summaries.
-  if (!model || !global.allowed) {
+  if (models.length === 0 || !global.allowed) {
     return eventStream(async (send) => {
       send({ t: "notice", code: "offline" });
       send({ t: "text", d: await answerOffline(question, locale) });
@@ -145,30 +145,53 @@ export async function POST(request: Request) {
 
   const modelMessages: ModelMessage[] = messages.map((m) => ({ role: m.role, content: m.content }));
   return eventStream(async (send) => {
-    const result = streamText({
-      model,
-      instructions: systemPrompt(locale, bogotaToday()),
-      messages: modelMessages,
-      tools: buildTools(locale),
-      stopWhen: isStepCount(MAX_STEPS),
-      maxOutputTokens: 700,
-      temperature: 0.2,
-      // No abortSignal from the request: on Vercel it fires at once and ends the stream empty.
-      // The total timeout below bounds the cost of an abandoned request instead.
-      timeout: { totalMs: 25_000 },
-    });
-    let answered = false;
-    let finish = "no finish event";
-    for await (const part of result.fullStream) {
-      if (part.type === "text-delta") {
-        if (part.text) answered = true;
-        send({ t: "text", d: part.text });
-      } else if (part.type === "tool-call") send({ t: "tool", name: part.toolName });
-      else if (part.type === "error") throw new ModelFailure(statusOf(part.error));
-      else if (part.type === "abort") finish = "aborted";
-      else if (part.type === "finish") finish = String(part.finishReason);
+    // Try each model in turn. A failure after text has gone out cannot be retried: the browser has it.
+    let failure: ModelFailure | undefined;
+    for (const [index, model] of models.entries()) {
+      const last = index === models.length - 1;
+      let sentText = false;
+      try {
+        await streamAnswer(model, last ? 12_000 : 14_000, () => {
+          sentText = true;
+        });
+        return;
+      } catch (error) {
+        failure = error instanceof ModelFailure ? error : new ModelFailure("provider error");
+        if (sentText) throw failure;
+      }
     }
-    // A stream that ends without any text is a failure, not an empty answer.
-    if (!answered) throw new ModelFailure(`empty answer, finish: ${finish}`);
+    throw failure ?? new ModelFailure("no model");
+
+    async function streamAnswer(model: LanguageModel, totalMs: number, onText: () => void) {
+      const result = streamText({
+        model,
+        instructions: systemPrompt(locale, bogotaToday()),
+        messages: modelMessages,
+        tools: buildTools(locale),
+        stopWhen: isStepCount(MAX_STEPS),
+        maxOutputTokens: 700,
+        temperature: 0.2,
+        maxRetries: 0,
+        // No abortSignal from the request: on Vercel it fires at once and ends the stream empty.
+        // The timeouts bound the cost of an abandoned request; together they fit maxDuration.
+        timeout: { totalMs },
+      });
+      let answered = false;
+      let finish = "no finish event";
+      for await (const part of result.fullStream) {
+        if (part.type === "text-delta") {
+          if (part.text) {
+            answered = true;
+            onText();
+          }
+          send({ t: "text", d: part.text });
+        } else if (part.type === "tool-call") send({ t: "tool", name: part.toolName });
+        else if (part.type === "error") throw new ModelFailure(statusOf(part.error));
+        else if (part.type === "abort") finish = "aborted";
+        else if (part.type === "finish") finish = String(part.finishReason);
+      }
+      // A stream that ends without any text is a failure, not an empty answer.
+      if (!answered) throw new ModelFailure(`empty answer, finish: ${finish}`);
+    }
   });
 }
