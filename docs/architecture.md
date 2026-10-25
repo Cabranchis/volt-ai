@@ -51,7 +51,7 @@ flowchart TB
 | `model_runs` | Training date, data range, backtest metrics, baseline metrics | run_id |
 | `anomalies` | Date, target, severity, method, explanation | (target, date) |
 | `briefings` | Daily summary per language | (date, lang) |
-| `rate_limits` | Sliding-window counters for the chat endpoint | (client_key, window) |
+| `rate_limits` | Fixed-window counters for the chat endpoint | (client_key, window) |
 | `ingest_log` | Last successful ingest per dataset, for freshness | dataset |
 
 The authoritative definition is in `db/migrations`.

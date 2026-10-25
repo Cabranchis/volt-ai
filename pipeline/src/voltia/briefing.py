@@ -183,16 +183,25 @@ def template(facts: Facts, lang: Lang) -> str:
     return " ".join(out)
 
 
-_NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
+_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+MINUS = "\N{MINUS SIGN}"
+_NUMBER = re.compile(rf"[+\-{MINUS}]?\d+(?:[.,]\d+)?")
 
 
 def numbers_in(text: str) -> set[str]:
-    """Numbers as written in `text`, with the decimal comma normalised to a point."""
-    return {m.replace(",", ".") for m in _NUMBER.findall(text)}
+    """Numbers as written in `text`: signed, decimal comma as a point, ISO dates kept whole.
+
+    The sign is part of the number, so "-4,2" and "4,2" differ; a rewrite that flips the
+    direction of a change therefore fails the check.
+    """
+    found = set(_DATE.findall(text))
+    rest = _DATE.sub(" ", text)
+    found |= {m.replace(",", ".").replace(MINUS, "-") for m in _NUMBER.findall(rest)}
+    return found
 
 
 def is_faithful(candidate: str, reference: str) -> bool:
-    """True when `candidate` quotes no number that `reference` does not already contain."""
+    """True when `candidate` quotes no number, sign or date that `reference` does not contain."""
     return bool(candidate.strip()) and numbers_in(candidate) <= numbers_in(reference)
 
 

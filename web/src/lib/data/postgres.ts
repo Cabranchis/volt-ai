@@ -60,8 +60,11 @@ export function createPostgresRepository(sql: Sql): Repository {
         SELECT r.run_id, r.trained_at AT TIME ZONE 'UTC' AS trained_at, to_char(f.day, 'YYYY-MM-DD') AS day,
                f.horizon, f.p10, f.p50, f.p90, f.drivers
         FROM forecasts f
-        JOIN (SELECT run_id, trained_at FROM model_runs ORDER BY trained_at DESC LIMIT 1) r
-          ON r.run_id = f.run_id
+        JOIN (
+          SELECT run_id, trained_at FROM model_runs m
+          WHERE EXISTS (SELECT 1 FROM forecasts x WHERE x.run_id = m.run_id AND x.target = ${target})
+          ORDER BY trained_at DESC LIMIT 1
+        ) r ON r.run_id = f.run_id
         WHERE f.target = ${target}
         ORDER BY f.day`;
       if (rows.length === 0) return null;

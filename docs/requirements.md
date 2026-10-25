@@ -22,7 +22,7 @@ VoltIA turns the public data of Colombia's electricity market (XM) into forecast
 | UC-06 | AI analyst | Visitor asks a question in natural language and gets an answer backed by data the model fetched through typed tools. | The answer cites the figures and dates it used. No free-form SQL is ever executed. |
 | UC-07 | Daily briefing | The pipeline writes an executive summary in ES and EN once per day. | Page views cost zero model calls. |
 | UC-08 | Model transparency | Visitor reads the model card: data, method, backtest metrics versus baselines, last training date, limitations. | Metrics are the real ones from the last run, including when the model does not beat the baseline. |
-| UC-09 | Public API | Developer calls `/api/v1/*` and reads the OpenAPI spec. | Read-only, versioned, documented, rate limited. |
+| UC-09 | Public API | Developer calls `/api/v1/*` and reads the OpenAPI spec. | Read-only, versioned, documented, and cached at the CDN. Only the chat endpoint has a per-client limiter. |
 | UC-10 | Operations | Maintainer sees whether the daily pipeline ran. If it failed, the dashboard says so. | `/api/v1/health` reports freshness per dataset. |
 
 ## 3. Functional requirements

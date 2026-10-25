@@ -28,7 +28,13 @@ export const FORECAST_TARGETS = ["demand_kwh", "price_mean_cop_kwh"] as const;
 export type ForecastTarget = (typeof FORECAST_TARGETS)[number];
 export const forecastTargetSchema = z.enum(FORECAST_TARGETS);
 
-export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((s) => {
+    const t = Date.parse(s);
+    return !Number.isNaN(t) && new Date(t).toISOString().startsWith(s);
+  }, "not a calendar date");
 
 /** Columnar daily data: one shared date axis, one array per series (null where missing). */
 export const seriesFrameSchema = z.object({

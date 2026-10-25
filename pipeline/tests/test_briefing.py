@@ -143,3 +143,10 @@ def test_template_formats_drops_and_percent_levels() -> None:
     text = template(facts, "en")
     assert "\N{MINUS SIGN}10 % in a week" in text
     assert "Reservoirs stand at 60.0 % (+2.0 points over the week)" in text
+
+
+def test_faithfulness_notices_flipped_signs_and_date_fragments() -> None:
+    reference = "El precio promedió 488 COP/kWh (\N{MINUS SIGN}4,2 % en una semana) el 2026-10-22."
+    assert is_faithful("El precio bajó 488 COP/kWh (-4,2 %) el 2026-10-22.", reference)
+    assert not is_faithful("El precio subió 4,2 % hasta 488 COP/kWh el 2026-10-22.", reference)
+    assert not is_faithful("El precio subió 10 % hasta 488 COP/kWh.", reference)

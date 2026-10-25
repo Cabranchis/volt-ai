@@ -26,6 +26,8 @@ describe("GET /api/v1/series", () => {
     ["unknown series", "/api/v1/series?names=drop_table"],
     ["bad date", "/api/v1/series?names=demand_kwh&from=yesterday"],
     ["reversed range", "/api/v1/series?names=demand_kwh&from=2026-10-05&to=2026-10-01"],
+    ["month 13", "/api/v1/series?names=demand_kwh&from=2026-13-01"],
+    ["30 February", "/api/v1/series?names=demand_kwh&from=2026-02-30"],
     ["range over the cap", "/api/v1/series?names=demand_kwh&from=2000-01-01&to=2026-10-01"],
   ])("rejects %s with a problem document", async (_name, path) => {
     const res = await series(get(path));
@@ -43,6 +45,11 @@ describe("GET /api/v1/series", () => {
 describe("GET /api/v1/forecasts/{target}", () => {
   it("404s on an unknown target", async () => {
     const res = await forecasts(get("/api/v1/forecasts/gas"), { params: Promise.resolve({ target: "gas" }) } as never);
+    expect(res.status).toBe(404);
+  });
+
+  it.each(["constructor", "toString", "__proto__"])("404s on the object property %s", async (target) => {
+    const res = await forecasts(get(`/api/v1/forecasts/${target}`), { params: Promise.resolve({ target }) } as never);
     expect(res.status).toBe(404);
   });
 });
