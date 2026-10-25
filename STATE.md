@@ -25,7 +25,6 @@ Working notes for the turn-based workflow (Claude and Codex share the repo throu
 
 ## Open items for the owner
 
-- Add the GitHub Actions secrets `DATABASE_URL` (owner URL) and, optionally, `GOOGLE_GENERATIVE_AI_API_KEY`, then run the `Daily pipeline` workflow once (`workflow_dispatch`).
-- Delete `web/.env.vercel` (only needed to import variables into Vercel).
+- Done: Actions secrets `DATABASE_URL` and `GOOGLE_GENERATIVE_AI_API_KEY` are set, `web/.env.vercel` was deleted, secret scanning and push protection are on, and the `Daily pipeline` workflow ran green by hand (run 40150965548).
 - Review the Dependabot pull requests: #1, #4, #5, #6 pass CI; #2 (vite 8) and #3 (plugin-react 6) fail CI and need the toolchain upgraded together.
 - The Gemini free tier is shared across models and was exhausted by testing; the chat falls back to Flash-Lite and then to the offline analyst.
