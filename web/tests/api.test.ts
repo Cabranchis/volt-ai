@@ -87,3 +87,23 @@ describe("OpenAPI document", () => {
     }
   });
 });
+
+describe("per-client limit on the open-ended endpoints", () => {
+  it("answers 429 with Retry-After after 60 requests a minute from one address", async () => {
+    const call = () =>
+      anomalies(new NextRequest("http://localhost/api/v1/anomalies?limit=1", { headers: { "x-forwarded-for": "203.0.113.9" } }));
+    let last = 200;
+    let retryAfter: string | null = null;
+    for (let i = 0; i < 61; i++) {
+      const res = await call();
+      last = res.status;
+      retryAfter = res.headers.get("retry-after");
+    }
+    expect(last).toBe(429);
+    expect(Number(retryAfter)).toBeGreaterThan(0);
+    const other = await anomalies(
+      new NextRequest("http://localhost/api/v1/anomalies?limit=1", { headers: { "x-forwarded-for": "203.0.113.10" } }),
+    );
+    expect(other.status).toBe(200);
+  });
+});

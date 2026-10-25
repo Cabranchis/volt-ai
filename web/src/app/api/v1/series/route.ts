@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { jsonResponse, parseQuery, problem } from "@/lib/api";
+import { jsonResponse, limitClient, parseQuery, problem } from "@/lib/api";
 import { getSeries } from "@/lib/data";
 import { isoDate, SERIES_NAMES, seriesNameSchema } from "@/lib/data/types";
 
@@ -17,6 +17,8 @@ const querySchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+  const limited = await limitClient(request, "series");
+  if (limited) return limited;
   const parsed = parseQuery(querySchema, request.nextUrl.searchParams);
   if (!parsed.ok) return parsed.response;
   const { names, from, to } = parsed.data;

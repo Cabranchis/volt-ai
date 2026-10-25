@@ -1,4 +1,30 @@
+import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { clientKey, getRateLimiter } from "@/lib/ai/ratelimit";
+
+const API_LIMIT = 60;
+const API_WINDOW_SEC = 60;
+
+/**
+ * Per-client limit for the endpoints whose arguments an anonymous caller can vary freely, which
+ * would otherwise bypass the CDN cache and reach the database on every request. Answers 429, or
+ * null to continue. A failing limiter lets the request through: the data call fails on its own
+ * if the database is down.
+ */
+export async function limitClient(request: NextRequest, scope: string): Promise<Response | null> {
+  try {
+    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    const address = forwarded || request.headers.get("x-real-ip") || "unknown";
+    const key = await clientKey(address, process.env.RATE_LIMIT_SALT ?? "voltia");
+    const hit = await (await getRateLimiter()).hit(`api:${scope}:${key}`, API_LIMIT, API_WINDOW_SEC);
+    if (hit.allowed) return null;
+    const response = problem(429, "Too many requests", `At most ${API_LIMIT} requests per minute.`);
+    response.headers.set("Retry-After", String(hit.retryAfterSec));
+    return response;
+  } catch {
+    return null;
+  }
+}
 
 /** Responses are shared by every visitor and change once a day, so the CDN may keep them for an hour. */
 const CACHE_CONTROL = "public, s-maxage=3600, stale-while-revalidate=86400";

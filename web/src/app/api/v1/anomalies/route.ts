@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { jsonResponse, parseQuery } from "@/lib/api";
+import { jsonResponse, limitClient, parseQuery } from "@/lib/api";
 import { getAnomalies } from "@/lib/data";
 import { forecastTargetSchema } from "@/lib/data/types";
 
@@ -10,6 +10,8 @@ const querySchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+  const limited = await limitClient(request, "anomalies");
+  if (limited) return limited;
   const parsed = parseQuery(querySchema, request.nextUrl.searchParams);
   if (!parsed.ok) return parsed.response;
   return jsonResponse(await getAnomalies(parsed.data.limit, parsed.data.target));
