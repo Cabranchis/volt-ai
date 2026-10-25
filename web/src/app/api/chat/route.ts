@@ -151,7 +151,8 @@ export async function POST(request: Request) {
       stopWhen: isStepCount(MAX_STEPS),
       maxOutputTokens: 700,
       temperature: 0.2,
-      abortSignal: request.signal,
+      // No abortSignal from the request: on Vercel it fires at once and ends the stream empty.
+      // The total timeout below bounds the cost of an abandoned request instead.
       timeout: { totalMs: 25_000 },
     });
     let answered = false;
