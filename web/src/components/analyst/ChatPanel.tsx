@@ -143,24 +143,46 @@ export function ChatPanel({ locale, dict }: Props) {
       <div
         aria-live="polite"
         aria-busy={busy}
-        className="flex min-h-72 flex-col gap-5 rounded-panel border border-line bg-surface p-5"
+        className="flex flex-col gap-5 rounded-panel border border-line bg-surface p-5 sm:p-6"
       >
         {messages.length === 0 ? (
-          <div className="flex flex-col gap-3">
-            <p className="text-sm font-medium">{dict.suggestionsTitle}</p>
-            <ul className="flex flex-wrap gap-2">
-              {dict.suggestions.map((suggestion) => (
-                <li key={suggestion}>
-                  <button
-                    type="button"
-                    onClick={() => void send(suggestion)}
-                    className="rounded-full border border-line bg-surface-2 px-3.5 py-2 text-left text-sm hover:border-faint"
+          <div className="flex flex-col gap-6">
+            <section aria-labelledby={`${inputId}-try`} className="flex flex-col gap-3">
+              <h2 id={`${inputId}-try`} className="text-sm font-medium">
+                {dict.suggestionsTitle}
+              </h2>
+              <ul className="flex flex-col gap-2">
+                {dict.suggestions.map((suggestion) => (
+                  <li key={suggestion}>
+                    <button
+                      type="button"
+                      onClick={() => void send(suggestion)}
+                      className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-line bg-surface-2 px-4 py-2.5 text-left text-sm hover:border-faint"
+                    >
+                      {suggestion}
+                      <CornerDownLeft aria-hidden="true" size={14} className="shrink-0 text-faint" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section aria-labelledby={`${inputId}-scope`} className="flex flex-col gap-2 border-t border-line pt-5">
+              <h2 id={`${inputId}-scope`} className="text-sm font-medium">
+                {dict.scopeTitle}
+              </h2>
+              <ul className="flex flex-wrap gap-1.5">
+                {Object.values(dict.tools).map((tool) => (
+                  <li
+                    key={tool}
+                    className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-xs text-muted"
                   >
-                    {suggestion}
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    <Search aria-hidden="true" size={11} />
+                    {tool}
+                  </li>
+                ))}
+              </ul>
+              <p className="max-w-[60ch] text-xs leading-relaxed text-muted">{dict.scopeBody}</p>
+            </section>
           </div>
         ) : (
           messages.map((message) => (
@@ -236,7 +258,7 @@ export function ChatPanel({ locale, dict }: Props) {
             <button
               type="submit"
               disabled={input.trim().length === 0}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent hover:brightness-95 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted"
             >
               {dict.send}
               <CornerDownLeft aria-hidden="true" size={14} />

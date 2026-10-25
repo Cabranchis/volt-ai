@@ -21,8 +21,8 @@ export function LocaleSwitch({ current, label }: { current: Locale; label: strin
               aria-current={locale === current ? "true" : undefined}
               title={NAMES[locale]}
               className={[
-                "grid h-8 place-items-center rounded-md text-xs font-semibold tracking-wide",
-                locale === current ? "bg-surface-2 text-ink" : "text-faint hover:text-ink",
+                "grid h-9 place-items-center rounded-md text-xs font-semibold tracking-wide",
+                locale === current ? "bg-accent text-on-accent" : "text-muted hover:text-ink",
               ].join(" ")}
             >
               {locale.toUpperCase()}

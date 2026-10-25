@@ -26,6 +26,13 @@ interface Props {
 
 const num = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null);
 
+/** "stl_robust_z+isolation_forest" as plain words; a method the dictionary does not know stays as written. */
+const methodLabel = (method: string, names: Record<string, string>): string =>
+  method
+    .split("+")
+    .map((part) => names[part] ?? part)
+    .join(" + ");
+
 export function AnomaliesExplorer({ locale, dict, dates, values, anomalies }: Props) {
   const [target, setTarget] = useState<ForecastTarget>("demand_kwh");
   const [range, setRange] = useState<Range>("all");
@@ -141,13 +148,14 @@ export function AnomaliesExplorer({ locale, dict, dates, values, anomalies }: Pr
                     <td className="px-3 py-1.5 text-right font-semibold">{formatNumber(a.severity, locale, 1)}</td>
                     <td className="px-3 py-1.5 text-right">{show(num(a.detail?.["observed"]))}</td>
                     <td className="px-3 py-1.5 text-right">{show(num(a.detail?.["expected"]))}</td>
-                    <td className="px-3 py-1.5 text-xs text-muted">{a.method}</td>
+                    <td className="px-3 py-1.5 text-xs text-muted">{methodLabel(a.method, dict.anomalies.methods)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+        {rows.length > 0 ? <p className="mt-3 max-w-[72ch] text-xs leading-relaxed text-muted">{dict.anomalies.methodNote}</p> : null}
       </Panel>
     </div>
   );

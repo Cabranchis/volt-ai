@@ -10,17 +10,16 @@ import { Panel } from "@/components/ui/Panel";
 import { StatStrip, type Stat } from "@/components/ui/StatStrip";
 import { EmptyState } from "@/components/ui/States";
 import { getAnomalies, getBriefing, getForecast, getSeries } from "@/lib/data";
-import { addDays, formatDate, formatGWh, formatNumber, formatPercent, formatSigned } from "@/lib/format";
+import { addDays, formatDate, formatGWh, formatNumber } from "@/lib/format";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
-import { fmt } from "@/lib/i18n/fmt";
 import {
   kpi,
   lastDayOf,
   meanOfFirst,
   MIX_SERIES_NAMES,
   mixShares,
-  oniPhase,
 } from "@/lib/insights";
+import { demandStat, oniStat, priceStat, reservoirStat } from "@/lib/stats";
 import { buildSummary, describeForecast } from "@/lib/summary";
 
 const SERIES = ["demand_kwh", "price_mean_cop_kwh", "reservoir_pct", "oni", ...MIX_SERIES_NAMES];
@@ -46,61 +45,12 @@ export default async function OverviewPage() {
   const mixYearAgo = mixDay ? mixShares(frame, addDays(mixDay, -365)) : null;
 
   const unitText = dict.units;
-  const stats: Stat[] = [];
-  if (demand) {
-    stats.push({
-      label: dict.kpi.demand,
-      value: formatGWh(demand.value, locale),
-      unit: unitText.gwhDay,
-      delta:
-        demand.delta === null
-          ? undefined
-          : fmt(dict.kpi.vsWeek, { delta: formatSigned(demand.delta / 1e6, locale), unit: unitText.gwhDay }),
-      deltaSign: demand.delta === null ? 0 : (Math.sign(demand.delta) as -1 | 0 | 1),
-      context: fmt(dict.kpi.onDate, { date: formatDate(demand.day, locale) }),
-    });
-  }
-  if (price) {
-    stats.push({
-      label: dict.kpi.price,
-      value: formatNumber(price.value, locale, 0),
-      unit: unitText.copKwh,
-      delta:
-        price.delta === null
-          ? undefined
-          : fmt(dict.kpi.vsWeek, { delta: formatSigned(price.delta, locale, 0), unit: unitText.copKwh }),
-      deltaSign: price.delta === null ? 0 : (Math.sign(price.delta) as -1 | 0 | 1),
-      context: fmt(dict.kpi.onDate, { date: formatDate(price.day, locale) }),
-    });
-  }
-  if (reservoir) {
-    stats.push({
-      label: dict.kpi.reservoir,
-      value: formatPercent(reservoir.value, locale).replace(" %", ""),
-      unit: unitText.percent,
-      delta:
-        reservoir.delta === null
-          ? undefined
-          : fmt(dict.kpi.vsWeekPoints, { delta: formatSigned(reservoir.delta * 100, locale) }),
-      deltaSign: reservoir.delta === null ? 0 : (Math.sign(reservoir.delta) as -1 | 0 | 1),
-      context: fmt(dict.kpi.onDate, { date: formatDate(reservoir.day, locale) }),
-    });
-  }
-  if (oni) {
-    const phaseLabel = {
-      strongNino: dict.kpi.oniStrongNino,
-      nino: dict.kpi.oniNino,
-      neutral: dict.kpi.oniNeutral,
-      nina: dict.kpi.oniNina,
-    }[oniPhase(oni.value)];
-    stats.push({
-      label: dict.kpi.oni,
-      value: formatNumber(oni.value, locale, 2),
-      unit: "",
-      note: phaseLabel,
-      context: fmt(dict.kpi.oniSeason, { month: formatDate(oni.day, locale, "month") }),
-    });
-  }
+  const stats: Stat[] = [
+    demand ? demandStat(demand, locale, dict) : null,
+    price ? priceStat(price, locale, dict) : null,
+    reservoir ? reservoirStat(reservoir, locale, dict) : null,
+    oni ? oniStat(oni, locale, dict) : null,
+  ].filter((stat): stat is Stat => stat !== null);
 
   const summaryText =
     briefing?.body ??
@@ -172,14 +122,14 @@ export default async function OverviewPage() {
 
         {stats.length > 0 ? <StatStrip stats={stats} /> : <EmptyState title={dict.common.noData} body={dict.common.noDataBody} />}
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <Panel
             title={dict.overview.demandForecast}
             note={dict.overview.demandForecastNote}
             actions={
               <Link
                 href={`/${locale}/demand`}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-ink hover:underline"
+                className="inline-flex min-h-10 items-center gap-1.5 text-sm font-medium text-accent-ink hover:underline"
               >
                 {dict.overview.openForecast}
                 <ArrowRight aria-hidden="true" size={16} strokeWidth={2} />
@@ -228,14 +178,14 @@ export default async function OverviewPage() {
           </Panel>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <Panel
             title={dict.overview.priceForecast}
             note={dict.overview.priceForecastNote}
             actions={
               <Link
                 href={`/${locale}/price`}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-ink hover:underline"
+                className="inline-flex min-h-10 items-center gap-1.5 text-sm font-medium text-accent-ink hover:underline"
               >
                 {dict.overview.openForecast}
                 <ArrowRight aria-hidden="true" size={16} strokeWidth={2} />
@@ -279,7 +229,7 @@ export default async function OverviewPage() {
             title={dict.overview.anomaliesTitle}
             note={dict.overview.anomaliesNote}
             actions={
-              <Link href={`/${locale}/anomalies`} className="text-sm font-medium text-accent-ink hover:underline">
+              <Link href={`/${locale}/anomalies`} className="inline-flex min-h-10 items-center text-sm font-medium text-accent-ink hover:underline">
                 {dict.overview.viewAll}
               </Link>
             }

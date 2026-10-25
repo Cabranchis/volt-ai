@@ -91,6 +91,8 @@ export const en = {
     oniNeutral: "Neutral",
     oniNina: "La Niña",
     oniSeason: "3-month season centred on {month}",
+    inflows: "River inflows",
+    inflowsNote: "{gwh} GWh/day against the historical mean for the day (100 % is normal)",
   },
   overview: {
     title: "Colombia's power system today",
@@ -107,7 +109,7 @@ export const en = {
     mixNote: "Share of the day's generation",
     mixYearAgo: "{share} a year ago",
     anomaliesTitle: "Most unusual days",
-    anomaliesNote: "Highest severity across demand and price",
+    anomaliesNote: "Highest severity across demand and price. Severity is how many robust standard deviations a day sits from its expected value.",
     viewAll: "See all",
     openForecast: "Open forecast",
   },
@@ -174,6 +176,8 @@ export const en = {
     tableCaption: "Unusual days by severity",
     empty: "No unusual days found in this selection.",
     method: "Method",
+    methodNote: "Methods: a seasonal decomposition measures how far a day is from its weekly and yearly pattern, and Isolation Forest flags days that are unusual in the combination of the other signals.",
+    methods: { stl_robust_z: "Seasonal decomposition", isolation_forest: "Isolation Forest" } as Record<string, string>,
     chartTitle: "Where they fall in time",
   },
   models: {
@@ -228,6 +232,8 @@ export const en = {
     stop: "Stop",
     newChat: "New conversation",
     suggestionsTitle: "Try asking",
+    scopeTitle: "What the analyst can look up",
+    scopeBody: "Only these checked lookups, never free-form queries. Each answer names the lookups it used and the dates behind the figures.",
     suggestions: [
       "Why did the price rise this week?",
       "How do reservoirs compare with a year ago?",

@@ -26,7 +26,7 @@ export function MobileNav({ labels, brand, children }: Props) {
         type="button"
         aria-label={labels.openMenu}
         onClick={() => dialogRef.current?.showModal()}
-        className="grid size-10 place-items-center rounded-lg border border-line bg-surface"
+        className="grid size-11 place-items-center rounded-lg border border-line bg-surface"
       >
         <Menu aria-hidden="true" size={20} strokeWidth={1.75} />
       </button>
@@ -45,7 +45,7 @@ export function MobileNav({ labels, brand, children }: Props) {
               type="button"
               aria-label={labels.closeMenu}
               onClick={() => dialogRef.current?.close()}
-              className="grid size-10 place-items-center rounded-lg border border-line bg-surface"
+              className="grid size-11 place-items-center rounded-lg border border-line bg-surface"
             >
               <X aria-hidden="true" size={20} strokeWidth={1.75} />
             </button>

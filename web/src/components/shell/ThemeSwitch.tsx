@@ -61,8 +61,8 @@ export function ThemeSwitch({ labels }: { labels: Dictionary["common"] }) {
           title={label}
           onClick={() => applyTheme(value)}
           className={[
-            "grid h-8 flex-1 place-items-center rounded-md",
-            theme === value ? "bg-surface-2 text-ink" : "text-faint hover:text-ink",
+            "grid h-9 flex-1 place-items-center rounded-md",
+            theme === value ? "bg-accent text-on-accent" : "text-muted hover:text-ink",
           ].join(" ")}
         >
           <Icon aria-hidden="true" size={16} strokeWidth={1.75} />

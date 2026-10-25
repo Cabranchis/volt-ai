@@ -93,6 +93,8 @@ export const es: Dictionary = {
     oniNeutral: "Neutral",
     oniNina: "La Niña",
     oniSeason: "Trimestre centrado en {month}",
+    inflows: "Aportes de los ríos",
+    inflowsNote: "{gwh} GWh/día frente a la media histórica del día (100 % es lo normal)",
   },
   overview: {
     title: "El sistema eléctrico de Colombia hoy",
@@ -109,7 +111,7 @@ export const es: Dictionary = {
     mixNote: "Participación en la generación del día",
     mixYearAgo: "{share} hace un año",
     anomaliesTitle: "Los días más inusuales",
-    anomaliesNote: "Mayor severidad entre demanda y precio",
+    anomaliesNote: "Mayor severidad entre demanda y precio. La severidad son las desviaciones estándar robustas que separan el día de su valor esperado.",
     viewAll: "Ver todo",
     openForecast: "Abrir pronóstico",
   },
@@ -176,6 +178,8 @@ export const es: Dictionary = {
     tableCaption: "Días inusuales por severidad",
     empty: "No hay días inusuales en esta selección.",
     method: "Método",
+    methodNote: "Métodos: la descomposición estacional mide cuánto se aleja un día de su patrón semanal y anual, e Isolation Forest marca los días inusuales por la combinación de las demás señales.",
+    methods: { stl_robust_z: "Descomposición estacional", isolation_forest: "Isolation Forest" } as Record<string, string>,
     chartTitle: "Dónde caen en el tiempo",
   },
   models: {
@@ -230,6 +234,8 @@ export const es: Dictionary = {
     stop: "Detener",
     newChat: "Nueva conversación",
     suggestionsTitle: "Prueba preguntando",
+    scopeTitle: "Qué puede consultar el analista",
+    scopeBody: "Solo estas consultas verificadas, nunca consultas libres. Cada respuesta indica qué consultas usó y las fechas detrás de las cifras.",
     suggestions: [
       "¿Por qué subió el precio esta semana?",
       "¿Cómo están los embalses frente a hace un año?",
