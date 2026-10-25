@@ -1,7 +1,7 @@
 import type { Locale } from "./i18n/config";
 
-/** Set NEXT_PUBLIC_REPO_URL when the repository is public; the link is hidden otherwise. */
-export const REPO_URL = process.env.NEXT_PUBLIC_REPO_URL || null;
+/** The public repository. NEXT_PUBLIC_REPO_URL overrides it; set it to an empty value to hide the link. */
+export const REPO_URL = (process.env.NEXT_PUBLIC_REPO_URL ?? "https://github.com/Cabranchis/voltia") || null;
 
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 

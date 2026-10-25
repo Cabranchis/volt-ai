@@ -32,22 +32,22 @@ function MetricsTable({ metrics, locale, dict }: { metrics: TargetMetrics; local
   ];
   return (
     <div tabIndex={0} role="region" aria-label={dict.metricsTitle} className="overflow-x-auto rounded-lg border border-line">
-      <table className="w-full min-w-max border-collapse text-sm tabular-nums">
+      <table className="w-full border-collapse text-sm tabular-nums">
         <thead className="bg-surface-2 text-xs text-muted">
           <tr>
-            <th scope="col" className="px-3 py-2 text-left font-medium">{dict.model}</th>
-            <th scope="col" className="px-3 py-2 text-right font-medium">{dict.mape}</th>
-            <th scope="col" className="px-3 py-2 text-right font-medium">{dict.mase}</th>
-            <th scope="col" className="px-3 py-2 text-right font-medium">{dict.coverage}</th>
+            <th scope="col" className="px-2 py-2 text-left font-medium sm:w-1/2 sm:px-3">{dict.model}</th>
+            <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">{dict.mape}</th>
+            <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">{dict.mase}</th>
+            <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">{dict.coverage}</th>
           </tr>
         </thead>
         <tbody>
           {rows.map(({ label, data, strong }) => (
             <tr key={label} className="border-t border-line">
-              <th scope="row" className={`px-3 py-2 text-left ${strong ? "font-semibold" : "font-normal"}`}>{label}</th>
-              <td className="px-3 py-2 text-right">{formatNumber(data.mape, locale, 1)} %</td>
-              <td className="px-3 py-2 text-right">{formatNumber(data.mase, locale, 2)}</td>
-              <td className="px-3 py-2 text-right">{formatPercent(data.coverage_p10_p90, locale, 0)}</td>
+              <th scope="row" className={`px-2 py-2 text-left sm:px-3 ${strong ? "font-semibold" : "font-normal"}`}>{label}</th>
+              <td className="px-2 py-2 text-right sm:px-3">{formatNumber(data.mape, locale, 1)} %</td>
+              <td className="px-2 py-2 text-right sm:px-3">{formatNumber(data.mase, locale, 2)}</td>
+              <td className="px-2 py-2 text-right sm:px-3">{formatPercent(data.coverage_p10_p90, locale, 0)}</td>
             </tr>
           ))}
         </tbody>

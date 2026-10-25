@@ -57,6 +57,7 @@ export function baseOption(tokens: ChartTokens, reducedMotion: boolean) {
  */
 export function monthTickRule(spanDays: number): (index: number, value: string) => boolean {
   if (spanDays <= 120) return (_i, value) => value.endsWith("-01") || value.endsWith("-15");
+  if (spanDays <= 270) return (_i, value) => value.endsWith("-01");
   if (spanDays <= 800) return (_i, value) => value.endsWith("-01") && ["01", "04", "07", "10"].includes(value.slice(5, 7));
   if (spanDays <= 1500) return (_i, value) => value.endsWith("-01-01") || value.endsWith("-07-01");
   return (_i, value) => value.endsWith("-01-01");

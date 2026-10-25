@@ -117,7 +117,7 @@ export default async function OverviewPage() {
           title={dict.overview.briefing}
           note={briefingSource === "gemini" ? dict.overview.briefingGemini : dict.overview.briefingTemplate}
         >
-          <p className="max-w-[72ch] text-base leading-relaxed text-pretty">{summaryText}</p>
+          <p className="max-w-[72ch] text-base leading-relaxed text-pretty">{summaryText.replace(/(\d) %/g, "$1 %")}</p>
         </Panel>
 
         {stats.length > 0 ? <StatStrip stats={stats} /> : <EmptyState title={dict.common.noData} body={dict.common.noDataBody} />}

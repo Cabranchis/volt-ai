@@ -1,4 +1,5 @@
-import { Database, Globe, Workflow } from "lucide-react";
+import { ArrowRight, Database, Globe, Workflow } from "lucide-react";
+import { Fragment } from "react";
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
@@ -44,13 +45,22 @@ export default async function AboutPage() {
         </Panel>
 
         <Panel title={dict.about.howTitle}>
-          <ol className="grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3">
-            {steps.map(({ Icon, title, body }) => (
-              <li key={title} className="flex flex-col gap-2 bg-surface p-4">
-                <Icon aria-hidden="true" size={20} strokeWidth={1.75} className="text-accent-ink" />
-                <h3 className="font-semibold">{title}</h3>
-                <p className="text-sm text-muted">{body}</p>
-              </li>
+          <ol className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-3">
+            {steps.map(({ Icon, title, body }, index) => (
+              <Fragment key={title}>
+                <li className="flex flex-1 flex-col gap-1.5">
+                  <h3 className="flex items-center gap-2 font-semibold">
+                    <Icon aria-hidden="true" size={18} strokeWidth={1.75} className="shrink-0 text-accent-ink" />
+                    {title}
+                  </h3>
+                  <p className="text-sm text-muted">{body}</p>
+                </li>
+                {index < steps.length - 1 ? (
+                  <li aria-hidden="true" className="hidden self-start pt-0.5 text-faint sm:block">
+                    <ArrowRight size={18} strokeWidth={1.75} />
+                  </li>
+                ) : null}
+              </Fragment>
             ))}
           </ol>
         </Panel>

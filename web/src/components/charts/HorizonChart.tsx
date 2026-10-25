@@ -49,7 +49,7 @@ export function HorizonChart({ locale, days, model, seasonalNaive, ets, labels, 
         nameTextStyle: { color: tokens.faint, fontSize: 11 },
         axisLine: { lineStyle: { color: tokens.border } },
         axisTick: { show: false },
-        axisLabel: { color: tokens.faint, fontSize: 11, interval: (i: number) => i === 0 || (i + 1) % 5 === 0 },
+        axisLabel: { color: tokens.faint, fontSize: 11, interval: (i: number) => i === 0 || (i + 1) % 5 === 0 || i === days.length - 1 },
       },
       yAxis: {
         type: "value",
@@ -74,7 +74,7 @@ export function HorizonChart({ locale, days, model, seasonalNaive, ets, labels, 
         items={[
           { label: labels.model, color: CSS[color], kind: "line" },
           { label: labels.seasonalNaive, color: "var(--c-ref)", kind: "dashed" },
-          { label: labels.ets, color: "var(--text)", kind: "dashed" },
+          { label: labels.ets, color: "var(--text)", kind: "dotted" },
         ]}
       />
       <EChart build={build} height={260} label={ariaLabel} />

@@ -1,4 +1,4 @@
-import { Download } from "lucide-react";
+import { ChevronRight, Download } from "lucide-react";
 import type { ReactNode } from "react";
 
 export interface Column {
@@ -42,7 +42,8 @@ export function DataTable({
         </a>
       ) : null}
       <details className="group">
-        <summary className="cursor-pointer select-none rounded py-1.5 text-sm font-medium text-muted hover:text-ink">
+        <summary className="flex cursor-pointer select-none list-none items-center gap-1.5 rounded py-1.5 text-sm font-medium text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
+          <ChevronRight aria-hidden="true" size={14} strokeWidth={2} className="transition-transform group-open:rotate-90 motion-reduce:transition-none" />
           <span className="group-open:hidden">{showLabel}</span>
           <span className="hidden group-open:inline">{hideLabel}</span>
         </summary>

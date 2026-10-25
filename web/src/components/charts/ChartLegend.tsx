@@ -2,7 +2,7 @@ export interface LegendItem {
   label: string;
   /** CSS colour (a token such as var(--c-demand)). */
   color: string;
-  kind: "line" | "dashed" | "area" | "bar";
+  kind: "line" | "dashed" | "dotted" | "area" | "bar";
 }
 
 /**
@@ -38,6 +38,17 @@ function Key({ item }: { item: LegendItem }) {
   }
   if (item.kind === "bar") {
     return <span aria-hidden="true" className="h-3 w-3 rounded-[3px]" style={style} />;
+  }
+  if (item.kind === "dotted") {
+    return (
+      <span
+        aria-hidden="true"
+        className="h-0.5 w-5"
+        style={{
+          backgroundImage: `repeating-linear-gradient(90deg, ${item.color} 0 2px, transparent 2px 5px)`,
+        }}
+      />
+    );
   }
   if (item.kind === "dashed") {
     return (
