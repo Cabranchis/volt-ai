@@ -29,6 +29,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Lets a phone on the same network load the dev server (npm run preview) with live reload.
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.*.*.*", "*.local"],
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
