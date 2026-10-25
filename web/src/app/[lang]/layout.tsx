@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Brand } from "@/components/shell/Brand";
 import { GlowPointer } from "@/components/shell/GlowPointer";
 import { MobileNav } from "@/components/shell/MobileNav";
+import { Splash } from "@/components/shell/Splash";
 import { SidebarBody } from "@/components/shell/SidebarBody";
 import { locales } from "@/lib/i18n/config";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
@@ -12,8 +13,9 @@ import "../globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-// Applies a saved theme before first paint so the page never flashes the wrong one.
-const THEME_SCRIPT = `try{var t=localStorage.getItem('voltia-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}`;
+// Applies a saved theme before first paint so the page never flashes the wrong one, and marks the
+// intro as seen once a tab has shown it.
+const THEME_SCRIPT = `try{var t=localStorage.getItem('voltia-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}try{if(sessionStorage.getItem('voltia-splash'))document.documentElement.setAttribute('data-splash','done');else sessionStorage.setItem('voltia-splash','1')}catch(e){}`;
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
@@ -52,6 +54,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-dvh text-ink antialiased">
+        <Splash name={dict.app.name} tagline={dict.app.tagline} />
         <GlowPointer />
         <a
           href="#main"
