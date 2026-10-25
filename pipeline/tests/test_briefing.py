@@ -60,7 +60,7 @@ def test_template_skips_sentences_whose_figures_are_missing() -> None:
     facts = build_facts(history()[["demand_kwh"]], None)
     assert facts is not None
     text = template(facts, "en")
-    assert text.startswith("Demand on 2026-10-21")
+    assert text.startswith("Demand on Wednesday, October 21, 2026 was 245.3 GWh")
     assert "price" not in text
     assert "Reservoirs" not in text
 

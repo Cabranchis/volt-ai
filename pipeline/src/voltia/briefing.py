@@ -105,6 +105,50 @@ def _signed(value: float, lang: Lang, digits: int = 1) -> str:
     return ("+" if value >= 0 else "\N{MINUS SIGN}") + _num(abs(value), lang, digits)
 
 
+_MONTHS = {
+    "es": [
+        "enero",
+        "febrero",
+        "marzo",
+        "abril",
+        "mayo",
+        "junio",
+        "julio",
+        "agosto",
+        "septiembre",
+        "octubre",
+        "noviembre",
+        "diciembre",
+    ],
+    "en": [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ],
+}
+_WEEKDAYS = {
+    "es": ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"],
+    "en": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+}
+
+
+def _long_date(day: date, lang: Lang) -> str:
+    """ "miércoles 21 de octubre de 2026" / "Wednesday, October 21, 2026", with no locale needed."""
+    weekday, month = _WEEKDAYS[lang][day.weekday()], _MONTHS[lang][day.month - 1]
+    if lang == "es":
+        return f"{weekday} {day.day} de {month} de {day.year}"
+    return f"{weekday}, {month} {day.day}, {day.year}"
+
+
 def _oni_phase(value: float, lang: Lang) -> str:
     phases = {
         "es": ("El Niño", "La Niña", "condiciones neutras"),
@@ -126,10 +170,11 @@ def template(facts: Facts, lang: Lang) -> str:
             else f", {_signed(facts.demand_week_pct, lang)} % against the previous week"
         )
         out.append(
-            f"La demanda del {facts.day.isoformat()} fue de "
+            f"La demanda del {_long_date(facts.day, lang)} fue de "
             f"{_num(facts.demand_gwh, lang)} GWh{week}."
             if es
-            else f"Demand on {facts.day.isoformat()} was {_num(facts.demand_gwh, lang)} GWh{week}."
+            else f"Demand on {_long_date(facts.day, lang)} was "
+            f"{_num(facts.demand_gwh, lang)} GWh{week}."
         )
     if facts.price_cop_kwh is not None:
         week = (
