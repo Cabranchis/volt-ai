@@ -26,7 +26,7 @@ export function RangeControl<T extends string>({ options, value, onChange, label
           <label
             key={option.value}
             className={[
-              "relative cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus",
+              "glow relative cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus",
               selected ? "seg-active" : "text-muted hover:text-ink",
             ].join(" ")}
           >

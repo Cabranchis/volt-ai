@@ -468,3 +468,99 @@ button,
     display: none;
   }
 }
+
+/*
+ * Border glow (after React Bits' BorderGlow): near an edge, a conic cone that follows the pointer
+ * lights a mesh-gradient border and an inner glow. The colours are the site's own: amber accent,
+ * demand violet and water blue, so both themes recolour it. components/shell/GlowPointer.tsx only
+ * writes --edge-proximity and --cursor-angle; everything else is CSS. Hover devices only.
+ */
+@media (hover: hover) and (pointer: fine) {
+  :where(.glow, .btn-glass, .btn-primary) {
+    position: relative;
+    isolation: isolate;
+    --edge-proximity: 0;
+    --cursor-angle: 45deg;
+    --edge-sensitivity: 30;
+    --color-sensitivity: calc(var(--edge-sensitivity) + 20);
+    --cone-spread: 25;
+    --glow-a: var(--accent);
+    --glow-b: var(--c-demand);
+    --glow-c: var(--c-water);
+    --glow-border: 2px;
+  }
+
+  :is(.glow, .btn-glass, .btn-primary)::before,
+  :is(.glow, .btn-glass, .btn-primary)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.6s ease-in-out;
+  }
+  :is(.glow, .btn-glass, .btn-primary):hover::before,
+  :is(.glow, .btn-glass, .btn-primary):hover::after {
+    transition-duration: 0.2s;
+  }
+
+  /* the mesh-gradient border: a ring (content-box xor border-box) cut to the pointer's cone */
+  :is(.glow, .btn-glass, .btn-primary)::before {
+    border: var(--glow-border) solid transparent;
+    background:
+      radial-gradient(at 80% 55%, var(--glow-b) 0, transparent 50%) border-box,
+      radial-gradient(at 69% 34%, var(--glow-a) 0, transparent 50%) border-box,
+      radial-gradient(at 8% 6%, var(--glow-c) 0, transparent 50%) border-box,
+      radial-gradient(at 41% 38%, var(--glow-b) 0, transparent 50%) border-box,
+      radial-gradient(at 86% 85%, var(--glow-a) 0, transparent 50%) border-box,
+      radial-gradient(at 82% 18%, var(--glow-c) 0, transparent 50%) border-box,
+      radial-gradient(at 51% 4%, var(--glow-a) 0, transparent 50%) border-box,
+      linear-gradient(var(--glow-a) 0 100%) border-box;
+    mask-image:
+      conic-gradient(
+        from var(--cursor-angle) at center,
+        black calc(var(--cone-spread) * 1%),
+        transparent calc((var(--cone-spread) + 15) * 1%),
+        transparent calc((100 - var(--cone-spread) - 15) * 1%),
+        black calc((100 - var(--cone-spread)) * 1%)
+      ),
+      linear-gradient(#000 0 0),
+      linear-gradient(#000 0 0);
+    mask-clip: border-box, content-box, border-box;
+    mask-composite: intersect, exclude, add;
+    -webkit-mask-composite: source-in, xor, source-over;
+    opacity: 0;
+  }
+  :is(.glow, .btn-glass, .btn-primary):hover::before {
+    opacity: calc((var(--edge-proximity) - var(--color-sensitivity)) / (100 - var(--color-sensitivity)));
+  }
+
+  /* the inner glow along the same edge */
+  :is(.glow, .btn-glass, .btn-primary)::after {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--glow-a) 90%, transparent),
+      inset 0 0 4px 0 color-mix(in srgb, var(--glow-a) 70%, transparent),
+      inset 0 0 12px 0 color-mix(in srgb, var(--glow-a) 50%, transparent),
+      inset 0 0 28px 0 color-mix(in srgb, var(--glow-b) 40%, transparent),
+      inset 0 0 56px 4px color-mix(in srgb, var(--glow-b) 26%, transparent);
+    mask-image: conic-gradient(
+      from var(--cursor-angle) at center,
+      black 2.5%,
+      transparent 14%,
+      transparent 86%,
+      black 97.5%
+    );
+  }
+  :is(.glow, .btn-glass, .btn-primary):hover::after {
+    opacity: calc((var(--edge-proximity) - var(--edge-sensitivity)) / (100 - var(--edge-sensitivity)));
+  }
+}
+
+@media (forced-colors: active) {
+  :is(.glow, .btn-glass, .btn-primary)::before,
+  :is(.glow, .btn-glass, .btn-primary)::after {
+    display: none;
+  }
+}

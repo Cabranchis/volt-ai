@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Brand } from "@/components/shell/Brand";
+import { GlowPointer } from "@/components/shell/GlowPointer";
 import { MobileNav } from "@/components/shell/MobileNav";
 import { SidebarBody } from "@/components/shell/SidebarBody";
 import { locales } from "@/lib/i18n/config";
@@ -51,6 +52,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-dvh text-ink antialiased">
+        <GlowPointer />
         <a
           href="#main"
           className="sr-only rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50"
