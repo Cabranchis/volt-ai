@@ -260,7 +260,9 @@ def polish(text: str, lang: Lang, api_key: str, model: str) -> str | None:
             contents=(
                 f"Rewrite this Colombian electricity-market briefing in {language} as one short, "
                 "neutral paragraph for energy analysts. Use only the facts and numbers given; "
-                "do not add, round or compute any figure, and do not give advice.\n\n" + text
+                "do not add, round or compute any figure, and do not give advice. Copy every "
+                "figure exactly as written, keeping its + or \N{MINUS SIGN} sign attached to the "
+                "number instead of describing the direction with words.\n\n" + text
             ),
             config=types.GenerateContentConfig(temperature=0.2, max_output_tokens=400),
         )
