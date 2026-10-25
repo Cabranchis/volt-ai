@@ -2,40 +2,74 @@
 
 **Inteligencia energética para Colombia.** VoltIA ingiere los datos públicos del mercado eléctrico nacional (XM), pronostica la demanda y el precio de bolsa con bandas de incertidumbre, detecta anomalías, explica qué mueve cada pronóstico y ofrece un analista con IA que responde preguntas con datos reales.
 
-[English](README.md) · [Requisitos](docs/requirements.md) · [Arquitectura](docs/architecture.md) · [Decisiones](docs/adr)
+**Demo en vivo: <https://voltia-xi-five.vercel.app/es>** · [English](README.md) · [Requisitos](docs/requirements.md) · [Arquitectura](docs/architecture.md) · [Ficha del modelo](docs/model-card.md) · [Decisiones](docs/adr) · [Runbook](docs/runbook.md)
 
-> **Estado:** en desarrollo. Fase 1 de 7 (andamiaje y diseño). Este README se completa con capturas, métricas y el enlace a la demo en la fase final.
+![Página de resumen](docs/img/overview.png)
 
 ## Qué hace
 
-- **Pronostica** la demanda diaria a 30 días y el precio de bolsa a 14 días, con bandas P10/P50/P90.
+- **Pronostica** la demanda diaria a 30 días y el precio de bolsa a 14 días, con bandas P10/P50/P90 calibradas.
 - **Evalúa con honestidad** mediante backtesting de origen rodante frente a baselines (estacional ingenuo y ETS) y publica los resultados aunque sean modestos.
 - **Explica** cada pronóstico con los factores SHAP en lenguaje claro.
 - **Vigila la hidrología y El Niño**: nivel de embalses, aportes y el índice ONI, que en 2026 está en +2,2.
 - **Detecta anomalías** como el confinamiento de 2020 y los años de El Niño.
-- **Responde preguntas** con un analista de IA limitado a herramientas tipadas y validadas. Nunca ejecuta SQL libre.
-- **Expone una API REST** con especificación OpenAPI.
-- **Funciona en español y en inglés.**
+- **Responde preguntas** con un analista de IA limitado a herramientas tipadas y validadas. Nunca ejecuta SQL libre y, si el modelo no está disponible, responde con resúmenes fijos.
+- **Escribe un informe diario** en los dos idiomas a partir de las cifras del día.
+- **Expone una API REST** en `/api/v1` con especificación OpenAPI.
+- **Funciona en español y en inglés**, con tema claro y oscuro.
+
+![Pronóstico de demanda, tema oscuro](docs/img/demand-dark.png)
+
+## Resultados medidos
+
+Backtesting de origen rodante, 24 orígenes, intervalos del 80 % (tablas y método completos en la [ficha del modelo](docs/model-card.md)):
+
+| Objetivo | Frente a estacional ingenuo | Frente a ETS | Cobertura P10–P90 (nominal 80 %) |
+| --- | --- | --- | --- |
+| Demanda, 30 días | MASE 54,0 % menor, gana en 21 de 24 orígenes | MASE 49,5 % menor, gana en 21 de 24 | 0,83 |
+| Precio de bolsa, 14 días | 5,2 % menor, no significativo | **ETS es 16,9 % mejor** | 0,87 (cubre de más) |
+
+El modelo de precio no supera a un suavizado exponencial simple. El sitio lo dice y presenta el pronóstico de precio como un rango calibrado, no como una mediana mejor.
 
 ## Tecnología
 
 | Capa | Tecnología |
 | --- | --- |
 | Pipeline | Python 3.12, uv, pandas, pandera, LightGBM, statsmodels, SHAP, SQLAlchemy |
-| Base de datos | PostgreSQL (plan gratuito de Neon o Supabase) |
-| Web | Next.js, TypeScript, Tailwind CSS, Apache ECharts, next-intl |
-| IA | Gemini Flash con el AI SDK de Vercel (opcional) |
-| Entrega | GitHub Actions (pipeline diario y CI) y Vercel |
+| Base de datos | PostgreSQL en Neon (plan gratuito); rol de solo lectura para la web |
+| Web | Next.js 16, TypeScript, Tailwind CSS 4, Apache ECharts |
+| IA | Gemini Flash con respaldo en Flash-Lite mediante el AI SDK de Vercel (opcional) |
+| Entrega | GitHub Actions (CI y pipeline diario) y Vercel |
 
 Todo corre en planes gratuitos.
+
+## Calidad
+
+- Pipeline: ruff, mypy y 109 tests con 96 % de cobertura, sin red en CI.
+- Web: eslint, tsc, vitest, build de producción y 62 comprobaciones de Playwright con escaneo de accesibilidad axe en ambos temas.
+- Seguridad: CSP estricta y cabeceras de seguridad, un rol de base de datos que no puede escribir (salvo la tabla de límites), verificación de Origin, tope de tamaño y límites por cliente en el chat, ningún secreto en el repositorio.
+- Reproducible: lockfiles en ambos lados y acciones fijadas por commit.
+
+## Ejecutarlo en local
+
+```bash
+# pipeline (usa SQLite si DATABASE_URL no está definida)
+cd pipeline && uv sync
+uv run voltia backfill && uv run voltia train --predict && uv run voltia anomalies && uv run voltia brief
+
+# web (usa datos de ejemplo si no hay base de datos)
+cd web && npm ci && npm run dev
+```
+
+El despliegue, los secretos y la programación diaria están en [docs/deployment.es.md](docs/deployment.es.md); qué hacer cuando algo falla, en [docs/runbook.md](docs/runbook.md).
 
 ## Estructura del repositorio
 
 ```
-pipeline/   Paquete Python: fuentes, validación, features, modelos, CLI
+pipeline/   Paquete Python: fuentes, validación, features, modelos, informe, CLI
 web/        Aplicación Next.js y API REST
 db/         Migraciones SQL versionadas
-docs/       Requisitos, arquitectura, ADRs, ficha del modelo, guía de despliegue
+docs/       Requisitos, arquitectura, ADRs, ficha del modelo, guía de despliegue, runbook
 ```
 
 ## Licencia
