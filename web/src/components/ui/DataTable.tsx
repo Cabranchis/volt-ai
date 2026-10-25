@@ -35,7 +35,7 @@ export function DataTable({
         <a
           href={csv.href}
           download
-          className="absolute right-0 top-2.5 z-10 inline-flex min-h-9 items-center gap-1.5 rounded-md border border-line bg-surface px-3 text-xs font-medium text-muted hover:border-ink hover:text-ink"
+          className="btn-glass absolute right-0 top-2.5 z-10 inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-xs font-medium text-muted hover:text-ink"
         >
           <Download aria-hidden="true" size={14} strokeWidth={2} />
           {csv.label}

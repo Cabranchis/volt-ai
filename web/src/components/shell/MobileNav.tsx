@@ -26,7 +26,7 @@ export function MobileNav({ labels, brand, children }: Props) {
         type="button"
         aria-label={labels.openMenu}
         onClick={() => dialogRef.current?.showModal()}
-        className="grid size-11 place-items-center rounded-lg border border-line bg-surface"
+        className="btn-glass grid size-11 place-items-center rounded-lg"
       >
         <Menu aria-hidden="true" size={20} strokeWidth={1.75} />
       </button>
@@ -36,7 +36,7 @@ export function MobileNav({ labels, brand, children }: Props) {
         onClick={(event) => {
           if (event.target === dialogRef.current) dialogRef.current?.close();
         }}
-        className="m-0 h-dvh max-h-none w-[min(20rem,88vw)] border-r border-line bg-surface-2 p-0 text-ink backdrop:bg-black/50"
+        className="glass-strong m-0 h-dvh max-h-none w-[min(20rem,88vw)] p-0 text-ink backdrop:bg-black/40 backdrop:backdrop-blur-sm"
       >
         <div className="flex h-full flex-col gap-6 p-4">
           <div className="flex items-center justify-between">
@@ -45,7 +45,7 @@ export function MobileNav({ labels, brand, children }: Props) {
               type="button"
               aria-label={labels.closeMenu}
               onClick={() => dialogRef.current?.close()}
-              className="grid size-11 place-items-center rounded-lg border border-line bg-surface"
+              className="btn-glass grid size-11 place-items-center rounded-lg"
             >
               <X aria-hidden="true" size={20} strokeWidth={1.75} />
             </button>

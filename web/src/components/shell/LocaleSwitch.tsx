@@ -11,7 +11,7 @@ export function LocaleSwitch({ current, label }: { current: Locale; label: strin
 
   return (
     <nav aria-label={label}>
-      <ul className="flex rounded-lg border border-line bg-surface p-0.5">
+      <ul className="glass flex rounded-lg p-0.5">
         {locales.map((locale) => (
           <li key={locale} className="flex-1">
             <Link
@@ -22,7 +22,7 @@ export function LocaleSwitch({ current, label }: { current: Locale; label: strin
               title={NAMES[locale]}
               className={[
                 "grid h-9 place-items-center rounded-md text-xs font-semibold tracking-wide",
-                locale === current ? "bg-accent text-on-accent" : "text-muted hover:text-ink",
+                locale === current ? "btn-primary" : "text-muted hover:text-ink",
               ].join(" ")}
             >
               {locale.toUpperCase()}

@@ -50,7 +50,7 @@ export function ThemeSwitch({ labels }: { labels: Dictionary["common"] }) {
   ];
 
   return (
-    <div role="radiogroup" aria-label={labels.theme} className="flex rounded-lg border border-line bg-surface p-0.5">
+    <div role="radiogroup" aria-label={labels.theme} className="glass flex rounded-lg p-0.5">
       {options.map(({ value, label, Icon }) => (
         <button
           key={value}
@@ -62,7 +62,7 @@ export function ThemeSwitch({ labels }: { labels: Dictionary["common"] }) {
           onClick={() => applyTheme(value)}
           className={[
             "grid h-9 flex-1 place-items-center rounded-md",
-            theme === value ? "bg-accent text-on-accent" : "text-muted hover:text-ink",
+            theme === value ? "btn-primary" : "text-muted hover:text-ink",
           ].join(" ")}
         >
           <Icon aria-hidden="true" size={16} strokeWidth={1.75} />

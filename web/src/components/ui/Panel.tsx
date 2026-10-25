@@ -10,13 +10,13 @@ interface Props {
   as?: "h2" | "h3";
 }
 
-/** Bordered section. Elevation is declared once, by the border (no shadow). */
+/** A frosted-glass section. Its edge and soft shadow come from the glass utility, declared once. */
 export function Panel({ title, note, actions, children, className = "", as: Heading = "h2" }: Props) {
   const id = useId();
   return (
     <section
       aria-labelledby={id}
-      className={`rounded-panel border border-line bg-surface p-5 sm:p-6 ${className}`}
+      className={`glass-strong rounded-panel p-5 sm:p-6 ${className}`}
     >
       <div className="mb-4 flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
         <div className="min-w-0">

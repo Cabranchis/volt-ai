@@ -50,7 +50,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body className="min-h-dvh bg-bg text-ink antialiased">
+      <body className="min-h-dvh text-ink antialiased">
         <a
           href="#main"
           className="sr-only rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50"
@@ -58,12 +58,12 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
           {dict.nav.skip}
         </a>
         <div className="mx-auto flex min-h-dvh max-w-[1520px]">
-          <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 border-r border-line bg-surface-2 p-4 lg:flex">
+          <aside className="glass sticky top-3 m-3 mr-0 hidden h-[calc(100dvh-1.5rem)] w-60 shrink-0 flex-col gap-6 rounded-2xl p-4 lg:flex">
             {brand}
             <SidebarBody locale={locale} dict={dict} />
           </aside>
           <div className="flex min-w-0 flex-1 flex-col">
-            <header className="flex items-center justify-between border-b border-line bg-surface-2 px-4 py-3 lg:hidden">
+            <header className="glass sticky top-0 z-30 flex items-center justify-between rounded-b-2xl px-4 py-3 lg:hidden">
               {brand}
               <MobileNav labels={dict.nav} brand={brand}>
                 <SidebarBody locale={locale} dict={dict} />

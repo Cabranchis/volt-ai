@@ -143,7 +143,7 @@ export function ChatPanel({ locale, dict }: Props) {
       <div
         aria-live="polite"
         aria-busy={busy}
-        className="flex flex-col gap-5 rounded-panel border border-line bg-surface p-5 sm:p-6"
+        className="glass-strong flex flex-col gap-5 rounded-panel p-5 sm:p-6"
       >
         {messages.length === 0 ? (
           <div className="flex flex-col gap-6">
@@ -157,7 +157,7 @@ export function ChatPanel({ locale, dict }: Props) {
                     <button
                       type="button"
                       onClick={() => void send(suggestion)}
-                      className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-line bg-surface-2 px-4 py-2.5 text-left text-sm hover:border-faint"
+                      className="btn-glass flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-4 py-2.5 text-left text-sm"
                     >
                       {suggestion}
                       <CornerDownLeft aria-hidden="true" size={14} className="shrink-0 text-faint" />
@@ -234,7 +234,7 @@ export function ChatPanel({ locale, dict }: Props) {
         <label htmlFor={inputId} className="sr-only">
           {dict.placeholder}
         </label>
-        <div className="flex items-end gap-2 rounded-panel border border-line bg-surface p-2 focus-within:border-faint">
+        <div className="glass-strong flex items-end gap-2 rounded-panel p-2 focus-within:ring-2 focus-within:ring-focus">
           <textarea
             id={inputId}
             value={input}
@@ -249,7 +249,7 @@ export function ChatPanel({ locale, dict }: Props) {
             <button
               type="button"
               onClick={() => abortRef.current?.abort()}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-line px-3.5 text-sm font-medium hover:border-faint"
+              className="btn-glass inline-flex h-10 items-center gap-2 rounded-lg px-3.5 text-sm font-medium"
             >
               <Square aria-hidden="true" size={14} />
               {dict.stop}
@@ -258,7 +258,7 @@ export function ChatPanel({ locale, dict }: Props) {
             <button
               type="submit"
               disabled={input.trim().length === 0}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent hover:brightness-95 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted"
+              className="btn-primary inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:bg-none disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
             >
               {dict.send}
               <CornerDownLeft aria-hidden="true" size={14} />

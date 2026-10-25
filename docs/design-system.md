@@ -93,3 +93,17 @@ Every interactive component defines default, hover, focus-visible, active, disab
 ## Accessibility
 
 WCAG 2.2 AA. Text contrast at least 4.5:1, large text 3:1. Full keyboard navigation, visible focus, skip link, landmarks, `lang` on the document, language switch with `hreflang` alternates. Charts expose a summary and a table; status is never colour alone.
+
+## Glass surfaces
+
+The page sits on a soft colour mesh (`body::before`: amber, indigo and blue glows built from the brand and data hues). Panels and controls are frosted glass over it. All values are tokens in `web/src/app/globals.css`, defined for light and dark.
+
+| Utility | Used for | Notes |
+| --- | --- | --- |
+| `glass-strong` | Data panels, the stat strip, the chat | More opaque (0.66 light, 0.64 dark) so charts and tables keep their contrast |
+| `glass` | Sidebar, mobile header, segmented controls | Lighter, with a 18 px blur |
+| `btn-glass` | Secondary buttons (CSV, Stop, suggestions, menu) | Lifts 1 px on hover and settles when pressed |
+| `btn-primary` | Send, selected language and theme | Amber gradient, lit top edge, soft amber shadow |
+| `seg-active` | Selected tab, range option and nav item | A raised glass chip |
+
+Fallbacks: without `backdrop-filter`, with `prefers-reduced-transparency`, or in forced-colours mode the surfaces become solid and the mesh is hidden. Hover lifts are removed under `prefers-reduced-motion`. Data colours are unchanged.
