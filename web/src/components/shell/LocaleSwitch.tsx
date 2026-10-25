@@ -21,7 +21,7 @@ export function LocaleSwitch({ current, label }: { current: Locale; label: strin
               aria-current={locale === current ? "true" : undefined}
               title={NAMES[locale]}
               className={[
-                "grid h-9 place-items-center rounded-md text-xs font-semibold tracking-wide",
+                "grid h-10 place-items-center rounded-md text-xs font-semibold tracking-wide",
                 locale === current ? "btn-primary" : "text-muted hover:text-ink",
               ].join(" ")}
             >

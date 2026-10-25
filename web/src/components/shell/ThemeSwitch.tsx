@@ -61,7 +61,7 @@ export function ThemeSwitch({ labels }: { labels: Dictionary["common"] }) {
           title={label}
           onClick={() => applyTheme(value)}
           className={[
-            "grid h-9 flex-1 place-items-center rounded-md",
+            "grid h-10 flex-1 place-items-center rounded-md",
             theme === value ? "btn-primary" : "text-muted hover:text-ink",
           ].join(" ")}
         >
