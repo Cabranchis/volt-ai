@@ -1,6 +1,6 @@
 # Model card: VoltIA demand and spot-price forecasters
 
-Backtest run `20261026T021011Z-92ab162`: the production trainer (`voltia train` code path, 2 LightGBM threads) on a snapshot of the database with data from 2018-01-01 to 2026-10-21, the last day XM had settled for both demand and price. The snapshot and the full metrics are in [`pipeline/research/results/production_backtest_2026-10-21.json`](../pipeline/research/results/production_backtest_2026-10-21.json). This run was not stored in `model_runs`; the first scheduled run after deployment stores the next one, and this card is refreshed from it (see "Reproducibility"). The previous version of this card described run `20261024T214240Z-280431a`; the experiments that led to the change are in [`model-experiments.md`](model-experiments.md).
+Last training run: `20261026T032630Z-eb8f132`, trained 2026-10-26 03:26 UTC by the scheduled workflow on data from 2018-01-01 to 2026-10-22 (the last day XM had settled for both demand and price). Every number below comes from that run's `model_runs.metrics` row, also saved in [`pipeline/research/results/stored_run_20261026.json`](../pipeline/research/results/stored_run_20261026.json). The previous version of this card described run `20261024T214240Z-280431a`, whose data ended one day earlier. The experiments behind the changes are in [`model-experiments.md`](model-experiments.md).
 
 **This is a portfolio project. The forecasts are not suitable for trading, bidding, hedging or any operational or financial decision.**
 
@@ -122,13 +122,13 @@ The price model lost to ETS, so a second round looked for information the first 
 - **What did not help.** Statistical models from `statsforecast` (AutoETS, AutoARIMA, AutoTheta, MSTL) matched ETS (MASE 1.80 to 1.89). Ridge with residual quantiles reached 1.63, a quantile random forest 1.61, CatBoost 1.53. The Chronos-2 foundation model, zero-shot on the price alone, reached 1.66; with covariates it was worse (1.81), fine-tuned it was much worse (2.26). N-HiTS reached 2.13. Averaging Chronos-2 with the tree models did not improve them.
 - **Finalists** were fixed before looking at the reported origins: LightGBM and XGBoost on the same features, and their average. Each ran once on the reported origins (the harness refuses a second run). LightGBM with default parameters was kept because the three were statistically tied and it needs no new dependency.
 - **Demand**: the only change that beat the production model on the development origins with a paired interval that excludes zero was the 7-day-mean reference (MASE 0.686 against 0.748, wins at 28 of 37 origins). On the reported origins it is better by a smaller margin (0.706 against 0.722 in the same harness).
-- **On the reported origins** the price improvement is smaller than on the development origins, because the reported period holds the 2023-24 El Niño regime and the 2024 spikes, where dispatch cost says little about next week's price. The new model's MASE is 11 % lower than the previous one's but still not better than ETS overall (see Results).
+- **On the reported origins** the price improvement is smaller than on the development origins, because the reported period holds the 2023-24 El Niño regime and the 2024 spikes, where dispatch cost says little about next week's price. On the research snapshot, with the previous model and the new one run on identical origins (2023-11-21 to 2026-09-21), the price MASE fell from 2.02 to 1.80 (-11 %) and stayed above ETS (1.73); the demand MASE went from 0.722 to 0.706. On the stored run of 2026-10-26, whose origins are one day later, the new price model has MASE 1.48 against 1.54 for ETS, not a significant difference. A one-day shift of the 24 origins moves ETS alone by about 0.2 MASE, so read the price model as level with ETS overall and clearly better over the first week.
 - **Probability of a price spike.** A dedicated LightGBM classifier did not beat simpler readings on the reported origins and is not shipped. Reading P(price > threshold) from the forecast's own P10, P50 and P90 as a log-normal beat ETS and persistence for "above 500 COP/kWh" and for "1.3 times the last 30-day mean" in both periods (Brier 0.087 and 0.144 on the reported origins against 0.113 and 0.174 for ETS); above 800 COP/kWh it did not, so that threshold is not offered. The reported-origin figures for this reading were computed after seeing the development result, so they are post hoc.
 - **Monthly price outlook.** The mean price of the next three 30-day windows was tried with persistence, a seasonal ratio, ridge, a regularised LightGBM and an analog method. None beat persistence with a paired interval that excludes zero on the development origins, and on the reported origins the errors reached 30 to 85 %. No monthly outlook is published.
 
 ## Backtest protocol
 
-- **Origins**: rolling origin with an expanding window, retraining at every origin. 24 reported origins, 45 days apart, from 2023-11-21 to 2026-09-21, so they cover the 2023-24 El Niño price regime and the 2024 price spikes.
+- **Origins**: rolling origin with an expanding window, retraining at every origin. 24 reported origins, 45 days apart, from 2023-11-22 to 2026-09-22 in the run above (2023-11-21 to 2026-09-21 in the previous one), so they cover the 2023-24 El Niño price regime and the 2024 price spikes.
   - The last origin leaves 30 observed days after it.
   - 8 earlier origins (2022-11-26 to 2023-10-07) are run only to seed the interval calibration and are excluded from every metric.
 - **Baselines**, computed at the same origins:
@@ -148,64 +148,64 @@ The price model lost to ETS, so a second round looked for information the first 
 
 | Method | MAPE % | sMAPE % | MASE | Pinball P10 | Pinball P50 | Pinball P90 | P10-P90 coverage | Below P10 | Above P90 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **LightGBM + CQR** | 1.73 | 1.73 | 0.707 | 1.04e6 | 2.00e6 | 9.16e5 | 0.83 | 0.11 | 0.07 |
-| LightGBM, raw intervals | 1.73 | 1.73 | 0.707 | 1.03e6 | 2.00e6 | 1.05e6 | 0.60 | 0.16 | 0.24 |
-| Seasonal naive | 3.83 | 3.91 | 1.560 | 2.03e6 | 4.41e6 | 2.83e6 | 0.75 | 0.07 | 0.17 |
-| ETS | 3.52 | 3.54 | 1.423 | 2.30e6 | 4.03e6 | 2.03e6 | 0.88 | 0.04 | 0.08 |
+| **LightGBM + CQR** | 1.78 | 1.78 | 0.725 | 1.06e6 | 2.05e6 | 9.60e5 | 0.82 | 0.11 | 0.07 |
+| LightGBM, raw intervals | 1.78 | 1.78 | 0.725 | 1.09e6 | 2.05e6 | 1.08e6 | 0.59 | 0.17 | 0.25 |
+| Seasonal naive | 3.69 | 3.75 | 1.498 | 2.00e6 | 4.24e6 | 2.71e6 | 0.76 | 0.08 | 0.16 |
+| ETS | 3.32 | 3.34 | 1.340 | 2.28e6 | 3.79e6 | 1.92e6 | 0.89 | 0.04 | 0.06 |
 
 | Horizon | MASE model | MASE seasonal naive | MASE ETS | MAPE model | MAPE seasonal naive | MAPE ETS | Coverage raw | Coverage CQR | Coverage seasonal naive | Coverage ETS |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1-7 | 0.708 | 1.266 | 1.233 | 1.75 | 3.16 | 3.11 | 0.60 | 0.80 | 0.75 | 0.80 |
-| 8-14 | 0.636 | 1.501 | 1.240 | 1.54 | 3.69 | 3.06 | 0.68 | 0.85 | 0.79 | 0.90 |
-| 15-30 | 0.737 | 1.715 | 1.585 | 1.80 | 4.19 | 3.90 | 0.57 | 0.83 | 0.73 | 0.90 |
+| 1-7 | 0.709 | 1.208 | 1.129 | 1.76 | 3.03 | 2.85 | 0.58 | 0.82 | 0.76 | 0.83 |
+| 8-14 | 0.565 | 1.407 | 1.171 | 1.37 | 3.46 | 2.89 | 0.69 | 0.85 | 0.81 | 0.91 |
+| 15-30 | 0.801 | 1.666 | 1.506 | 1.96 | 4.07 | 3.71 | 0.54 | 0.81 | 0.74 | 0.91 |
 
 Pinball loss is in kWh.
 
 Verdicts:
 
-- **The model beats seasonal naive on MASE by 54.7 % (it wins 22 of 24 origins, Wilcoxon p < 0.001, significant) and beats ETS on MASE by 50.3 % (it wins 20 of 24 origins, Wilcoxon p < 0.001, significant).**
+- **The model beats seasonal naive on MASE by 51.6 % (it wins 22 of 24 origins, Wilcoxon p < 0.001, significant) and beats ETS on MASE by 45.9 % (it wins 23 of 24 origins, Wilcoxon p < 0.001, significant).**
   - It has the lowest MASE in every horizon bucket.
   - Per individual horizon it has the lowest MASE at 30 of 30 horizons.
-- **Calibration lifts P10-P90 coverage from 0.60 (raw) to 0.83** (nominal 0.80); the tails are 11% below P10 and 7% above P90. The P90 pinball loss goes from 1.05e+06 (raw) to 9.16e+05.
-- The weakest origins are 2024-04-04 (MASE 1.23, coverage 0.90), 2024-01-05 (MASE 1.11, coverage 0.50), 2026-09-21 (MASE 1.09, coverage 0.37).
+- **Calibration lifts P10-P90 coverage from 0.59 (raw) to 0.82** (nominal 0.80); the tails are 11% below P10 and 7% above P90. The P90 pinball loss goes from 1.08e+06 (raw) to 9.6e+05.
+- The weakest origins are 2024-01-06 (MASE 1.36, coverage 0.40), 2026-09-22 (MASE 1.30, coverage 0.43), 2024-05-20 (MASE 1.22, coverage 0.37).
   - Coverage per origin ranges from 0.37 to 1.00.
 
 ### Spot price (daily mean), horizons 1 to 14 days (336 forecasts)
 
 | Method | MAPE % | sMAPE % | MASE | Pinball P10 | Pinball P50 | Pinball P90 | P10-P90 coverage | Below P10 | Above P90 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| LightGBM + CQR | 29.73 | 27.36 | 1.798 | 23.4 | 64.1 | 47.9 | 0.90 | 0.06 | 0.04 |
-| LightGBM, raw intervals | 29.73 | 27.36 | 1.798 | 23.6 | 64.1 | 38.8 | 0.61 | 0.19 | 0.20 |
-| Seasonal naive | 37.09 | 34.66 | 2.131 | 26.4 | 76.9 | 49.5 | 0.77 | 0.08 | 0.15 |
-| **ETS** | 31.05 | 30.16 | 1.729 | 25.5 | 62.4 | 47.4 | 0.78 | 0.10 | 0.12 |
+| **LightGBM + CQR** | 25.74 | 24.06 | 1.477 | 20.9 | 53.5 | 50.7 | 0.89 | 0.06 | 0.05 |
+| LightGBM, raw intervals | 25.74 | 24.06 | 1.477 | 19.0 | 53.5 | 32.3 | 0.66 | 0.15 | 0.19 |
+| Seasonal naive | 35.76 | 33.76 | 2.039 | 25.3 | 73.9 | 47.8 | 0.79 | 0.08 | 0.14 |
+| ETS | 27.42 | 26.95 | 1.543 | 23.1 | 56.1 | 41.8 | 0.82 | 0.07 | 0.11 |
 
 | Horizon | MASE model | MASE seasonal naive | MASE ETS | MAPE model | MAPE seasonal naive | MAPE ETS | Coverage raw | Coverage CQR | Coverage seasonal naive | Coverage ETS |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1-3 | 0.971 | 1.935 | 1.206 | 15.30 | 32.85 | 21.70 | 0.72 | 0.88 | 0.78 | 0.74 |
-| 4-7 | 1.634 | 1.869 | 1.657 | 25.88 | 31.39 | 28.55 | 0.64 | 0.90 | 0.77 | 0.77 |
-| 8-14 | 2.247 | 2.365 | 1.995 | 38.12 | 42.16 | 36.49 | 0.54 | 0.91 | 0.77 | 0.80 |
+| 1-3 | 0.904 | 1.916 | 1.053 | 13.62 | 29.91 | 16.58 | 0.74 | 0.83 | 0.78 | 0.78 |
+| 4-7 | 1.411 | 1.782 | 1.374 | 24.07 | 31.21 | 25.58 | 0.67 | 0.91 | 0.79 | 0.80 |
+| 8-14 | 1.760 | 2.238 | 1.850 | 31.90 | 40.87 | 33.12 | 0.62 | 0.91 | 0.79 | 0.85 |
 
 Pinball loss is in COP/kWh.
 
 Verdicts:
 
-- **The model beats seasonal naive on MASE by 15.6 % (it wins 18 of 24 origins, Wilcoxon p = 0.007, significant) and does not beat ETS: its MASE is 4.0 % higher (it wins 15 of 24 origins, Wilcoxon p = 0.456, not significant).**
-  - It does not have the lowest MASE in the horizon buckets 8-14 days.
-  - Per individual horizon it has the lowest MASE at 5 of 14 horizons.
-- **Calibration lifts P10-P90 coverage from 0.61 (raw) to 0.90** (nominal 0.80); the tails are 6% below P10 and 4% above P90. The P90 pinball loss goes from 38.8 (raw) to 47.9.
-- The weakest origins are 2024-10-01 (MASE 7.82, coverage 0.79), 2026-05-09 (MASE 4.61, coverage 0.21), 2024-01-05 (MASE 3.62, coverage 1.00).
-  - Coverage per origin ranges from 0.21 to 1.00.
+- **The model beats seasonal naive on MASE by 27.5 % (it wins 19 of 24 origins, Wilcoxon p < 0.001, significant) and beats ETS on MASE by 4.3 % (it wins 14 of 24 origins, Wilcoxon p = 0.360, not significant).**
+  - It does not have the lowest MASE in the horizon buckets 4-7 days.
+  - Per individual horizon it has the lowest MASE at 8 of 14 horizons.
+- **Calibration lifts P10-P90 coverage from 0.66 (raw) to 0.89** (nominal 0.80); the tails are 6% below P10 and 5% above P90. The P90 pinball loss goes from 32.3 (raw) to 50.7.
+- The weakest origins are 2024-10-02 (MASE 4.96, coverage 1.00), 2026-05-10 (MASE 4.03, coverage 0.14), 2024-11-16 (MASE 3.68, coverage 0.93).
+  - Coverage per origin ranges from 0.14 to 1.00.
 
 ### Change against the previous run
 
-The previous run's figures are those published in the earlier version of this card. Buckets are 1-7, 8-14 and 15-30 days for demand and 1-3, 4-7 and 8-14 days for price.
+The previous run's figures are those published in the earlier version of this card; its 24 origins ended one day earlier, so the two sets are not identical, and a one-day shift moves the price MASE of ETS alone by about 0.2. On identical origins the research harness measured 2.02 to 1.80 for the price and 0.722 to 0.706 for the demand. Buckets are 1-7, 8-14 and 15-30 days for demand and 1-3, 4-7 and 8-14 days for price.
 
 | Target | | MAPE % | MASE | P10-P90 coverage | MASE by horizon bucket |
 | --- | --- | --- | --- | --- | --- |
 | Demand | previous run | 1.76 | 0.718 | 0.83 | 0.680 / 0.643 / 0.768 |
-| Demand | this run | 1.73 | 0.707 | 0.83 | 0.708 / 0.636 / 0.737 |
+| Demand | this run | 1.78 | 0.725 | 0.82 | 0.709 / 0.565 / 0.801 |
 | Spot price | previous run | 34.75 | 2.021 | 0.87 | 1.270 / 1.917 / 2.403 |
-| Spot price | this run | 29.73 | 1.798 | 0.90 | 0.971 / 1.634 / 2.247 |
+| Spot price | this run | 25.74 | 1.477 | 0.89 | 0.904 / 1.411 / 1.760 |
 
 ## Anomaly detection (FR-09)
 

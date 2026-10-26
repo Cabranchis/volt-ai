@@ -159,7 +159,7 @@ def section(metrics: dict[str, Any]) -> str:
         "",
         "### Change against the previous run",
         "",
-        "The previous run's figures are those published in the earlier version of this card. Buckets are 1-7, 8-14 and 15-30 days for demand and 1-3, 4-7 and 8-14 days for price.",
+        "The previous run's figures are those published in the earlier version of this card; its 24 origins ended one day earlier, so the two sets are not identical, and a one-day shift moves the price MASE of ETS alone by about 0.2. On identical origins the research harness measured 2.02 to 1.80 for the price and 0.722 to 0.706 for the demand. Buckets are 1-7, 8-14 and 15-30 days for demand and 1-3, 4-7 and 8-14 days for price.",
         "",
         *change_table(d, p),
         "",
