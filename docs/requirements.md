@@ -1,6 +1,6 @@
 # Requirements
 
-VoltIA turns the public data of Colombia's electricity market (XM) into forecasts, anomaly detection and an AI analyst. This document is the source of truth for scope. Every requirement has an ID that tests and pull requests can reference.
+Volt-AI turns the public data of Colombia's electricity market (XM) into forecasts, anomaly detection and an AI analyst. This document is the source of truth for scope. Every requirement has an ID that tests and pull requests can reference.
 
 ## 1. Actors
 

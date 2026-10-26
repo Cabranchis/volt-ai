@@ -26,7 +26,7 @@ from voltia.sources.oni import OniClient
 from voltia.sources.openmeteo import OpenMeteoClient
 from voltia.sources.xm import XMClient
 
-app = typer.Typer(help="VoltIA data pipeline", no_args_is_help=True, add_completion=False)
+app = typer.Typer(help="Volt-AI data pipeline", no_args_is_help=True, add_completion=False)
 log = structlog.get_logger()
 
 BOGOTA = ZoneInfo("America/Bogota")

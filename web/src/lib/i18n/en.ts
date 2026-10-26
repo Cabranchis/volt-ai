@@ -1,6 +1,6 @@
 export const en = {
   app: {
-    name: "VoltIA",
+    name: "Volt-AI",
     tagline: "Energy intelligence for Colombia",
     description:
       "Forecasts for electricity demand and spot price in Colombia, with uncertainty, explanations and an AI analyst. Built on open data from XM.",
@@ -249,7 +249,7 @@ export const en = {
       "What the forecasts are built from, how they were tested and where they fail. The numbers below come from the latest training run.",
     live: {
       title: "Live track record",
-      note: "Every day VoltIA stores its forecast before the outcome is known and never changes it afterwards. Here they are compared with what happened.",
+      note: "Every day Volt-AI stores its forecast before the outcome is known and never changes it afterwards. Here they are compared with what happened.",
       empty:
         "There are no forecasts with a known outcome yet. XM settles the price about three days late, so the record starts filling in a few days and grows every day.",
       summary: "{n} forecasts scored, for days between {first} and {last}. Another {pending} are waiting for XM to settle the day.",
@@ -275,7 +275,7 @@ export const en = {
     targetDemand: "Demand",
     targetPrice: "Spot price",
     model: "Method",
-    rowModel: "VoltIA model",
+    rowModel: "Volt-AI model",
     mase: "MASE",
     mape: "MAPE",
     coverage: "P10–P90 coverage",
@@ -340,11 +340,11 @@ export const en = {
     analystSaid: "Analyst",
   },
   about: {
-    title: "About VoltIA",
+    title: "About Volt-AI",
     description:
       "A portfolio project that turns Colombia's open electricity data into forecasts, explanations and answers.",
     whatTitle: "What it is",
-    what: "VoltIA reads the public data of the national power market every day, trains forecasting models, checks them honestly against the past and publishes the results here. An AI analyst answers questions using only validated lookups.",
+    what: "Volt-AI reads the public data of the national power market every day, trains forecasting models, checks them honestly against the past and publishes the results here. An AI analyst answers questions using only validated lookups.",
     howTitle: "How it works",
     pipeline: "Daily pipeline",
     pipelineBody: "Python on GitHub Actions: fetch, validate, train, forecast, brief.",
@@ -408,7 +408,7 @@ export const en = {
       "The price model beats both references in the first days and is level with ETS beyond a week. The method and the detailed comparison, with its intervals, are on the Models page.",
     trackTitle: "Check it yourself",
     trackBody:
-      "Each day VoltIA stores its forecast before the outcome is published. Once XM settles the day, the Models page compares them with what happened, including the cases where the forecast was worse than a simple reference.",
+      "Each day Volt-AI stores its forecast before the outcome is published. Once XM settles the day, the Models page compares them with what happened, including the cases where the forecast was worse than a simple reference.",
     trackCta: "See the live record",
     limitsTitle: "What it does not do",
     limits: [

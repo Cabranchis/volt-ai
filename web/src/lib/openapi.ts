@@ -12,7 +12,7 @@ const problemResponse = (description: string) => ({
 export const openApiDocument = {
   openapi: "3.1.0",
   info: {
-    title: "VoltIA API",
+    title: "Volt-AI API",
     version: "1.0.0",
     description:
       "Read-only access to Colombian power-system series, forecasts and anomalies built from XM open data. Responses are cached for an hour.",

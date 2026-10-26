@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * VoltIA design tokens. See docs/design-system.md.
+ * Volt-AI design tokens. See docs/design-system.md.
  * Light is the default; dark follows the OS unless the visitor chose a theme (data-theme).
  * Chart colours are validated sets (docs/design-system.md, "Data colours").
  */

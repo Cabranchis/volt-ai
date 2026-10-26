@@ -1,6 +1,6 @@
-# VoltIA
+# Volt-AI
 
-**Energy intelligence for Colombia.** VoltIA ingests the public data of the national power market (XM), forecasts electricity demand and spot price with uncertainty bands, detects anomalies, explains what drives each forecast and offers an AI analyst that answers questions using real data.
+**Energy intelligence for Colombia.** Volt-AI ingests the public data of the national power market (XM), forecasts electricity demand and spot price with uncertainty bands, detects anomalies, explains what drives each forecast and offers an AI analyst that answers questions using real data.
 
 **Live demo: <https://voltia-xi-five.vercel.app/en>** · [Español](README.es.md) · [Requirements](docs/requirements.md) · [Architecture](docs/architecture.md) · [Model card](docs/model-card.md) · [Decisions](docs/adr) · [Runbook](docs/runbook.md)
 

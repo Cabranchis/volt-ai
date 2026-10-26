@@ -9,7 +9,7 @@ Todo corre en planes gratuitos. Cuatro pasos dependen de ti porque usan tus cuen
 | Vercel (Hobby) | La aplicación web | Gratis para proyectos personales | Inicia sesión con tu cuenta de GitHub |
 | Google AI Studio | Clave de Gemini para el analista | Plan gratuito | Opcional: sin ella el analista responde con resúmenes fijos |
 
-Los límites de cada proveedor cambian, así que revisa los vigentes antes de depender de ellos. Lo que usa VoltIA, medido con los datos reales en octubre de 2026:
+Los límites de cada proveedor cambian, así que revisa los vigentes antes de depender de ellos. Lo que usa Volt-AI, medido con los datos reales en octubre de 2026:
 
 - **Tamaño de la base**: toda la historia desde 2018 (54 789 filas diarias y 4 224 horarias) ocupa 5,6 MB en SQLite. En PostgreSQL súmale los índices: calcula de 15 a 25 MB. El objetivo de diseño es menos de 500 MB.
 - **Tiempo del pipeline**: la actualización diaria dura cerca de un minuto. El primer backfill tarda unos 10 minutos, sobre todo por las descargas de generación por planta.

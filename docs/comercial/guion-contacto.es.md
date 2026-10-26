@@ -2,7 +2,7 @@
 
 Para Miguel. Sirve para tener entre 8 y 10 conversaciones de unos 20 minutos con quien compra o vende energía en Colombia. No es un guion de venta: el objetivo de las primeras conversaciones es aprender si el producto le sirve a alguien y qué le falta. Si de ahí sale un piloto o un trabajo, mejor.
 
-Material que usas: la página <https://voltia-xi-five.vercel.app/es/business> (tiene la tabla de precisión), el informe de ejemplo (`/informe-ejemplo-voltia.pdf`) y la página de Modelos, donde están el método, la comparación detallada y el historial de aciertos.
+Material que usas: la página <https://voltia-xi-five.vercel.app/es/business> (tiene la tabla de precisión), el informe de ejemplo (`/informe-ejemplo-volt-ai.pdf`) y la página de Modelos, donde están el método, la comparación detallada y el historial de aciertos.
 
 ## Antes de escribir a nadie
 
@@ -31,7 +31,7 @@ Empieza por los consultores y por las empresas medianas: contestan más y no tie
 
 > Hola [nombre],
 >
-> Soy Miguel Angel, desarrollador de datos e IA. Construí VoltIA, un sistema que pronostica cada día la demanda y el precio de bolsa de Colombia con su rango de incertidumbre, y que guarda cada pronóstico tal como lo emitió para poder evaluarlo en público. Los datos son de XM.
+> Soy Miguel Angel, desarrollador de datos e IA. Construí Volt-AI, un sistema que pronostica cada día la demanda y el precio de bolsa de Colombia con su rango de incertidumbre, y que guarda cada pronóstico tal como lo emitió para poder evaluarlo en público. Los datos son de XM.
 >
 > No le escribo para venderle algo todavía: quiero saber si esto le serviría a quien decide compras en [empresa] y qué le faltaría. ¿Tendría 20 minutos esta semana o la próxima? Le dejo un informe de ejemplo con datos reales y la página donde se ve el historial de aciertos, incluidos los casos en que el modelo no gana: <https://voltia-xi-five.vercel.app/es/business>
 >
@@ -63,7 +63,7 @@ Empieza por los consultores y por las empresas medianas: contestan más y no tie
 
 | Dicen | Respondes |
 | --- | --- |
-| "Ya tenemos modelo propio." | "Perfecto. Entonces VoltIA sirve como segunda opinión: le muestro dónde coincidimos y dónde no. Y el historial público permite comparar sin confiar en mi palabra." |
+| "Ya tenemos modelo propio." | "Perfecto. Entonces Volt-AI sirve como segunda opinión: le muestro dónde coincidimos y dónde no. Y el historial público permite comparar sin confiar en mi palabra." |
 | "¿Qué tan preciso es?" | Las cifras de la página de Modelos del día. Subraya que la precisión del precio es buena en los primeros 3 días y a la par de un modelo simple pasada una semana. |
 | "El precio sube por decisiones que nadie ve venir." | "Tiene razón: no anticipa racionamientos ni cambios regulatorios, y lo dice el sitio. Lo que sí hace es medir el rango y la probabilidad de picos con lo que se sabe." |
 | "¿Cuánto cuesta?" | "Todavía no tengo una tarifa. Depende de qué necesite: un informe semanal, acceso a la API o un pronóstico adaptado a su portafolio. Primero quiero entender su caso." No inventes un precio en la llamada. |

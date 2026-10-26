@@ -5,7 +5,7 @@ Run from the repository root:
     uv run --no-project --with reportlab --with matplotlib python tools/build_sample_report.py
 
 Reads web/src/lib/data/fixtures/ (export them first with tools/export_fixtures.py) and writes
-web/public/informe-ejemplo-voltia.pdf. Every figure comes from the fixtures; the text only frames
+web/public/informe-ejemplo-volt-ai.pdf. Every figure comes from the fixtures; the text only frames
 them. The probability of a price spike reads the forecast's own P10, P50 and P90 as a log-normal,
 the same rule as web/src/lib/spikes.ts.
 """
@@ -31,7 +31,7 @@ from reportlab.platypus import Image, KeepTogether, Paragraph, SimpleDocTemplate
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "web" / "src" / "lib" / "data" / "fixtures"
-OUT = ROOT / "web" / "public" / "informe-ejemplo-voltia.pdf"
+OUT = ROOT / "web" / "public" / "informe-ejemplo-volt-ai.pdf"
 SITE = "https://voltia-xi-five.vercel.app/es"
 CONTACT = "miguelangel.14130@gmail.com"
 
@@ -205,7 +205,7 @@ def main() -> None:
         return t
 
     story: list = [
-        Paragraph("VoltIA · Informe de ejemplo", h1),
+        Paragraph("Volt-AI · Informe de ejemplo", h1),
         Paragraph(
             f"Mercado eléctrico colombiano. Pronóstico emitido el {day_label(issued)}; en los datos públicos de XM, precio completo hasta el {day_label(p_day)} y demanda completa hasta el {day_label(d_day)}. "
             "Ejemplo con datos reales: así se vería un resumen semanal.",
@@ -265,7 +265,7 @@ def main() -> None:
             ]
         )
 
-    bucket_rows = [["Pronóstico", "VoltIA", "Estacional ingenuo", "ETS"]]
+    bucket_rows = [["Pronóstico", "Volt-AI", "Estacional ingenuo", "ETS"]]
     metrics = run["metrics"]["targets"]
     d = metrics["demand_kwh"]["overall"]
     bucket_rows.append(["Demanda, 1 a 30 días", f"{num(d['model']['mape'], 1)} %", f"{num(d['seasonal_naive']['mape'], 1)} %", f"{num(d['ets']['mape'], 1)} %"])
@@ -318,7 +318,7 @@ def main() -> None:
         canvas.line(1.8 * cm, A4[1] - 1.2 * cm, 4.2 * cm, A4[1] - 1.2 * cm)
         canvas.setFont("Helvetica", 7.5)
         canvas.setFillColor(MUTED)
-        canvas.drawString(1.8 * cm, 1.1 * cm, "VoltIA · informe de ejemplo con datos reales · no es una recomendación de inversión")
+        canvas.drawString(1.8 * cm, 1.1 * cm, "Volt-AI · informe de ejemplo con datos reales · no es una recomendación de inversión")
         canvas.drawRightString(A4[0] - 1.8 * cm, 1.1 * cm, f"Página {doc.page}")
         canvas.restoreState()
 
@@ -329,7 +329,7 @@ def main() -> None:
         rightMargin=1.8 * cm,
         topMargin=1.7 * cm,
         bottomMargin=1.7 * cm,
-        title="VoltIA, informe de ejemplo",
+        title="Volt-AI, informe de ejemplo",
         author="Miguel Angel",
         subject="Pronóstico de demanda y precio de bolsa de la electricidad en Colombia",
     )

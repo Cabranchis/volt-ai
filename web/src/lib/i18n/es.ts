@@ -2,7 +2,7 @@ import type { Dictionary } from "./en";
 
 export const es: Dictionary = {
   app: {
-    name: "VoltIA",
+    name: "Volt-AI",
     tagline: "Inteligencia energética para Colombia",
     description:
       "Pronósticos de demanda y precio de bolsa de la electricidad en Colombia, con incertidumbre, explicaciones y un analista de IA. Construido con datos abiertos de XM.",
@@ -251,7 +251,7 @@ export const es: Dictionary = {
       "Con qué se construyen los pronósticos, cómo se probaron y dónde fallan. Las cifras de abajo salen de la última corrida de entrenamiento.",
     live: {
       title: "Registro en vivo de aciertos",
-      note: "Cada día VoltIA guarda su pronóstico antes de conocer el resultado y no lo modifica después. Aquí se comparan con lo que pasó.",
+      note: "Cada día Volt-AI guarda su pronóstico antes de conocer el resultado y no lo modifica después. Aquí se comparan con lo que pasó.",
       empty:
         "Todavía no hay pronósticos con resultado conocido. XM liquida el precio unos tres días tarde, así que el registro empieza a llenarse en pocos días y crece cada día.",
       summary: "{n} pronósticos evaluados, de días entre el {first} y el {last}. Otros {pending} esperan a que XM liquide el día.",
@@ -277,7 +277,7 @@ export const es: Dictionary = {
     targetDemand: "Demanda",
     targetPrice: "Precio de bolsa",
     model: "Método",
-    rowModel: "Modelo VoltIA",
+    rowModel: "Modelo Volt-AI",
     mase: "MASE",
     mape: "MAPE",
     coverage: "Cobertura P10–P90",
@@ -342,11 +342,11 @@ export const es: Dictionary = {
     analystSaid: "Analista",
   },
   about: {
-    title: "Acerca de VoltIA",
+    title: "Acerca de Volt-AI",
     description:
       "Un proyecto de portafolio que convierte los datos abiertos de electricidad de Colombia en pronósticos, explicaciones y respuestas.",
     whatTitle: "Qué es",
-    what: "VoltIA lee cada día los datos públicos del mercado eléctrico nacional, entrena modelos de pronóstico, los compara con honestidad contra el pasado y publica los resultados aquí. Un analista de IA responde preguntas usando solo consultas validadas.",
+    what: "Volt-AI lee cada día los datos públicos del mercado eléctrico nacional, entrena modelos de pronóstico, los compara con honestidad contra el pasado y publica los resultados aquí. Un analista de IA responde preguntas usando solo consultas validadas.",
     howTitle: "Cómo funciona",
     pipeline: "Pipeline diario",
     pipelineBody: "Python en GitHub Actions: descarga, valida, entrena, pronostica y resume.",
@@ -410,7 +410,7 @@ export const es: Dictionary = {
       "El modelo de precio supera a las dos referencias en los primeros días y queda a la par con ETS pasada una semana. El método y la comparación detallada, con sus intervalos, están en la página de Modelos.",
     trackTitle: "Compruébalo tú",
     trackBody:
-      "Cada día VoltIA guarda su pronóstico antes de que se publique el resultado. Cuando XM liquida el día, la página de Modelos los compara con lo que pasó, incluidos los casos en que el pronóstico fue peor que una referencia simple.",
+      "Cada día Volt-AI guarda su pronóstico antes de que se publique el resultado. Cuando XM liquida el día, la página de Modelos los compara con lo que pasó, incluidos los casos en que el pronóstico fue peor que una referencia simple.",
     trackCta: "Ver el historial en vivo",
     limitsTitle: "Qué no hace",
     limits: [

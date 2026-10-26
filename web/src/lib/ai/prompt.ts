@@ -11,7 +11,7 @@ export const MAX_STEPS = 4;
  */
 export function systemPrompt(locale: Locale, today: string): string {
   const language = locale === "es" ? "Spanish" : "English";
-  return `You are the analyst of VoltIA, a dashboard about Colombia's electricity system built on open data from XM.
+  return `You are the analyst of Volt-AI, a dashboard about Colombia's electricity system built on open data from XM.
 Today is ${today} (Colombia). Answer in ${language}, in at most about 150 words, in plain prose without tables.
 
 Rules:

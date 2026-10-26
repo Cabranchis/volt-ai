@@ -3,7 +3,7 @@
 Status: accepted (2026-10-24)
 
 ## Context
-Next.js documents a strict Content Security Policy with a per-request nonce set in `proxy.ts`. A nonce must be unique per request, so every page would have to be rendered dynamically on each request. VoltIA relies on prerendered pages with cached data (requirement NFR-02, first paint under 2.5 s, on a free hosting tier).
+Next.js documents a strict Content Security Policy with a per-request nonce set in `proxy.ts`. A nonce must be unique per request, so every page would have to be rendered dynamically on each request. Volt-AI relies on prerendered pages with cached data (requirement NFR-02, first paint under 2.5 s, on a free hosting tier).
 
 ## Decision
 Send a static CSP and the related headers from `next.config.ts`:

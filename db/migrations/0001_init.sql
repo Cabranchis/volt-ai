@@ -1,4 +1,4 @@
--- VoltIA schema. Portable between PostgreSQL (production) and SQLite (tests, local dev).
+-- Volt-AI schema. Portable between PostgreSQL (production) and SQLite (tests, local dev).
 -- Rules: no provider-specific features here; PostgreSQL-only statements go in *.pg.sql files.
 
 -- Daily values in long format. Series names are listed in docs/data-dictionary.md.

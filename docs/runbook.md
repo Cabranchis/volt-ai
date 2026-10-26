@@ -1,6 +1,6 @@
 # Runbook
 
-What to check and do when VoltIA misbehaves. Every command runs from `pipeline/` unless noted, with `DATABASE_URL` set to the owner URL (in `pipeline/.env` locally, a secret in GitHub Actions).
+What to check and do when Volt-AI misbehaves. Every command runs from `pipeline/` unless noted, with `DATABASE_URL` set to the owner URL (in `pipeline/.env` locally, a secret in GitHub Actions).
 
 ## Quick health check
 

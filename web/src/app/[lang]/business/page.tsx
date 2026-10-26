@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: dict.business.title, description: dict.business.description };
 }
 
-const SAMPLE_REPORT = "/informe-ejemplo-voltia.pdf";
+const SAMPLE_REPORT = "/informe-ejemplo-volt-ai.pdf";
 
 interface ErrorRow {
   label: string;

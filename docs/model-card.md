@@ -1,4 +1,4 @@
-# Model card: VoltIA demand and spot-price forecasters
+# Model card: Volt-AI demand and spot-price forecasters
 
 Last training run: `20261026T145436Z-d78e8d1`, trained 2026-10-26 14:54 UTC on data from 2018-01-01 to 2026-10-23 (the last day with a complete price in XM's public data). The results and the backtest protocol below come from that run's `model_runs.metrics` row, also saved in [`pipeline/research/results/calendar_backtest_2026-10-26.json`](../pipeline/research/results/calendar_backtest_2026-10-26.json); the sections on how the design was chosen quote earlier runs and say so. The previous version of this card described run `20261024T214240Z-280431a`, whose data ended one day earlier. The experiments behind the changes are in [`model-experiments.md`](model-experiments.md).
 
@@ -6,7 +6,7 @@ Last training run: `20261026T145436Z-d78e8d1`, trained 2026-10-26 14:54 UTC on d
 
 ## Intended use
 
-- Show, on the VoltIA site, where daily national electricity demand (next 30 days) and the daily mean spot price (next 14 days) are likely to go, with an 80 % interval (P10 to P90) and the main drivers of each forecast.
+- Show, on the Volt-AI site, where daily national electricity demand (next 30 days) and the daily mean spot price (next 14 days) are likely to go, with an 80 % interval (P10 to P90) and the main drivers of each forecast.
 - Explain the method and its measured accuracy to a technical reader, including where it fails.
 - Support a person who decides on energy purchases or consumption, next to the forecast's interval and the limits listed in this card.
 

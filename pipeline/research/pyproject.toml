@@ -1,7 +1,7 @@
 [project]
 name = "voltia-research"
 version = "0.0.0"
-description = "Model experiments for VoltIA. Not part of the daily pipeline or CI."
+description = "Model experiments for Volt-AI. Not part of the daily pipeline or CI."
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "voltia-pipeline",

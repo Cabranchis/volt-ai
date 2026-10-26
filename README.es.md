@@ -1,6 +1,6 @@
-# VoltIA
+# Volt-AI
 
-**Inteligencia energética para Colombia.** VoltIA ingiere los datos públicos del mercado eléctrico nacional (XM), pronostica la demanda y el precio de bolsa con bandas de incertidumbre, detecta anomalías, explica qué mueve cada pronóstico y ofrece un analista con IA que responde preguntas con datos reales.
+**Inteligencia energética para Colombia.** Volt-AI ingiere los datos públicos del mercado eléctrico nacional (XM), pronostica la demanda y el precio de bolsa con bandas de incertidumbre, detecta anomalías, explica qué mueve cada pronóstico y ofrece un analista con IA que responde preguntas con datos reales.
 
 **Demo en vivo: <https://voltia-xi-five.vercel.app/es>** · [English](README.md) · [Requisitos](docs/requirements.md) · [Arquitectura](docs/architecture.md) · [Ficha del modelo](docs/model-card.md) · [Decisiones](docs/adr) · [Runbook](docs/runbook.md)
 

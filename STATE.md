@@ -21,7 +21,8 @@ Working notes for the project: current status, environment and open items.
 - Node 20.18, npm 10.8.
 - No Docker, no Vercel CLI.
 - Database: Neon (pooled URL). Owner URL in `pipeline/.env`; the web uses the `voltia_ro` role (`DATABASE_URL_READONLY`).
-- Remote: `https://github.com/Cabranchis/voltia` (personal account; the academic account is `mcabranchiz`).
+- Remote: `https://github.com/Cabranchis/volt-ai` (personal account; the academic account is `mcabranchiz`). The repository was renamed from `voltia` on 2026-10-26; GitHub redirects the old URL.
+- Name: the brand is **Volt-AI** (it was VoltIA until 2026-10-26). Internal identifiers keep `voltia` on purpose: the Python package and CLI, the `VOLTIA_*` variables, the `voltia_ro` database role, the browser storage keys and the Vercel domain `voltia-xi-five.vercel.app`. Renaming those would break production and the stored secrets.
 
 ## Open items for the owner
 

@@ -1,6 +1,6 @@
 # Design system
 
-VoltIA is an **operate** surface: people come to read numbers, compare a forecast with what happened and ask a question. The interface should disappear into that task. Familiar structure (sidebar, header, panels), one type family, restrained colour, and charts that are the loudest thing on the page.
+Volt-AI is an **operate** surface: people come to read numbers, compare a forecast with what happened and ask a question. The interface should disappear into that task. Familiar structure (sidebar, header, panels), one type family, restrained colour, and charts that are the loudest thing on the page.
 
 ## Principles
 

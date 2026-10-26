@@ -9,7 +9,7 @@ Everything runs on free tiers. Four steps need you, because they involve your ow
 | Vercel (Hobby) | The web app | Free for personal projects | Sign in with your GitHub account |
 | Google AI Studio | Gemini key for the analyst | Free tier | Optional: without it the analyst answers from fixed summaries |
 
-Provider limits change. Check the current free-tier limits of each service before relying on them. What VoltIA uses, measured on the real data in October 2026:
+Provider limits change. Check the current free-tier limits of each service before relying on them. What Volt-AI uses, measured on the real data in October 2026:
 
 - **Database size**: the complete history from 2018 (54 789 daily rows and 4 224 hourly rows) is a 5.6 MB SQLite file. PostgreSQL adds index overhead, so plan for 15 to 25 MB. The design target is below 500 MB (NFR-09).
 - **Pipeline time**: a daily update takes about a minute. The first backfill takes about 10 minutes, mostly the generation-by-plant downloads.

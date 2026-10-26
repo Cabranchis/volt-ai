@@ -1,7 +1,7 @@
 [project]
 name = "voltia-pipeline"
 version = "0.1.0"
-description = "Data ingestion, forecasting and anomaly detection pipeline for VoltIA"
+description = "Data ingestion, forecasting and anomaly detection pipeline for Volt-AI"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { text = "MIT" }

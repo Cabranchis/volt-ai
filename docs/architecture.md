@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-    V([Visitor]) --> W[VoltIA web app]
+    V([Visitor]) --> W[Volt-AI web app]
     D([Developer]) --> W
     P[Daily pipeline<br/>GitHub Actions] --> DB[(PostgreSQL)]
     W --> DB
