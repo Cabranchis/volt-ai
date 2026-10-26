@@ -37,7 +37,7 @@ export const en = {
     date: "Date",
     source: "Source",
     github: "Source code",
-    dataThrough: "Settled market data through {date}",
+    dataThrough: "Market data through {date}",
     hydroThrough: "Hydrology through {date}",
     sourcePostgres: "Live database",
     sourceFixtures: "Demo snapshot",
@@ -49,7 +49,7 @@ export const en = {
       unknown: "Freshness unknown",
     },
     footer:
-      "Open data from XM, Open-Meteo and NOAA. Forecasts are statistical estimates for information only, not advice for trading.",
+      "Open data from XM, Open-Meteo and NOAA. Forecasts are statistical estimates that come with their margin of error, to support decisions.",
   },
   units: {
     gwhDay: "GWh/day",
@@ -107,7 +107,7 @@ export const en = {
     demandForecast: "Demand forecast",
     demandForecastNote: "Next 30 days, with the range the model expects",
     priceForecast: "Spot price forecast",
-    priceForecastNote: "Next 14 days. Prices are volatile, so the range is wide.",
+    priceForecastNote: "Next 14 days, with the range the model expects.",
     mixTitle: "Generation mix",
     mixNote: "Share of the day's generation",
     mixYearAgo: "{share} a year ago",
@@ -133,7 +133,7 @@ export const en = {
   price: {
     title: "Spot price",
     description:
-      "Daily mean of the national spot price in COP per kWh, with a 14-day forecast. Prices jump when reservoirs are low, so the range is wide.",
+      "Daily mean of the national spot price in COP per kWh, with a 14-day forecast. Prices rise when reservoirs fall; the band shows how much uncertainty each day carries.",
     chartTitle: "Price and forecast",
     driversTitle: "What drives the next-day forecast",
     driversNote: "Contribution of each factor to the next-day median, in COP/kWh",
@@ -152,7 +152,7 @@ export const en = {
       peakLevel: "The highest probability of exceeding {level} COP/kWh is {p}, on {date}.",
       peakRise: "The highest probability of a price 30 % above the recent average ({base} COP/kWh) is {p}, on {date}.",
       caveat:
-        "Computed from the forecast's own P10, P50 and P90 bands, with no separate model. In the backtest it separated expensive days from normal ones well (AUC 0.96 for 500 COP/kWh and 0.85 for the 30 % rise) and had a lower Brier error than repeating what just happened. It did not manage that for much higher levels, so those are not shown. It is an estimate, not a guarantee or a recommendation to trade.",
+        "Computed from the forecast's own P10, P50 and P90 bands, with no separate model. In the backtest it separated expensive days from normal ones well (AUC 0.96 for 500 COP/kWh and 0.85 for the 30 % rise) and had a lower Brier error than repeating what just happened. Only the levels where it proved reliable are shown. It is a statistical estimate.",
       tableCaption: "Daily probability of price spikes",
       level: "Above {level}",
       riseShort: "30 % rise",
@@ -251,8 +251,8 @@ export const en = {
       title: "Live track record",
       note: "Every day Volt-AI stores its forecast before the outcome is known and never changes it afterwards. Here they are compared with what happened.",
       empty:
-        "There are no forecasts with a known outcome yet. XM settles the price about three days late, so the record starts filling in a few days and grows every day.",
-      summary: "{n} forecasts scored, for days between {first} and {last}. Another {pending} are waiting for XM to settle the day.",
+        "There are no forecasts with a known outcome yet. XM publishes the complete price about three days late, so the record starts filling in a few days and grows every day.",
+      summary: "{n} forecasts scored, for days between {first} and {last}. Another {pending} are waiting for XM to publish the day's complete price.",
       win: "The forecast was closer than the reference in {p} of the cases.",
       few: "While the record is short, these figures move a lot from one day to the next. The backtest results above give the broader evaluation.",
       horizon: "Days ahead",
@@ -261,9 +261,9 @@ export const en = {
       errNaive: "Reference error",
       coverage: "Inside the range",
       days: "{from} to {to} days",
-      tableCaption: "Mean error of the forecasts already settled, by days ahead",
+      tableCaption: "Mean error of the forecasts already scored, by days ahead",
       naiveDemand: "Reference: demand on the same weekday of the previous week.",
-      naivePrice: "Reference: the last settled price when the forecast was made.",
+      naivePrice: "Reference: the last complete price when the forecast was made.",
     },
     lastRun: "Latest training run",
     trainedOn: "Trained on data from {start} to {end}",
@@ -297,9 +297,9 @@ export const en = {
     methodTitle: "Method",
     method:
       "Gradient-boosted trees (LightGBM) with quantile objectives produce the 10th, 50th and 90th percentile. Inputs are only what is known on the forecast day: recent history, reservoir and inflow levels, the climate index, the calendar and, for the price, the programmed dispatch cost XM publishes before it settles prices. Intervals are calibrated on past errors.",
-    limitsTitle: "Limits",
+    limitsTitle: "What to keep in mind",
     limits:
-      "Prices react to events no model sees coming, such as plant outages, regulation or sudden rain. The forecast is a statistical estimate, not advice for trading. Backtests describe the past and do not guarantee the future.",
+      "Prices react to events no model sees coming, such as plant outages, regulation or sudden rain, which is why every forecast comes with a range. The forecast is a statistical estimate that supports decisions, and backtests describe the past.",
     cardLink: "Read the full model card",
     empty: "No training run has been recorded yet.",
   },
@@ -342,7 +342,7 @@ export const en = {
   about: {
     title: "About Volt-AI",
     description:
-      "A portfolio project that turns Colombia's open electricity data into forecasts, explanations and answers.",
+      "Turns Colombia's open electricity data into forecasts, explanations and answers, with every forecast checked in public.",
     whatTitle: "What it is",
     what: "Volt-AI reads the public data of the national power market every day, trains forecasting models, checks them honestly against the past and publishes the results here. An AI analyst answers questions using only validated lookups.",
     howTitle: "How it works",
@@ -361,23 +361,27 @@ export const en = {
     stackTitle: "Built with",
     careTitle: "What was taken care of",
     care: [
-      "Days XM has not finished settling are held back, not shown as data.",
+      "Days with incomplete data are held back, never shown as if they were final.",
       "Forecasts are tested only on days they could not have seen.",
       "Every chart has a text summary and a table.",
       "The site works in Spanish and English and without JavaScript for reading.",
     ],
     authorTitle: "Author",
-    authorBody: "Built by Miguel Angel as a data and AI engineering portfolio.",
+    authorBody: "Built by Miguel Angel, data and AI developer.",
   },
   business: {
     title: "For business",
     description:
-      "Forecasts of Colombian electricity demand and spot price, with their margin of error and a public record of how they did.",
+      "Know where Colombian electricity demand and spot price are heading, with the margin of error of every forecast and a public record of how each one did.",
+    heroDemand: "Mean error of the demand forecast",
+    heroPrice: "Mean error of the price, 1 to 3 days",
+    heroTests: "Past dates used to test it",
+    heroNote: "Measured on days the model had not seen. Lower is better.",
     forWhoTitle: "Who it is for",
     forWho: [
       "Electricity retailers (comercializadoras) that decide each week how much to buy in the spot market and how much to cover with contracts.",
       "Large consumers on the unregulated market who plan consumption and contract renewals.",
-      "Anyone who wants a second, transparent opinion on where the spot price and the system's demand are heading.",
+      "Anyone who wants a second, transparent opinion on where the spot price and the system's demand are heading, with the evidence in the open.",
     ],
     getTitle: "What you get",
     get: [
@@ -400,30 +404,30 @@ export const en = {
     ],
     numbersTitle: "Measured accuracy",
     numbersNote:
-      "Mean percentage error (MAPE) over {n} past dates the model had not seen, against two simple references. Lower is better. Days ahead are counted from the last day with a complete price in XM's public data, which is about three days before a forecast is published, so the first days are the nearest ones.",
+      "Mean percentage error (MAPE) over {n} past dates the model had not seen, against two references. Lower is better. Days ahead are counted from the last day with a complete price in XM's public data, which is about three days before a forecast is published, so the first days are the nearest ones.",
     horizon: "Forecast",
     demandRow: "Demand, 1 to 30 days",
     priceRow: "Spot price, {range} days",
     numbersFoot:
-      "The price model beats both references in the first days and is level with ETS beyond a week. The method and the detailed comparison, with its intervals, are on the Models page.",
+      "In the first days the price model beats both references; beyond a week it stays level with ETS, a strong statistical method. The method and the detailed comparison are on the Models page.",
     trackTitle: "Check it yourself",
     trackBody:
-      "Each day Volt-AI stores its forecast before the outcome is published. Once XM settles the day, the Models page compares them with what happened, including the cases where the forecast was worse than a simple reference.",
+      "Each day Volt-AI stores its forecast before the outcome is published. Once XM publishes the day, the Models page compares them with what happened, hits and misses included.",
     trackCta: "See the live record",
-    limitsTitle: "What it does not do",
+    limitsTitle: "Scope",
     limits: [
-      "It does not foresee rationing, regulatory decisions or events with no precedent in the history.",
-      "Beyond a week the price is no better than a simple statistical forecast, so read its range more than its central value.",
-      "XM's public data give the complete daily price about three days late (as observed), so the newest forecast starts from data that is three days old.",
-      "It supports decisions. It is not advice to buy, sell or hedge energy.",
+      "Sharpest in the first week for the price and across the whole month for demand; further out, read the range more than the central value.",
+      "Built on XM's public data, which carry the complete daily price about three days late, so every forecast projects forward from that point.",
+      "Regulatory decisions, rationing and events with no precedent in the history are outside what a statistical model can see.",
+      "It supports decisions; it is not advice to buy, sell or hedge energy.",
     ],
-    reportTitle: "Sample report",
+    reportTitle: "See a real report",
     reportBody:
       "A short summary like the one that could be sent each week: forecast with ranges, price spike probabilities, hydrology and the record of hits. It uses real data: forecast issued on 26 October 2026, with prices complete up to 23 October.",
     reportCta: "Download the sample report (PDF, in Spanish)",
     contactTitle: "Let's talk",
     contactBody:
-      "If you want to see how it would fit your portfolio, or need a forecast or a report adapted to your case, write to me.",
+      "Tell me what you decide each week and I will show you how this forecast would fit your case. A trial month, a weekly report or a forecast adapted to your portfolio are all possible.",
     contactCta: "Write to me",
     contactNote: "I reply in Spanish or English.",
   },

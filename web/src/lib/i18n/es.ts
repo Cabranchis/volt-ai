@@ -39,7 +39,7 @@ export const es: Dictionary = {
     date: "Fecha",
     source: "Fuente",
     github: "Código fuente",
-    dataThrough: "Mercado liquidado hasta el {date}",
+    dataThrough: "Datos de mercado hasta el {date}",
     hydroThrough: "Hidrología hasta el {date}",
     sourcePostgres: "Base de datos en vivo",
     sourceFixtures: "Instantánea de demostración",
@@ -51,7 +51,7 @@ export const es: Dictionary = {
       unknown: "Frescura desconocida",
     },
     footer:
-      "Datos abiertos de XM, Open-Meteo y NOAA. Los pronósticos son estimaciones estadísticas solo informativas, no una recomendación para operar en el mercado.",
+      "Datos abiertos de XM, Open-Meteo y NOAA. Los pronósticos son estimaciones estadísticas que incluyen su margen de error, para apoyar decisiones.",
   },
   units: {
     gwhDay: "GWh/día",
@@ -109,7 +109,7 @@ export const es: Dictionary = {
     demandForecast: "Pronóstico de demanda",
     demandForecastNote: "Próximos 30 días, con el rango que espera el modelo",
     priceForecast: "Pronóstico del precio de bolsa",
-    priceForecastNote: "Próximos 14 días. Los precios son volátiles, por eso el rango es amplio.",
+    priceForecastNote: "Próximos 14 días, con el rango que espera el modelo.",
     mixTitle: "Mezcla de generación",
     mixNote: "Participación en la generación del día",
     mixYearAgo: "{share} hace un año",
@@ -135,7 +135,7 @@ export const es: Dictionary = {
   price: {
     title: "Precio de bolsa",
     description:
-      "Promedio diario del precio de bolsa nacional en COP por kWh, con un pronóstico a 14 días. Los precios se disparan cuando los embalses están bajos, por eso el rango es amplio.",
+      "Promedio diario del precio de bolsa nacional en COP por kWh, con un pronóstico a 14 días. Los precios suben cuando los embalses bajan; la banda muestra cuánta incertidumbre tiene cada día.",
     chartTitle: "Precio y pronóstico",
     driversTitle: "Qué mueve el pronóstico del día siguiente",
     driversNote: "Aporte de cada factor a la mediana del día siguiente, en COP/kWh",
@@ -154,7 +154,7 @@ export const es: Dictionary = {
       peakLevel: "La probabilidad más alta de superar {level} COP/kWh es {p}, el {date}.",
       peakRise: "La probabilidad más alta de un precio 30 % sobre el promedio reciente ({base} COP/kWh) es {p}, el {date}.",
       caveat:
-        "Se calcula a partir de las bandas P10, P50 y P90 del pronóstico, sin un modelo aparte. En el backtest separó bien los días caros de los normales (AUC de 0,96 para 500 COP/kWh y de 0,85 para el alza de 30 %) y tuvo menos error de Brier que repetir lo que acaba de pasar. Para niveles mucho más altos no lo logró, por eso no se muestran. Es una estimación, no una garantía ni una recomendación para operar.",
+        "Se calcula a partir de las bandas P10, P50 y P90 del pronóstico, sin un modelo aparte. En el backtest separó bien los días caros de los normales (AUC de 0,96 para 500 COP/kWh y de 0,85 para el alza de 30 %) y tuvo menos error de Brier que repetir lo que acaba de pasar. Solo se muestran los niveles donde demostró ser confiable. Es una estimación estadística.",
       tableCaption: "Probabilidad diaria de picos de precio",
       level: "Supera {level}",
       riseShort: "Alza de 30 %",
@@ -253,8 +253,8 @@ export const es: Dictionary = {
       title: "Registro en vivo de aciertos",
       note: "Cada día Volt-AI guarda su pronóstico antes de conocer el resultado y no lo modifica después. Aquí se comparan con lo que pasó.",
       empty:
-        "Todavía no hay pronósticos con resultado conocido. XM liquida el precio unos tres días tarde, así que el registro empieza a llenarse en pocos días y crece cada día.",
-      summary: "{n} pronósticos evaluados, de días entre el {first} y el {last}. Otros {pending} esperan a que XM liquide el día.",
+        "Todavía no hay pronósticos con resultado conocido. XM publica el precio completo unos tres días tarde, así que el registro empieza a llenarse en pocos días y crece cada día.",
+      summary: "{n} pronósticos evaluados, de días entre el {first} y el {last}. Otros {pending} esperan a que XM publique el precio completo del día.",
       win: "El pronóstico estuvo más cerca que la referencia en el {p} de los casos.",
       few: "Mientras el registro sea corto, estas cifras se mueven mucho de un día a otro. Para una evaluación más amplia están los resultados del backtest de arriba.",
       horizon: "Días adelante",
@@ -263,9 +263,9 @@ export const es: Dictionary = {
       errNaive: "Error de la referencia",
       coverage: "Dentro del rango",
       days: "{from} a {to} días",
-      tableCaption: "Error medio de los pronósticos ya liquidados, por días hacia adelante",
+      tableCaption: "Error medio de los pronósticos ya evaluados, por días hacia adelante",
       naiveDemand: "Referencia: la demanda del mismo día de la semana anterior.",
-      naivePrice: "Referencia: el último precio liquidado cuando se hizo el pronóstico.",
+      naivePrice: "Referencia: el último precio completo cuando se hizo el pronóstico.",
     },
     lastRun: "Última corrida de entrenamiento",
     trainedOn: "Entrenado con datos del {start} al {end}",
@@ -299,9 +299,9 @@ export const es: Dictionary = {
     methodTitle: "Método",
     method:
       "Árboles de gradiente (LightGBM) con objetivos cuantílicos producen los percentiles 10, 50 y 90. Las entradas son solo lo que se conoce el día del pronóstico: historia reciente, niveles de embalses y aportes, el índice climático, el calendario y, para el precio, el costo del despacho programado que XM publica antes de liquidar los precios. Los intervalos se calibran con errores pasados.",
-    limitsTitle: "Límites",
+    limitsTitle: "Qué tener en cuenta",
     limits:
-      "Los precios reaccionan a hechos que ningún modelo anticipa, como fallas de plantas, regulación o lluvias repentinas. El pronóstico es una estimación estadística, no una recomendación para operar en el mercado. Los backtests describen el pasado y no garantizan el futuro.",
+      "Los precios reaccionan a hechos que ningún modelo anticipa, como fallas de plantas, regulación o lluvias repentinas, por eso cada pronóstico trae su rango. El pronóstico es una estimación estadística que apoya decisiones, y los backtests describen el pasado.",
     cardLink: "Leer la ficha completa del modelo",
     empty: "Todavía no se ha registrado ninguna corrida de entrenamiento.",
   },
@@ -344,7 +344,7 @@ export const es: Dictionary = {
   about: {
     title: "Acerca de Volt-AI",
     description:
-      "Un proyecto de portafolio que convierte los datos abiertos de electricidad de Colombia en pronósticos, explicaciones y respuestas.",
+      "Convierte los datos abiertos de electricidad de Colombia en pronósticos, explicaciones y respuestas, con cada pronóstico comprobado en público.",
     whatTitle: "Qué es",
     what: "Volt-AI lee cada día los datos públicos del mercado eléctrico nacional, entrena modelos de pronóstico, los compara con honestidad contra el pasado y publica los resultados aquí. Un analista de IA responde preguntas usando solo consultas validadas.",
     howTitle: "Cómo funciona",
@@ -363,23 +363,27 @@ export const es: Dictionary = {
     stackTitle: "Construido con",
     careTitle: "Qué se cuidó",
     care: [
-      "Los días que XM aún no termina de liquidar se retienen, no se muestran como dato.",
+      "Los días con datos incompletos se retienen, nunca se muestran como si fueran definitivos.",
       "Los pronósticos se prueban solo con días que no podían haber visto.",
       "Cada gráfico tiene un resumen en texto y una tabla.",
       "El sitio funciona en español e inglés y se puede leer sin JavaScript.",
     ],
     authorTitle: "Autor",
-    authorBody: "Construido por Miguel Angel como portafolio de ingeniería de datos e IA.",
+    authorBody: "Construido por Miguel Angel, desarrollador de datos e IA.",
   },
   business: {
     title: "Para empresas",
     description:
-      "Pronósticos de demanda y precio de bolsa de la electricidad en Colombia, con su margen de error y un historial público de cómo les fue.",
+      "Anticipa hacia dónde van la demanda y el precio de bolsa de la electricidad en Colombia, con el margen de error de cada pronóstico y un historial público de cómo le fue a cada uno.",
+    heroDemand: "Error medio del pronóstico de demanda",
+    heroPrice: "Error medio del precio, 1 a 3 días",
+    heroTests: "Fechas pasadas usadas para probarlo",
+    heroNote: "Medido en días que el modelo no había visto. Menor es mejor.",
     forWhoTitle: "Para quién es",
     forWho: [
       "Comercializadoras de energía que deciden cada semana cuánto comprar en bolsa y cuánto cubrir con contratos.",
       "Grandes consumidores del mercado no regulado que planean su consumo y la renovación de contratos.",
-      "Quien quiera una segunda opinión transparente sobre hacia dónde van el precio de bolsa y la demanda del sistema.",
+      "Quien quiera una segunda opinión transparente sobre hacia dónde van el precio de bolsa y la demanda del sistema, con la evidencia a la vista.",
     ],
     getTitle: "Qué recibes",
     get: [
@@ -402,30 +406,30 @@ export const es: Dictionary = {
     ],
     numbersTitle: "Precisión medida",
     numbersNote:
-      "Error porcentual medio (MAPE) en {n} fechas pasadas que el modelo no había visto, frente a dos referencias simples. Menor es mejor. Los días se cuentan desde el último día con precio completo en los datos públicos de XM, unos tres días antes de que se publique el pronóstico, así que los primeros días son los más cercanos.",
+      "Error porcentual medio (MAPE) en {n} fechas pasadas que el modelo no había visto, frente a dos referencias. Menor es mejor. Los días se cuentan desde el último día con precio completo en los datos públicos de XM, unos tres días antes de que se publique el pronóstico, así que los primeros días son los más cercanos.",
     horizon: "Pronóstico",
     demandRow: "Demanda, 1 a 30 días",
     priceRow: "Precio de bolsa, {range} días",
     numbersFoot:
-      "El modelo de precio supera a las dos referencias en los primeros días y queda a la par con ETS pasada una semana. El método y la comparación detallada, con sus intervalos, están en la página de Modelos.",
+      "En los primeros días el modelo de precio supera a las dos referencias; pasada una semana queda a la par con ETS, un método estadístico sólido. El método y la comparación detallada están en la página de Modelos.",
     trackTitle: "Compruébalo tú",
     trackBody:
-      "Cada día Volt-AI guarda su pronóstico antes de que se publique el resultado. Cuando XM liquida el día, la página de Modelos los compara con lo que pasó, incluidos los casos en que el pronóstico fue peor que una referencia simple.",
+      "Cada día Volt-AI guarda su pronóstico antes de que se publique el resultado. Cuando XM publica el día, la página de Modelos los compara con lo que pasó, con aciertos y errores a la vista.",
     trackCta: "Ver el historial en vivo",
-    limitsTitle: "Qué no hace",
+    limitsTitle: "Alcance",
     limits: [
-      "No anticipa racionamientos, decisiones regulatorias ni hechos sin precedente en la historia.",
-      "Pasada una semana el precio no es mejor que un pronóstico estadístico simple, así que conviene leer su rango más que el valor central.",
-      "Los datos públicos de XM traen el precio diario completo con unos tres días de retraso (según lo observado), así que el pronóstico más nuevo parte de datos de hace tres días.",
-      "Apoya decisiones. No es una recomendación para comprar, vender ni cubrir energía.",
+      "Más afinado en la primera semana para el precio y en todo el mes para la demanda; más lejos, conviene leer el rango más que el valor central.",
+      "Se apoya en los datos públicos de XM, que traen el precio diario completo con unos tres días de retraso, así que cada pronóstico proyecta hacia adelante desde ese punto.",
+      "Decisiones regulatorias, racionamientos y hechos sin precedente en la historia quedan fuera de lo que un modelo estadístico puede ver.",
+      "Apoya decisiones; no es una recomendación para comprar, vender ni cubrir energía.",
     ],
-    reportTitle: "Informe de ejemplo",
+    reportTitle: "Mira un informe real",
     reportBody:
       "Un resumen corto como el que se podría enviar cada semana: pronóstico con rangos, probabilidad de picos de precio, hidrología y el historial de aciertos. Usa datos reales: pronóstico emitido el 26 de octubre de 2026, con precios completos hasta el 23 de octubre.",
     reportCta: "Descargar el informe de ejemplo (PDF)",
     contactTitle: "Hablemos",
     contactBody:
-      "Si quieres ver cómo encajaría en tu portafolio, o necesitas un pronóstico o un informe adaptado a tu caso, escríbeme.",
+      "Cuéntame qué decides cada semana y te muestro cómo encajaría este pronóstico en tu caso. Un mes de prueba, un informe semanal o un pronóstico adaptado a tu portafolio son posibles.",
     contactCta: "Escríbeme",
     contactNote: "Respondo en español o en inglés.",
   },

@@ -2,16 +2,16 @@
 
 **Energy intelligence for Colombia.** Volt-AI ingests the public data of the national power market (XM), forecasts electricity demand and spot price with uncertainty bands, detects anomalies, explains what drives each forecast and offers an AI analyst that answers questions using real data.
 
-**Live demo: <https://voltia-xi-five.vercel.app/en>** · [Español](README.es.md) · [Requirements](docs/requirements.md) · [Architecture](docs/architecture.md) · [Model card](docs/model-card.md) · [Decisions](docs/adr) · [Runbook](docs/runbook.md)
+**Live demo: <https://voltia-xi-five.vercel.app/en>** · [Español](README.es.md) · [For business](https://voltia-xi-five.vercel.app/en/business) · [Requirements](docs/requirements.md) · [Architecture](docs/architecture.md) · [Model card](docs/model-card.md) · [Decisions](docs/adr) · [Runbook](docs/runbook.md)
 
 ![Overview page](docs/img/overview.png)
 
 ## What it does
 
 - **Forecasts** daily demand 30 days ahead and spot price 14 days ahead, with calibrated P10/P50/P90 bands.
-- **Backtests honestly** with rolling-origin evaluation against seasonal-naive and ETS baselines, and publishes the results even when they are modest.
+- **Backtests honestly** with rolling-origin evaluation against seasonal-naive and ETS baselines, and publishes every result with its margin of error.
 - **Explains** each forecast with SHAP drivers in plain language.
-- **Watches hydrology and El Niño**: reservoir level, inflows and the ONI index, which is at +2.2 in 2026.
+- **Watches hydrology and El Niño**: reservoir level, inflows and the ONI index.
 - **Detects anomalies** such as the 2020 lockdown and the El Niño years.
 - **Answers questions** through an AI analyst limited to typed, validated tools. It never runs free-form SQL, and it still answers from fixed summaries when the model is unavailable.
 - **Writes a daily briefing** in both languages from the day's figures.
@@ -29,7 +29,7 @@ Rolling-origin backtest, 50 origins on a fixed calendar (21 days apart), 80 % in
 | Demand, 30 days | MASE 42.3 % lower, wins 46 of 50 origins | MASE 42.7 % lower, wins 45 of 50 | 0.82 |
 | Spot price, 14 days | MASE 33.3 % lower, wins 42 of 50 | 14.2 % lower, but the interval of the difference includes zero; clearly better only in the first days | 0.81 |
 
-Against a plain exponential-smoothing forecast the price model wins in the first days and is level with it beyond a week. The site says so, and presents the price forecast as a calibrated range rather than a better median.
+In plain percentage error (MAPE), the demand forecast misses by 1.9 % on average against 3.4 % for the references, and the price forecast 1 to 3 days ahead misses by 10.7 % against 15.3 % for ETS and 29.8 % for the seasonal-naive reference. Beyond a week the price model stays level with ETS, so the site presents the price as a calibrated range.
 
 ## Stack
 
@@ -45,8 +45,8 @@ Everything runs on free tiers.
 
 ## Quality
 
-- Pipeline: ruff, mypy and 109 tests at 96 % coverage, no network in CI.
-- Web: eslint, tsc, vitest, a production build and 62 Playwright checks with axe accessibility scans in both themes.
+- Pipeline: ruff, mypy and 142 tests at 97 % coverage, no network in CI.
+- Web: eslint, tsc, vitest, a production build and 75 Playwright checks with axe accessibility scans in both themes.
 - Security: strict CSP and security headers, a database role that cannot write (except the rate-limit table), an Origin check, body-size cap and per-client limits on the chat, no secrets in the repository.
 - Reproducible: lockfiles for both sides and actions pinned by commit.
 

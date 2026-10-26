@@ -52,6 +52,14 @@ export default async function BusinessPage() {
   const origins = Math.min(demand?.n_origins ?? Infinity, price?.n_origins ?? Infinity);
   const hasPriceRows = rows.length > (demand ? 1 : 0);
 
+  const heroDemand = demand?.overall.model.mape;
+  const heroPrice = price ? bucketErrors(price)[0]?.model : undefined;
+  const hero = [
+    heroDemand !== undefined ? { label: b.heroDemand, value: `${formatNumber(heroDemand, locale, 1)} %` } : null,
+    heroPrice !== undefined ? { label: b.heroPrice, value: `${formatNumber(heroPrice, locale, 1)} %` } : null,
+    Number.isFinite(origins) ? { label: b.heroTests, value: String(origins) } : null,
+  ].filter((item): item is { label: string; value: string } => item !== null);
+
   const gets = [
     { Icon: Zap, ...b.get[0] },
     { Icon: Gauge, ...b.get[1] },
@@ -63,6 +71,38 @@ export default async function BusinessPage() {
     <>
       <PageHeader title={b.title} description={b.description} />
       <div className="flex flex-col gap-6">
+        {hero.length > 0 ? (
+          <section aria-label={b.numbersTitle} className="glass-strong glow rounded-panel p-5 sm:p-6">
+            <dl className="grid gap-5 sm:grid-cols-3">
+              {hero.map((item) => (
+                <div key={item.label} className="flex flex-col gap-1">
+                  <dd className="order-1 text-3xl font-semibold tracking-tight text-accent-ink tabular-nums">{item.value}</dd>
+                  <dt className="order-2 text-sm text-muted">{item.label}</dt>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 text-xs text-faint">{b.heroNote}</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="btn-primary inline-flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium"
+              >
+                <Mail aria-hidden="true" size={16} strokeWidth={1.75} />
+                {b.contactCta}
+              </a>
+              <a
+                href={SAMPLE_REPORT}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-glass inline-flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium"
+              >
+                <FileText aria-hidden="true" size={16} strokeWidth={1.75} />
+                {b.reportCta}
+              </a>
+            </div>
+          </section>
+        ) : null}
+
         <Panel title={b.forWhoTitle}>
           <ul className="flex list-disc flex-col gap-2 pl-5 text-sm leading-relaxed marker:text-faint">
             {b.forWho.map((item) => (
