@@ -10,7 +10,7 @@ import {
   MAX_TOTAL_CHARS,
   systemPrompt,
 } from "@/lib/ai/prompt";
-import { clientKey, getRateLimiter } from "@/lib/ai/ratelimit";
+import { clientKeyFor, getRateLimiter } from "@/lib/ai/ratelimit";
 import { buildTools } from "@/lib/ai/tools";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -119,9 +119,7 @@ export async function POST(request: Request) {
   const { lang, messages } = parsed.data;
   const locale: Locale = lang;
 
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const address = forwarded || request.headers.get("x-real-ip") || "unknown";
-  const key = await clientKey(address, process.env.RATE_LIMIT_SALT ?? "voltia");
+  const key = await clientKeyFor(request.headers);
   const limiter = await getRateLimiter();
 
   const mine = await limiter.hit(`chat:${key}`, PER_CLIENT_LIMIT, PER_CLIENT_WINDOW_SEC);

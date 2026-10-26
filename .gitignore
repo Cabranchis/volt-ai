@@ -51,3 +51,6 @@ desktop.ini
 # Local research snapshots and heavy experiment environments
 pipeline/research/data/
 pipeline/research/.venv/
+
+# Output folders of the research tools
+catboost_info/

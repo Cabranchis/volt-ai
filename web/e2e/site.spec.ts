@@ -152,11 +152,14 @@ test.describe("security headers", () => {
   test("pages send the static CSP and the related headers", async ({ request }) => {
     const headers = (await request.get("/en")).headers();
     const csp = headers["content-security-policy"] ?? "";
-    for (const rule of ["default-src 'self'", "object-src 'none'", "frame-ancestors 'none'", "base-uri 'self'", "connect-src 'self'"]) {
+    for (const rule of ["default-src 'self'", "object-src 'none'", "frame-ancestors 'none'", "base-uri 'self'", "connect-src 'self'", "manifest-src 'self'"]) {
       expect(csp).toContain(rule);
     }
     expect(headers["x-content-type-options"]).toBe("nosniff");
     expect(headers["x-frame-options"]).toBe("DENY");
+    expect(headers["cross-origin-opener-policy"]).toBe("same-origin");
+    expect(headers["x-permitted-cross-domain-policies"]).toBe("none");
+    expect(csp).toContain("upgrade-insecure-requests");
     expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
     expect(headers["permissions-policy"]).toContain("camera=()");
     expect(headers["x-powered-by"]).toBeUndefined();

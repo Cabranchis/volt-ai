@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clientKey, createMemoryLimiter, createPostgresLimiter } from "./ratelimit";
+import { clientKey, clientKeyFor, createMemoryLimiter, createPostgresLimiter, rateLimitSalt } from "./ratelimit";
 
 describe("memory limiter", () => {
   it("allows up to the limit and then refuses, with a retry time", async () => {
@@ -55,5 +55,22 @@ describe("clientKey", () => {
     expect(a).not.toBe(await clientKey("203.0.113.9", "other"));
     expect(a).not.toContain("203");
     expect(a).toMatch(/^[0-9a-f]{24}$/);
+  });
+});
+
+describe("rateLimitSalt and clientKeyFor", () => {
+  it("prefers RATE_LIMIT_SALT, then the database URL, never a public constant when a secret exists", () => {
+    expect(rateLimitSalt({ RATE_LIMIT_SALT: "s", DATABASE_URL_READONLY: "u" })).toBe("s");
+    expect(rateLimitSalt({ DATABASE_URL_READONLY: "u" })).toBe("u");
+    expect(rateLimitSalt({})).toBe("voltia-local-development");
+  });
+
+  it("uses the first forwarded address and the salt from the environment", async () => {
+    const headers = new Headers({ "x-forwarded-for": "203.0.113.9, 10.0.0.1" });
+    expect(await clientKeyFor(headers, { RATE_LIMIT_SALT: "salt" })).toBe(await clientKey("203.0.113.9", "salt"));
+    expect(await clientKeyFor(headers, { RATE_LIMIT_SALT: "other" })).not.toBe(
+      await clientKeyFor(headers, { RATE_LIMIT_SALT: "salt" }),
+    );
+    expect(await clientKeyFor(new Headers(), { RATE_LIMIT_SALT: "salt" })).toBe(await clientKey("unknown", "salt"));
   });
 });

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import replace
 from datetime import date, datetime
+from pathlib import Path
 from typing import Annotated, Any
 from zoneinfo import ZoneInfo
 
@@ -235,6 +238,43 @@ def anomalies() -> None:
                 f"  {pd.Timestamp(day).date()} {direction:<4} severity={severity:.1f} "
                 f"deviation={detail['deviation_pct']:+.1f}%"
             )
+
+
+# What cannot be fetched again: the live track record, the rain forecasts and the run metrics.
+ARCHIVE_TABLES = ("forecast_log", "weather_forecast_log", "model_runs")
+
+
+@app.command()
+def archive(
+    out: Annotated[Path, typer.Option(help="Directory to write the files into")],
+    allow_sqlite: Annotated[bool, typer.Option(help="Allow a local SQLite file (tests)")] = False,
+) -> None:
+    """Export the tables that XM or Open-Meteo cannot give back, as gzipped CSV plus a manifest."""
+    # No migrate here: a backup must still work when a pending migration is broken.
+    engine = db.make_engine(get_settings().resolved_database_url)
+    if engine.dialect.name != "postgresql" and not allow_sqlite:
+        # Without DATABASE_URL the settings fall back to a new empty local file: refuse, do not
+        # produce a green run with an empty backup.
+        typer.echo("refusing to archive: DATABASE_URL does not point to PostgreSQL", err=True)
+        raise typer.Exit(code=1)
+    out.mkdir(parents=True, exist_ok=True)
+    manifest: dict[str, Any] = {"created_at": datetime.now(BOGOTA).isoformat(), "tables": {}}
+    for table in ARCHIVE_TABLES:
+        frame = pd.read_sql_query(f"SELECT * FROM {table}", engine)  # noqa: S608 - fixed names
+        for column in frame.columns:
+            # JSON columns come back as dicts; the CSV must hold JSON text, not a Python repr.
+            if frame[column].map(lambda v: isinstance(v, dict | list)).any():
+                frame[column] = frame[column].map(
+                    lambda v: json.dumps(v) if isinstance(v, dict | list) else v
+                )
+        path = out / f"{table}.csv.gz"
+        frame.to_csv(path, index=False, compression="gzip")
+        manifest["tables"][table] = {
+            "rows": len(frame),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+        typer.echo(f"{table:<22} {len(frame)} rows")
+    (out / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
 
 @app.command()

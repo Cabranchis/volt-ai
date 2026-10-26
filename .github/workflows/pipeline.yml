@@ -21,6 +21,8 @@ concurrency:
   group: pipeline
   cancel-in-progress: false
 
+# The write-capable URL lives only in the steps that use it, so the actions that fetch code and
+# tools never see it. The web app gets the read-only one on Vercel.
 jobs:
   run:
     name: Ingest, forecast, detect anomalies
@@ -29,12 +31,11 @@ jobs:
     defaults:
       run:
         working-directory: pipeline
-    env:
-      # The write-capable URL lives only here; the web app gets the read-only one on Vercel.
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - name: Check the database secret exists
         working-directory: .  # pipeline/ does not exist until checkout has run
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           if [ -z "$DATABASE_URL" ]; then
             echo "::error::Secret DATABASE_URL is not set. See docs/deployment.md, step 2."
@@ -51,20 +52,33 @@ jobs:
       - name: Install from the lockfile only
         run: uv sync --frozen --no-dev
       - name: Migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: uv run voltia migrate
       - name: Full history (manual runs only)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.backfill }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: uv run voltia backfill
       - name: Ingest what is new
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: uv run voltia update
       - name: Train, backtest and forecast
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: uv run voltia train --predict
       - name: Detect anomalies
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: uv run voltia anomalies
       - name: Status
         if: always()
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: uv run voltia status
       - name: Daily briefing (template if there is no Gemini key)
         env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
         run: uv run voltia brief

@@ -1,0 +1,46 @@
+name: Weekly backup
+
+# Copies the tables that XM and Open-Meteo cannot give back (the live track record, the rain
+# forecasts and the model runs) into a workflow artifact kept for 90 days. Everything else is
+# rebuilt with `voltia backfill`. Restoring is described in docs/runbook.md.
+on:
+  schedule:
+    - cron: "15 12 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    name: Export the irreplaceable tables
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: pipeline/uv.lock
+      - name: Install from the lockfile only
+        run: uv sync --frozen --no-dev
+      - name: Export
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: uv run voltia archive --out "$RUNNER_TEMP/backup"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: volt-ai-backup
+          path: ${{ runner.temp }}/backup
+          retention-days: 90
+          if-no-files-found: error

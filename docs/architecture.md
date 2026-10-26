@@ -60,6 +60,7 @@ The authoritative definition is in `db/migrations`.
 
 - **Configuration**: environment variables only, loaded with pydantic-settings (Python) and a zod-validated module (web). `.env.example` lists them all.
 - **Failure handling**: HTTP clients retry with exponential backoff and a hard timeout. A failed dataset leaves the previous data in place and updates `ingest_log` with the error.
-- **Security**: read-only role for the web, typed AI tools, input validation at every API boundary, CSP and related headers, rate limiting, no secrets in the repository.
+- **Security**: read-only role for the web, typed AI tools, input validation at every API boundary, CSP and related headers, rate limiting, no secrets in the repository. The threat model is in [security.md](security.md).
+- **Backup**: the live track record and the rain forecasts cannot be fetched again, so a weekly workflow exports them (`voltia archive`); the rest of the database is rebuilt from the sources.
 - **Observability**: structured logs in the pipeline, a `/api/v1/health` endpoint with per-dataset freshness, and the pipeline workflow summary in GitHub Actions.
 - **Testing**: unit tests with recorded API responses, an integration test of the pipeline on SQLite, repository contract tests, Playwright end-to-end tests on fixtures.

@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { clientKey, getRateLimiter } from "@/lib/ai/ratelimit";
+import { clientKeyFor, getRateLimiter } from "@/lib/ai/ratelimit";
 
 const API_LIMIT = 60;
 const API_WINDOW_SEC = 60;
@@ -13,9 +13,7 @@ const API_WINDOW_SEC = 60;
  */
 export async function limitClient(request: NextRequest, scope: string): Promise<Response | null> {
   try {
-    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-    const address = forwarded || request.headers.get("x-real-ip") || "unknown";
-    const key = await clientKey(address, process.env.RATE_LIMIT_SALT ?? "voltia");
+    const key = await clientKeyFor(request.headers);
     const hit = await (await getRateLimiter()).hit(`api:${scope}:${key}`, API_LIMIT, API_WINDOW_SEC);
     if (hit.allowed) return null;
     const response = problem(429, "Too many requests", `At most ${API_LIMIT} requests per minute.`);

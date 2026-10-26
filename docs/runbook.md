@@ -41,6 +41,24 @@ What to check and do when Volt-AI misbehaves. Every command runs from `pipeline/
 - Retrain: `uv run voltia train --predict`. The run is deterministic for the same data. Forecasts of the 10 most recent runs are kept; `forecast_log` keeps every forecast as first issued, for the live track record.
 - Regime shifts (a new El Niño phase, reservoir emergencies) are the known weak spot.
 
+## Restoring the backup
+
+The `Weekly backup` workflow (Sundays, 07:15 Bogotá; also runnable by hand) uploads the artifact `volt-ai-backup` with `forecast_log`, `weather_forecast_log` and `model_runs` as gzipped CSV and a `manifest.json` with row counts and checksums. Everything else is rebuilt with `voltia backfill`.
+
+1. Download the artifact from the workflow run (Actions, then the run, then Artifacts) and unzip it.
+2. Check each file against the `sha256` in `manifest.json`.
+3. On an empty database, run `voltia migrate`, then load each file with `psql`, which converts every column to its type on the server and fails on a duplicate key instead of overwriting. `model_runs` goes first, because `forecast_log` points at its run ids. On Windows, `gunzip` each file first and use `FROM '<file>.csv'`:
+
+```bash
+for table in model_runs forecast_log weather_forecast_log; do
+  psql "$DATABASE_URL" -c "\copy $table FROM PROGRAM 'gunzip -c $table.csv.gz' WITH (FORMAT csv, HEADER)"
+done
+```
+
+4. Compare `SELECT count(*)` of each table with the `rows` in the manifest.
+
+This procedure has not been rehearsed against a real database yet: try it once on an empty Neon branch before the day it is needed.
+
 ## Rotating secrets
 
 - **Neon owner URL**: reset the role password in the Neon console, update `pipeline/.env` and the GitHub secret `DATABASE_URL`.

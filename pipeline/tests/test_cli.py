@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import gzip
+import hashlib
+import json
+import sqlite3
 from pathlib import Path
 
+import pandas as pd
 import pytest
 import typer
 from typer.testing import CliRunner
@@ -61,3 +66,38 @@ def test_a_failing_market_dataset_does_not_fail_the_run() -> None:
     _report([core, market])  # the price model copes with missing market series
     with pytest.raises(typer.Exit):
         _report([Result("xm_price", False, 0, None, "boom"), market])
+
+
+def test_archive_writes_each_table_and_a_manifest(tmp_path: Path, local_db: Path) -> None:
+    out = tmp_path / "backup"
+    runner.invoke(app, ["migrate"])
+    with sqlite3.connect(local_db) as conn:
+        conn.execute(
+            "INSERT INTO forecast_log VALUES "
+            "('demand_kwh', '2026-10-01', '2026-10-02', 1, 'r1', '2026-10-01 12:00:00', 1, 2, 3)"
+        )
+        conn.execute(
+            "INSERT INTO model_runs (run_id, trained_at, data_start, data_end, params, metrics) "
+            "VALUES ('r1', '2026-10-01 12:00:00', '2018-01-01', '2026-09-30', "
+            "'{\"a\": 1}', '{\"mase\": 1.2}')"
+        )
+    result = runner.invoke(app, ["archive", "--out", str(out), "--allow-sqlite"])
+    assert result.exit_code == 0, result.output
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    assert set(manifest["tables"]) == {"forecast_log", "weather_forecast_log", "model_runs"}
+    assert manifest["tables"]["forecast_log"]["rows"] == 1
+    assert manifest["tables"]["model_runs"]["rows"] == 1
+    for table, info in manifest["tables"].items():
+        assert info["sha256"] == hashlib.sha256((out / f"{table}.csv.gz").read_bytes()).hexdigest()
+        with gzip.open(out / f"{table}.csv.gz", "rt", encoding="utf-8") as handle:
+            assert handle.readline().strip()  # the header survives even when the table is empty
+    with gzip.open(out / "forecast_log.csv.gz", "rt", encoding="utf-8") as handle:
+        assert "demand_kwh" in handle.read()
+    runs = pd.read_csv(out / "model_runs.csv.gz")
+    assert json.loads(runs.loc[0, "metrics"]) == {"mase": 1.2}  # JSON text, not a Python repr
+
+
+def test_archive_refuses_a_database_that_is_not_postgresql(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["archive", "--out", str(tmp_path / "backup")])
+    assert result.exit_code == 1
+    assert not (tmp_path / "backup" / "manifest.json").exists()

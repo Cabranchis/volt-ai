@@ -74,6 +74,25 @@ export async function clientKey(address: string, salt: string): Promise<string> 
     .join("");
 }
 
+/**
+ * The salt that keeps a stored key from being reversed by trying every IPv4 address. It comes from
+ * RATE_LIMIT_SALT; when that is missing it falls back to a secret every deployment already has (the
+ * database URL), so the key is never hashed with a value anyone can read in the repository.
+ */
+export function rateLimitSalt(env: Record<string, string | undefined> = process.env): string {
+  return env.RATE_LIMIT_SALT || env.DATABASE_URL_READONLY || "voltia-local-development";
+}
+
+/** The caller's key for the rate limiters: the first address Vercel reports, hashed with the salt. */
+export async function clientKeyFor(
+  headers: Headers,
+  env: Record<string, string | undefined> = process.env,
+): Promise<string> {
+  const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const address = forwarded || headers.get("x-real-ip") || "unknown";
+  return clientKey(address, rateLimitSalt(env));
+}
+
 let shared: Promise<RateLimiter> | undefined;
 
 export function getRateLimiter(): Promise<RateLimiter> {
