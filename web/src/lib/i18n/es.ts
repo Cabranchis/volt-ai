@@ -39,6 +39,7 @@ export const es: Dictionary = {
     source: "Fuente",
     github: "Código fuente",
     dataThrough: "Mercado liquidado hasta el {date}",
+    hydroThrough: "Hidrología hasta el {date}",
     sourcePostgres: "Base de datos en vivo",
     sourceFixtures: "Instantánea de demostración",
     snapshotNote:

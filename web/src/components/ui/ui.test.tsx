@@ -102,4 +102,11 @@ describe("Freshness", () => {
     render(<Freshness lastDay="2026-10-21" lastDayLabel="Oct 21" labels={labels} />);
     expect(screen.getByText("Data through Oct 21")).toBeInTheDocument();
   });
+
+  it("adds the newer series after the main date", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-23T15:00:00Z"));
+    render(<Freshness lastDay="2026-10-21" lastDayLabel="Oct 21" labels={labels} detail="Hydrology through Oct 23" />);
+    expect(screen.getByText("Data through Oct 21 · Hydrology through Oct 23")).toBeInTheDocument();
+  });
 });

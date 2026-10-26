@@ -1,9 +1,11 @@
 name: Daily pipeline
 
-# 06:30 in Bogotá. XM publishes the previous day's settled values overnight.
+# 06:30 and 17:30 in Bogotá. XM settles price and demand about three days late and publishes at no
+# fixed hour, so the second run picks up the day that was not out yet in the morning.
 on:
   schedule:
     - cron: "30 11 * * *"
+    - cron: "30 22 * * *"
   workflow_dispatch:
     inputs:
       backfill:

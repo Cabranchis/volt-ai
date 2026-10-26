@@ -37,6 +37,7 @@ export const en = {
     source: "Source",
     github: "Source code",
     dataThrough: "Settled market data through {date}",
+    hydroThrough: "Hydrology through {date}",
     sourcePostgres: "Live database",
     sourceFixtures: "Demo snapshot",
     snapshotNote:

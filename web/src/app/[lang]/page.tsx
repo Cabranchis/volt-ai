@@ -10,6 +10,7 @@ import { Panel } from "@/components/ui/Panel";
 import { StatStrip, type Stat } from "@/components/ui/StatStrip";
 import { EmptyState } from "@/components/ui/States";
 import { getAnomalies, getBriefing, getForecast, getSeries } from "@/lib/data";
+import { fmt } from "@/lib/i18n/fmt";
 import { addDays, formatDate, formatGWh, formatNumber } from "@/lib/format";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 import {
@@ -102,6 +103,11 @@ export default async function OverviewPage() {
             <Freshness
               lastDay={demand.day}
               lastDayLabel={formatDate(demand.day, locale)}
+              detail={
+                reservoir && reservoir.day > demand.day
+                  ? fmt(dict.common.hydroThrough, { date: formatDate(reservoir.day, locale) })
+                  : undefined
+              }
               labels={{
                 dataThrough: dict.common.dataThrough,
                 fresh: dict.common.freshness.fresh,
