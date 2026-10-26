@@ -26,10 +26,12 @@ from voltia.db import utcnow
 from voltia.explain import shap_values, top_drivers
 from voltia.features import (
     ONI_PUBLICATION_LAG_DAYS,
+    PUBLICATION_LAG_DAYS,
     TARGETS,
     TargetSpec,
     build_features,
     complete_daily,
+    days_known_past_origin,
 )
 from voltia.models.backtest import (
     BacktestConfig,
@@ -49,8 +51,9 @@ from voltia.models.gbm import QUANTILES, GBMParams, predict_quantiles
 
 log = structlog.get_logger()
 
-# Chosen on development origins from 2021-07 to 2023-01, before any reported origin.
-REFERENCES: dict[str, Reference] = {"demand_kwh": "last", "price_mean_cop_kwh": "last"}
+# Chosen on development origins before any reported origin: 2021-07 to 2023-01 first, then the
+# 45 origins of 2020-03 to 2023-10 of pipeline/research (docs/model-experiments.md).
+REFERENCES: dict[str, Reference] = {"demand_kwh": "level7", "price_mean_cop_kwh": "last"}
 STORE_RUNS_KEPT = 3
 
 
@@ -119,7 +122,10 @@ def train(
     targets = targets or TARGETS
     start = time.perf_counter()
     end = last_settled_day(history, list(targets))
-    hist = complete_daily(history).loc[:end]
+    # The history is not cut at `end`: the price model reads series XM publishes sooner than the
+    # settled price (features.PUBLICATION_LAG_DAYS). Outcomes after `end` are never trained on:
+    # origins stop at `end` and a fit only uses rows whose target day is on or before its cutoff.
+    hist = complete_daily(history)
     max_horizon = max(spec.horizon for spec in targets.values())
     planned = select_origins(end, max_horizon, cfg.n_warmup + cfg.n_origins, cfg.step_days)
     origins = [observed_origin(hist, list(targets), o) for o in planned]
@@ -187,6 +193,17 @@ def forecast_target(
         if last is None:
             raise ValueError(f"no data for {spec.name}")
         origin = pd.Timestamp(str(last))
+    for series in PUBLICATION_LAG_DAYS:
+        if series not in history.columns:
+            continue
+        newest = history[series].last_valid_index()
+        needed = origin + pd.Timedelta(days=days_known_past_origin(series))
+        if spec.name == "price_mean_cop_kwh" and (
+            newest is None or pd.Timestamp(str(newest)) < needed
+        ):
+            log.warning(
+                "market_series_stale", series=series, needed=str(needed.date()), newest=str(newest)
+            )
     feats = build_features(history, origin, spec.horizons, spec.name)
     x = feats[model.features].to_numpy(dtype=np.float32)
     offset = reference_offset(feats, model.reference).to_numpy(dtype=float)

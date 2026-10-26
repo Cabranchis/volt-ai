@@ -27,6 +27,20 @@ XM_DAILY_METRICS = {
     "PorcVoluUtilDiar": "reservoir_pct",
     "VoluUtilDiarEner": "reservoir_kwh",
 }
+# Market state read by the price model (features.MARKET_FEATURES). Daily metrics, then hourly
+# ones averaged over the 24 hours. VertEner lists only the days with spilling.
+XM_MARKET_DAILY = {
+    "PrecEsca": "scarcity_price",
+    "VolTurbMasa": "turbined_m3",
+    "CapaUtilDiarEner": "reservoir_capacity_kwh",
+}
+XM_MARKET_HOURLY = {"CostMargDesp": "dispatch_cost"}
+XM_SPILL_METRIC = "VertEner"
+# Contract prices have weeks without a published value (a 34-day gap in 2018-2026), so they are a
+# dataset of their own and may have holes; the model reads missing values as NaN.
+XM_CONTRACT_DAILY = {"PrecPromCont": "contract_price"}
+XM_CONTRACT_HOURLY = {"PrecPromContNoRegu": "contract_price_unreg"}
+
 MIX_CATEGORIES = ["hydro", "thermal", "solar", "wind", "cogen", "other"]
 HOURS_PER_DAY = 24
 DEMAND_TOLERANCE = 0.08  # demand / generation stays within about -3 % to +5 % in every year
@@ -130,6 +144,46 @@ def fetch_xm_price(c: Clients, s: Settings, start: date, end: date, today: date)
     )
 
 
+def _hourly_means(
+    c: Clients, metrics: dict[str, str], start: date, end: date
+) -> list[pd.DataFrame]:
+    parts = []
+    for metric, series in metrics.items():
+        hourly = _complete_days(c.xm.hourly_system(metric, start, end))
+        mean = hourly.groupby("day")["value"].mean().rename("value").reset_index()
+        parts.append(_daily_long(mean, series))
+    return parts
+
+
+def fetch_xm_contracts(c: Clients, s: Settings, start: date, end: date, today: date) -> Batch:
+    """Average contract prices, all and unregulated markets; published about five days late."""
+    parts = [
+        _daily_long(c.xm.daily_system(metric, start, end), series)
+        for metric, series in XM_CONTRACT_DAILY.items()
+    ]
+    parts += _hourly_means(c, XM_CONTRACT_HOURLY, start, end)
+    return Batch(daily=pd.concat(parts, ignore_index=True), continuous=False)
+
+
+def fetch_xm_market(c: Clients, s: Settings, start: date, end: date, today: date) -> Batch:
+    """Dispatch cost, scarcity price, spilling and the turbined volume and usable capacity."""
+    daily = {
+        series: c.xm.daily_system(metric, start, end) for metric, series in XM_MARKET_DAILY.items()
+    }
+    parts = [_daily_long(frame, series) for series, frame in daily.items()]
+    parts += _hourly_means(c, XM_MARKET_HOURLY, start, end)
+    # XM reports spilling only on the days it happened: a day the turbined volume is published
+    # for but spilling is not listed had none. The newest turbined day is the exception, because
+    # spilling may simply not be published yet, so it stays empty unless XM listed it.
+    spill = c.xm.daily_system(XM_SPILL_METRIC, start, end).set_index("day")["value"]
+    published = pd.DatetimeIndex(daily["turbined_m3"]["day"]).sort_values()
+    settled = published[:-1] if len(published) else published
+    days = pd.DatetimeIndex(settled.union(pd.DatetimeIndex(spill.index.intersection(published))))
+    full = spill.reindex(days).fillna(0.0).rename("value").rename_axis("day").reset_index()
+    parts.append(_daily_long(full, "spill_kwh"))
+    return Batch(daily=pd.concat(parts, ignore_index=True))
+
+
 def fetch_xm_generation(c: Clients, s: Settings, start: date, end: date, today: date) -> Batch:
     hourly = _complete_days(c.xm.hourly_system("Gene", start, end))
     totals = hourly.groupby("day")["value"].sum().rename("value").reset_index()
@@ -174,9 +228,15 @@ def fetch_oni(c: Clients, s: Settings, start: date, end: date, today: date) -> B
 
 Fetcher = Callable[[Clients, Settings, date, date, date], Batch]
 
+# Datasets only the price model's market features need. When one fails the run goes on: the
+# features are then missing (NaN) for the newest days, which the trees treat as unknown.
+OPTIONAL_DATASETS = frozenset({"xm_market", "xm_contracts"})
+
 DATASETS: dict[str, Fetcher] = {
     "xm_daily": fetch_xm_daily,
     "xm_price": fetch_xm_price,
+    "xm_market": fetch_xm_market,
+    "xm_contracts": fetch_xm_contracts,
     "xm_generation": fetch_xm_generation,
     "xm_mix": fetch_xm_mix,
     "weather": fetch_weather,

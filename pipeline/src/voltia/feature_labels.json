@@ -39,5 +39,21 @@
   "temp_mean30_yoy": {"es": "Temperatura frente al año pasado", "en": "Temperature vs. last year"},
   "precip_sum30": {"es": "Lluvia del último mes", "en": "Rainfall over the last month"},
   "oni_known": {"es": "Índice de El Niño (ONI)", "en": "El Niño index (ONI)"},
-  "oni_chg3": {"es": "Cambio del índice de El Niño en 3 meses", "en": "El Niño index change over 3 months"}
+  "oni_chg3": {"es": "Cambio del índice de El Niño en 3 meses", "en": "El Niño index change over 3 months"},
+  "dc_target_rel": {"es": "Costo del despacho programado para ese día", "en": "Programmed dispatch cost for that day"},
+  "dc_known_mean_rel": {"es": "Costo del despacho de los últimos días sin liquidar", "en": "Dispatch cost of the latest unsettled days"},
+  "dc_mean7_rel": {"es": "Costo del despacho, promedio semanal", "en": "Dispatch cost, weekly average"},
+  "dc_basis14": {"es": "Brecha reciente entre precio de bolsa y despacho", "en": "Recent gap between spot price and dispatch cost"},
+  "dc_corrected_target_rel": {"es": "Despacho programado ajustado por la brecha reciente", "en": "Dispatch cost adjusted for the recent gap"},
+  "dc_chg3": {"es": "Cambio del costo del despacho en 3 días", "en": "Dispatch cost change over 3 days"},
+  "contract_rel": {"es": "Precio promedio de contratos", "en": "Average contract price"},
+  "scarcity_rel": {"es": "Precio de escasez", "en": "Scarcity price"},
+  "contract_unreg_rel": {"es": "Precio de contratos del mercado no regulado", "en": "Unregulated-market contract price"},
+  "price_contract_gap28": {"es": "Precio de bolsa frente a contratos (28 días)", "en": "Spot price vs. contracts (28 days)"},
+  "reservoir_now_chg": {"es": "Cambio del nivel de embalses desde el último día liquidado", "en": "Reservoir change since the last settled day"},
+  "inflows_now_chg": {"es": "Cambio reciente de los aportes hídricos", "en": "Recent change in river inflows"},
+  "spill7": {"es": "Vertimientos de la última semana", "en": "Spilled energy in the last week"},
+  "spill_chg28": {"es": "Vertimientos frente a las 4 semanas previas", "en": "Spilling vs. the previous 4 weeks"},
+  "turbined_rel90": {"es": "Agua turbinada frente al último trimestre", "en": "Turbined water vs. the last quarter"},
+  "reservoir_capacity_share": {"es": "Embalses frente a su capacidad útil", "en": "Reservoirs vs. usable capacity"}
 }

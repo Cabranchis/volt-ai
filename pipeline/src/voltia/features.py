@@ -1,9 +1,12 @@
 """Features for the direct multi-horizon forecasters (one row per origin T and horizon h).
 
-A row for origin T uses only values observed up to and including day T, plus calendar facts
-about the target day T + h (weekday, holidays, long weekends), which are known in advance.
-`build_features` makes this explicit by truncating the history at the origin; the vectorised
-`feature_table` used for training is tested to give bit-identical rows.
+A row for origin T uses only what was published by the day the forecast is made, plus calendar
+facts about the target day T + h (weekday, holidays, long weekends), which are known in advance.
+XM settles the price about three days after its day, so the forecast of origin T (the last settled
+day) is made on day A = T + SETTLE_LAG_DAYS; hydrology and the programmed dispatch cost are
+published faster and are already known past T (PUBLICATION_LAG_DAYS). Nothing later than
+A - lag is read for a series. `build_features` makes this explicit by truncating the history at A;
+the vectorised `feature_table` used for training is tested to give bit-identical rows.
 """
 
 from __future__ import annotations
@@ -23,6 +26,28 @@ from dateutil.easter import easter
 ONI_PUBLICATION_LAG_DAYS = 75
 HOLIDAY_DISTANCE_CAP = 14
 YEAR = 364  # 52 weeks: keeps the weekday aligned
+
+# Days between the day a forecast origin T is settled and the day the forecast is made.
+SETTLE_LAG_DAYS = 3
+# Days after its own day at which XM publishes a value; series not listed are read only up to T.
+# The dispatch cost is programmed the day before it applies; one day of margin is kept.
+PUBLICATION_LAG_DAYS: dict[str, int] = {
+    "dispatch_cost": 1,
+    "reservoir_pct": 1,
+    "reservoir_kwh": 1,
+    "reservoir_capacity_kwh": 1,
+    "inflows_pct": 1,
+    "spill_kwh": 1,
+    "turbined_m3": 1,
+    "scarcity_price": 3,
+    "contract_price": 5,
+    "contract_price_unreg": 5,
+}
+
+
+def days_known_past_origin(series: str) -> int:
+    """Days past the origin of the newest usable value of `series` (negative: before it)."""
+    return SETTLE_LAG_DAYS - PUBLICATION_LAG_DAYS.get(series, SETTLE_LAG_DAYS)
 
 
 @dataclass(frozen=True)
@@ -92,6 +117,30 @@ CROSS_FEATURES = {
     "demand_kwh": ["price_level_yoy_28"],
     "price_mean_cop_kwh": ["demand_yoy_28", "price_spike_7"],
 }
+# Market state read past the origin (see PUBLICATION_LAG_DAYS), relative to the 7-day mean log
+# price:
+# the programmed dispatch cost of the days XM has not settled yet, contract and scarcity prices,
+# and the newest hydrology. `dc_target_rel` and `dc_corrected_target_rel` depend on the horizon.
+MARKET_FEATURES = {
+    "price_mean_cop_kwh": [
+        "dc_target_rel",
+        "dc_known_mean_rel",
+        "dc_mean7_rel",
+        "dc_basis14",
+        "dc_corrected_target_rel",
+        "dc_chg3",
+        "contract_rel",
+        "scarcity_rel",
+        "contract_unreg_rel",
+        "price_contract_gap28",
+        "reservoir_now_chg",
+        "inflows_now_chg",
+        "spill7",
+        "spill_chg28",
+        "turbined_rel90",
+        "reservoir_capacity_share",
+    ],
+}
 META_COLUMNS = ["origin", "day", "ref_log", "sn_log", "last_log"]
 
 
@@ -103,6 +152,7 @@ def feature_names(target: str) -> list[str]:
         *OWN_FEATURES,
         *CROSS_FEATURES[target],
         *EXOGENOUS_FEATURES,
+        *MARKET_FEATURES.get(target, []),
     ]
 
 
@@ -211,6 +261,67 @@ def oni_known(hist: pd.DataFrame) -> pd.Series:
     return known
 
 
+def _newest(series: pd.Series, name: str) -> pd.Series:
+    """Value of `series` on the newest day usable at the forecast date, aligned to the origin."""
+    return series.shift(-days_known_past_origin(name))
+
+
+def _rolling_known(series: pd.Series, window: int, name: str, how: str = "mean") -> pd.Series:
+    """Rolling mean or sum ending on the newest usable day of `name`, aligned to the origin."""
+    rolled = series.rolling(window, min_periods=max(1, int(window * 0.7)))
+    return (rolled.mean() if how == "mean" else rolled.sum()).shift(-days_known_past_origin(name))
+
+
+def market_features(hist: pd.DataFrame, price: pd.Series, ref: pd.Series) -> dict[str, pd.Series]:
+    """Origin-level market features of the price model; NaN where a series is not loaded yet."""
+    out: dict[str, pd.Series] = {}
+    dc = log_positive(_col(hist, "dispatch_cost"))
+    k_dc = days_known_past_origin("dispatch_cost")
+    basis = (price - dc).rolling(14, min_periods=10).mean()  # settled price minus dispatch cost
+    out["dc_basis14"] = basis
+    ahead = [dc.shift(-j) for j in range(1, k_dc + 1)]
+    known_mean = (
+        pd.concat(ahead, axis=1).mean(axis=1) if ahead else pd.Series(np.nan, index=dc.index)
+    )
+    out["dc_known_mean_rel"] = known_mean - ref
+    out["dc_mean7_rel"] = _rolling_known(dc, 7, "dispatch_cost") - ref
+    out["dc_chg3"] = dc.shift(-k_dc) - dc.shift(3 - k_dc)
+
+    contract = log_positive(_col(hist, "contract_price"))
+    scarcity = log_positive(_col(hist, "scarcity_price"))
+    contract_unreg = log_positive(_col(hist, "contract_price_unreg"))
+    out["contract_rel"] = _newest(contract, "contract_price") - ref
+    out["scarcity_rel"] = _newest(scarcity, "scarcity_price") - ref
+    out["contract_unreg_rel"] = _newest(contract_unreg, "contract_price_unreg") - ref
+    out["price_contract_gap28"] = _rolling_known(price, 28, "price_mean_cop_kwh") - _rolling_known(
+        contract, 28, "contract_price"
+    )
+
+    reservoir = _col(hist, "reservoir_pct")
+    inflows = _col(hist, "inflows_pct")
+    out["reservoir_now_chg"] = _newest(reservoir, "reservoir_pct") - reservoir
+    out["inflows_now_chg"] = _rolling_known(inflows, 3, "inflows_pct") - _rolling_known(
+        inflows, 3, "price_mean_cop_kwh"
+    )
+    raw_spill = _col(hist, "spill_kwh")
+    last_spill = raw_spill.last_valid_index()
+    # Zero-fill the days XM listed no spilling for, but not the days after the newest stored one.
+    spill = (
+        raw_spill
+        if last_spill is None
+        else raw_spill.where(raw_spill.index > last_spill, raw_spill.fillna(0.0))
+    ) / 1e6
+    out["spill7"] = _rolling_known(spill, 7, "spill_kwh")
+    out["spill_chg28"] = out["spill7"] - _rolling_known(spill, 28, "spill_kwh")
+    turbined = log_positive(_col(hist, "turbined_m3"))
+    out["turbined_rel90"] = _rolling_known(turbined, 7, "turbined_m3") - _rolling_known(
+        turbined, 90, "turbined_m3"
+    )
+    capacity_share = _col(hist, "reservoir_kwh") / _col(hist, "reservoir_capacity_kwh")
+    out["reservoir_capacity_share"] = _newest(capacity_share, "reservoir_capacity_kwh")
+    return out
+
+
 def origin_features(hist: pd.DataFrame, target: str) -> pd.DataFrame:
     """Features that depend only on the origin day. `hist` must be a complete daily frame."""
     y = log_positive(hist[target])
@@ -266,6 +377,8 @@ def origin_features(hist: pd.DataFrame, target: str) -> pd.DataFrame:
             "oni_chg3": oni - oni.shift(91),
         }
     )
+    if target in MARKET_FEATURES:
+        out.update(market_features(hist, price, ref))
     return pd.DataFrame(out, index=hist.index)
 
 
@@ -303,6 +416,7 @@ def feature_table(
     ref = base["ref_log"].to_numpy()
     last_log = y.reindex(index).to_numpy()
     ref_last_year = ref_all.reindex(index - pd.Timedelta(days=YEAR)).to_numpy()
+    dispatch = log_positive(_col(hist, "dispatch_cost"))
     frames = []
     for h in horizons:
         k = (-h) % 7  # lag of the same weekday in the last observed week
@@ -328,6 +442,13 @@ def feature_table(
         target_cal = cal.reindex(day)
         for name in CALENDAR_FEATURES:
             frame[name] = target_cal[name].to_numpy()
+        if target in MARKET_FEATURES:
+            known = h <= days_known_past_origin("dispatch_cost")
+            at_day = dispatch.reindex(day).to_numpy()
+            frame["dc_target_rel"] = np.where(known, at_day - ref, np.nan)
+            frame["dc_corrected_target_rel"] = np.where(
+                known, at_day + base["dc_basis14"].to_numpy() - ref, np.nan
+            )
         frames.append(frame)
     table = pd.concat(frames, ignore_index=True)
     table = table.sort_values(["origin", "h"], kind="stable").reset_index(drop=True)
@@ -337,12 +458,16 @@ def feature_table(
 def build_features(
     history: pd.DataFrame, origin: pd.Timestamp, horizons: Sequence[int], target: str
 ) -> pd.DataFrame:
-    """Feature rows for one origin, computed from `history` truncated at the origin."""
+    """Feature rows for one origin, computed from `history` truncated at the forecast date.
+
+    The forecast date is the origin plus SETTLE_LAG_DAYS: later days are cut, and each series is
+    read only up to the day it is published by then.
+    """
     origin = pd.Timestamp(origin).as_unit("ns")
     hist = complete_daily(history)
-    seen = hist.loc[:origin]
-    if seen.empty or seen.index[-1] != origin:
+    if origin not in hist.index:
         raise ValueError(f"history does not reach the origin {origin.date()}")
+    seen = hist.loc[: origin + pd.Timedelta(days=SETTLE_LAG_DAYS)]
     return feature_table(seen, target, horizons, origins=[origin])
 
 

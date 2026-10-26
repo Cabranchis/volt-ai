@@ -27,6 +27,13 @@ DAILY_BOUNDS: dict[str, tuple[float, float]] = {
     "weather_temp_c": (-5.0, 40.0),
     "weather_precip_mm": (0.0, 500.0),
     "oni": (-4.0, 4.0),
+    "dispatch_cost": (0.0, 20_000.0),
+    "contract_price": (0.0, 5_000.0),
+    "contract_price_unreg": (0.0, 5_000.0),
+    "scarcity_price": (0.0, 5_000.0),
+    "spill_kwh": (0.0, 2e9),
+    "turbined_m3": (0.0, 2e10),
+    "reservoir_capacity_kwh": (0.0, 40e9),
 }
 
 HOURLY_BOUNDS: dict[str, tuple[float, float]] = {

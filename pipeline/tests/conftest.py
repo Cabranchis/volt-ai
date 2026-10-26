@@ -78,6 +78,14 @@ def make_history(days: int = 760, start: str = "2023-01-01", seed: int = 0) -> p
             "gen_wind_kwh": total * 0.01,
             "weather_temp_c": 22 + 1.5 * season + rng.normal(0, 0.5, days),
             "weather_precip_mm": rng.gamma(1.0, 5.0, days),
+            # Market state of the price model: dispatch cost follows the settled price with a bias.
+            "dispatch_cost": price * 0.85 * np.exp(rng.normal(0, 0.05, days)),
+            "contract_price": 250 + 30 * season + rng.normal(0, 2, days),
+            "contract_price_unreg": 255 + 30 * season + rng.normal(0, 2, days),
+            "scarcity_price": 700 + 40 * season,
+            "spill_kwh": np.where(season > 0.4, 3e7 * season, 0.0),
+            "turbined_m3": 2e8 * (1 + 0.2 * season) + rng.normal(0, 1e6, days),
+            "reservoir_capacity_kwh": np.full(days, 1.7e10),
         },
         index=index,
     )

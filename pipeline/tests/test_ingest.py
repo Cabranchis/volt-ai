@@ -15,7 +15,19 @@ from sqlalchemy import Engine
 
 from voltia import db
 from voltia.config import Settings
-from voltia.ingest import MIX_CATEGORIES, XM_DAILY_METRICS, Clients, run_all, settled_demand
+from voltia.ingest import (
+    MIX_CATEGORIES,
+    XM_CONTRACT_DAILY,
+    XM_CONTRACT_HOURLY,
+    XM_DAILY_METRICS,
+    XM_MARKET_DAILY,
+    XM_MARKET_HOURLY,
+    XM_SPILL_METRIC,
+    Clients,
+    fetch_xm_market,
+    run_all,
+    settled_demand,
+)
 from voltia.schemas import DAILY_BOUNDS
 from voltia.sources.oni import ONI_URL, OniClient
 from voltia.sources.openmeteo import FORECAST_URL, OpenMeteoClient
@@ -27,18 +39,30 @@ TODAY = date(2026, 10, 22)
 SINCE = date(2026, 10, 20)
 
 
+DAILY_METRICS = {
+    **XM_DAILY_METRICS,
+    **XM_MARKET_DAILY,
+    **XM_CONTRACT_DAILY,
+    XM_SPILL_METRIC: "spill_kwh",
+}
+HOURLY_METRICS = {**XM_MARKET_HOURLY, **XM_CONTRACT_HOURLY}
+
+
 def _daily_payload(request: httpx.Request) -> httpx.Response:
     body = json.loads(request.content)
-    series = XM_DAILY_METRICS[body["MetricId"]]
+    series = DAILY_METRICS[body["MetricId"]]
     low, high = DAILY_BOUNDS[series]
     value = DEMAND_KWH if series == "demand_kwh" else (low + high) / 2
     start, end = date.fromisoformat(body["StartDate"]), date.fromisoformat(body["EndDate"])
+    days = (end - start).days + 1
+    if series == "spill_kwh":
+        days = 1  # XM lists spilling only on the days it happened
     items = [
         {
             "Date": (start + timedelta(days=i)).isoformat(),
             "DailyEntities": [{"Id": "Sistema", "Value": str(value)}],
         }
-        for i in range((end - start).days + 1)
+        for i in range(days)
     ]
     return httpx.Response(200, json={"Items": items})
 
@@ -64,7 +88,7 @@ def mocked_apis(
 
         def hourly(request: httpx.Request) -> httpx.Response:
             body = json.loads(request.content)
-            if body["MetricId"] == "PrecBolsNaci":
+            if body["MetricId"] == "PrecBolsNaci" or body["MetricId"] in HOURLY_METRICS:
                 return httpx.Response(200, json=load_json("xm/hourly_price.json"))
             if body["Entity"] == "Recurso":
                 return httpx.Response(200, json=load_json("xm/hourly_gene_resources.json"))
@@ -98,7 +122,8 @@ def test_full_ingest_loads_every_dataset(
     assert [r.dataset for r in results if not r.ok] == []
     wide = db.read_series(engine)
     expected = {
-        *XM_DAILY_METRICS.values(),
+        *DAILY_METRICS.values(),
+        *HOURLY_METRICS.values(),
         "price_mean_cop_kwh",
         "price_max_cop_kwh",
         "gen_total_kwh",
@@ -112,6 +137,12 @@ def test_full_ingest_loads_every_dataset(
     # Only 2026-10-20 has recorded generation to reconcile with, so 2026-10-21 demand is held back.
     assert wide["demand_kwh"].dropna().index.tolist() == [pd.Timestamp("2026-10-20")]
     assert wide["gen_wind_kwh"].dropna().eq(0).all() or wide["gen_wind_kwh"].dropna().gt(0).all()
+    # Spilling was listed for the first day only; the newest turbined day stays empty because XM
+    # may not have published its spilling yet.
+    spill = wide["spill_kwh"].dropna()
+    assert spill.index.tolist() == [pd.Timestamp("2026-10-20")]
+    assert spill.iloc[0] > 0
+    assert wide["dispatch_cost"].dropna().gt(0).all()
     assert db.table_counts(engine, ["series_hourly"])["series_hourly"] == 48 + 24
 
 
@@ -195,3 +226,24 @@ def test_settled_demand_drops_placeholder_and_unmatched_days() -> None:
     kept = settled_demand(demand, generation)
     # 10-22 is the placeholder, 10-23 has no generation to compare with.
     assert kept["day"].tolist() == list(days[:2])
+
+
+class _MarketXM:
+    """Three turbined days; spilling is listed for the first only."""
+
+    def daily_system(self, metric: str, start: date, end: date) -> pd.DataFrame:
+        days = pd.to_datetime(["2026-10-18", "2026-10-19", "2026-10-20"])
+        if metric == XM_SPILL_METRIC:
+            return pd.DataFrame({"day": days[:1], "value": [5e6]})
+        return pd.DataFrame({"day": days, "value": [1.0e8] * 3})
+
+    def hourly_system(self, metric: str, start: date, end: date) -> pd.DataFrame:
+        days = pd.to_datetime(["2026-10-18", "2026-10-19", "2026-10-20"]).repeat(24)
+        return pd.DataFrame({"day": days, "hour": list(range(1, 25)) * 3, "value": 300.0})
+
+
+def test_spill_is_zero_on_settled_unlisted_days_and_empty_on_the_newest(settings: Settings) -> None:
+    clients = Clients(_MarketXM(), None, None)  # type: ignore[arg-type]
+    batch = fetch_xm_market(clients, settings, SINCE, TODAY, TODAY)
+    spill = batch.daily[batch.daily["series"] == "spill_kwh"].set_index("day")["value"]
+    assert spill.to_dict() == {pd.Timestamp("2026-10-18"): 5e6, pd.Timestamp("2026-10-19"): 0.0}

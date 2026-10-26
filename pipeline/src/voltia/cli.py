@@ -19,7 +19,7 @@ from voltia.config import Settings, get_settings
 from voltia.features import TARGETS
 from voltia.forecast import TrainedTarget, forecast_target, load_models, save_models
 from voltia.forecast import train as train_models
-from voltia.ingest import DATASETS, Clients, Result, run_all
+from voltia.ingest import DATASETS, OPTIONAL_DATASETS, Clients, Result, run_all
 from voltia.models.backtest import BacktestConfig
 from voltia.models.gbm import GBMParams
 from voltia.sources.oni import OniClient
@@ -58,10 +58,10 @@ def _run(settings: Settings, since: date, full: bool, only: list[str] | None) ->
 
 def _report(results: list[Result]) -> None:
     for r in results:
-        mark = "ok   " if r.ok else "FAIL "
+        mark = "ok   " if r.ok else ("warn " if r.dataset in OPTIONAL_DATASETS else "FAIL ")
         extra = "" if r.ok else r.detail
         typer.echo(f"{mark}{r.dataset:<14} rows={r.rows:<8} last_day={r.last_day} {extra}")
-    if any(not r.ok for r in results):
+    if any(not r.ok and r.dataset not in OPTIONAL_DATASETS for r in results):
         raise typer.Exit(code=1)
 
 

@@ -3,10 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
-from voltia.cli import app, today_bogota
+from voltia.cli import _report, app, today_bogota
 from voltia.config import Settings, get_settings
+from voltia.ingest import Result
 
 runner = CliRunner()
 
@@ -51,3 +53,11 @@ def test_sqlite_is_the_default(local_db: Path) -> None:
     url = Settings(_env_file=None).resolved_database_url  # type: ignore[call-arg]
     assert url.startswith("sqlite:///")
     assert local_db.parent.exists()
+
+
+def test_a_failing_market_dataset_does_not_fail_the_run() -> None:
+    core = Result("xm_price", True, 5, None, "ok")
+    market = Result("xm_market", False, 0, None, "XMTransientError: down")
+    _report([core, market])  # the price model copes with missing market series
+    with pytest.raises(typer.Exit):
+        _report([Result("xm_price", False, 0, None, "boom"), market])

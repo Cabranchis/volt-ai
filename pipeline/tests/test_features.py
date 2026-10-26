@@ -6,33 +6,66 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from voltia import features as features_module
 from voltia.explain import feature_labels
 from voltia.features import (
+    MARKET_FEATURES,
+    SETTLE_LAG_DAYS,
     TARGETS,
     build_features,
     calendar_frame,
+    days_known_past_origin,
     feature_names,
     feature_table,
+    log_positive,
     oni_known,
 )
 
+ORIGINS = ["2024-01-31", "2024-06-12"]  # spilling is positive around the first one
 
-@pytest.mark.parametrize("target", list(TARGETS))
-def test_features_ignore_everything_after_the_origin(history: pd.DataFrame, target: str) -> None:
-    origin = pd.Timestamp("2024-06-12")
+
+def assert_ignores_unpublished(
+    history: pd.DataFrame, origin: pd.Timestamp, target: str, column: str
+) -> None:
+    """Corrupt `column` from the first day not yet published at the forecast date."""
     horizons = TARGETS[target].horizons
     before = build_features(history, origin, horizons, target)
-
     rng = np.random.default_rng(1)
-    future = history.index > origin
     mutated = history.copy()
-    mutated.loc[future] = mutated.loc[future] * rng.uniform(0.2, 5.0, size=(future.sum(), 1))
-    mutated.loc[mutated.index[future][::3], "demand_kwh"] = np.nan
+    usable_until = origin + pd.Timedelta(days=days_known_past_origin(column))
+    later = mutated.index > usable_until
+    # additive noise: a multiplicative change would leave a column that is 0 there unchanged
+    mutated.loc[later, column] = mutated.loc[later, column] + rng.uniform(1e3, 1e9, later.sum())
     after = build_features(mutated, origin, horizons, target)
-
     pd.testing.assert_frame_equal(before, after, check_exact=True)
     assert before["h"].tolist() == horizons
     assert (before["day"] == origin + pd.to_timedelta(before["h"], unit="D")).all()
+
+
+@pytest.mark.parametrize("origin", ORIGINS)
+@pytest.mark.parametrize("target", list(TARGETS))
+def test_features_ignore_everything_not_yet_published(
+    history: pd.DataFrame, target: str, origin: str
+) -> None:
+    """Each series is corrupted on its own, from the first day XM has not published by then."""
+    for column in history.columns:
+        assert_ignores_unpublished(history, pd.Timestamp(origin), target, column)
+
+
+def test_the_leakage_check_fails_when_a_lag_is_too_short(
+    history: pd.DataFrame, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Guard the guard: the features read a day beyond what is published, as if the lag were 0."""
+    real = features_module.days_known_past_origin
+    monkeypatch.setattr(
+        features_module,
+        "days_known_past_origin",
+        lambda s: real(s) + 1 if s == "dispatch_cost" else real(s),
+    )
+    with pytest.raises(AssertionError):
+        assert_ignores_unpublished(
+            history, pd.Timestamp("2024-06-12"), "price_mean_cop_kwh", "dispatch_cost"
+        )
 
 
 @pytest.mark.parametrize("target", list(TARGETS))
@@ -42,7 +75,8 @@ def test_training_table_rows_equal_truncated_builds(history: pd.DataFrame, targe
     table = feature_table(history, target, horizons)
     for origin in pd.to_datetime(["2024-01-31", "2024-07-04", "2025-01-02"]):
         full_rows = table[table["origin"] == origin].reset_index(drop=True)
-        truncated = build_features(history.loc[:origin], origin, horizons, target)
+        seen = history.loc[: origin + pd.Timedelta(days=SETTLE_LAG_DAYS)]
+        truncated = build_features(seen, origin, horizons, target)
         pd.testing.assert_frame_equal(full_rows, truncated, check_exact=True)
 
 
@@ -122,3 +156,43 @@ def test_every_feature_has_spanish_and_english_labels() -> None:
             assert set(labels[name]) == {"es", "en"}, name
             assert labels[name]["es"]
             assert labels[name]["en"]
+
+
+def test_market_features_exist_only_for_the_price(history: pd.DataFrame) -> None:
+    assert set(MARKET_FEATURES) == {"price_mean_cop_kwh"}
+    assert set(MARKET_FEATURES["price_mean_cop_kwh"]) <= set(feature_names("price_mean_cop_kwh"))
+    assert not set(MARKET_FEATURES["price_mean_cop_kwh"]) & set(feature_names("demand_kwh"))
+
+
+def test_dispatch_cost_prices_the_days_xm_has_not_settled(history: pd.DataFrame) -> None:
+    """With a one-day publication lag the cost is read for h = 1 and 2, never beyond."""
+    origin = pd.Timestamp("2024-06-12")
+    horizons = TARGETS["price_mean_cop_kwh"].horizons
+    rows = build_features(history, origin, horizons, "price_mean_cop_kwh")
+    known_days = SETTLE_LAG_DAYS - 1
+    assert known_days == days_known_past_origin("dispatch_cost")
+    assert rows.loc[rows["h"] <= known_days, "dc_target_rel"].notna().all()
+    assert rows.loc[rows["h"] > known_days, "dc_target_rel"].isna().all()
+    assert rows.loc[rows["h"] > known_days, "dc_corrected_target_rel"].isna().all()
+    cost = log_positive(history["dispatch_cost"])
+    expected = cost.loc[origin + pd.Timedelta(days=1)] - rows["ref_log"].iloc[0]
+    assert rows.loc[rows["h"] == 1, "dc_target_rel"].iloc[0] == pytest.approx(expected)
+
+
+def test_the_last_published_day_does_feed_the_features(history: pd.DataFrame) -> None:
+    origin = pd.Timestamp("2024-06-12")
+    horizons = TARGETS["price_mean_cop_kwh"].horizons
+    before = build_features(history, origin, horizons, "price_mean_cop_kwh")
+    mutated = history.copy()
+    last_usable = origin + pd.Timedelta(days=days_known_past_origin("dispatch_cost"))
+    mutated.loc[mutated.index == last_usable, "dispatch_cost"] *= 3.0
+    after = build_features(mutated, origin, horizons, "price_mean_cop_kwh")
+    assert not before.equals(after)
+
+
+def test_missing_market_series_leave_nan_features_not_errors(history: pd.DataFrame) -> None:
+    bare = history.drop(columns=["dispatch_cost", "contract_price", "spill_kwh"])
+    rows = build_features(bare, pd.Timestamp("2024-06-12"), [1, 2, 3], "price_mean_cop_kwh")
+    assert rows["dc_target_rel"].isna().all()
+    assert rows["contract_rel"].isna().all()
+    assert rows["level_last_rel"].notna().all()
