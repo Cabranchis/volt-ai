@@ -4,6 +4,7 @@ import {
   Activity,
   BrainCircuit,
   Briefcase,
+  Calculator,
   CloudRain,
   Gauge,
   Info,
@@ -28,6 +29,7 @@ const ICONS: Record<NavItem["key"], LucideIcon> = {
   anomalies: Activity,
   models: BrainCircuit,
   analyst: MessageSquareText,
+  calculator: Calculator,
   business: Briefcase,
   about: Info,
 };

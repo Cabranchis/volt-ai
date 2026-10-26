@@ -4,7 +4,7 @@ import type { ForecastPoint } from "./data/types";
 export const SPIKE_LEVEL = 500;
 /** A day counts as a rise when it is this many times the mean of the last 30 settled days. */
 export const SPIKE_RISE = 1.3;
-const Z90 = 1.2815515655446004;
+export const Z90 = 1.2815515655446004;
 const MEAN_WINDOW = 30;
 
 export interface SpikeDay {
@@ -41,15 +41,24 @@ export function recentMean(values: readonly (number | null)[]): number | null {
   return recent.reduce((sum, v) => sum + v, 0) / recent.length;
 }
 
+/** The log-normal with a day's median (P50) and the log-scale spread between its P10 and P90, or null if the band is unusable. */
+export function logNormalOf(point: Pick<ForecastPoint, "p10" | "p50" | "p90">): { mu: number; sigma: number } | null {
+  if (!(point.p10 > 0) || !(point.p50 > 0) || !(point.p90 > point.p10)) return null;
+  return {
+    mu: Math.log(point.p50),
+    sigma: Math.max((Math.log(point.p90) - Math.log(point.p10)) / (2 * Z90), 1e-3),
+  };
+}
+
 /**
  * P(price > threshold) read from the forecast's own P10/P50/P90, taken as a log-normal
  * distribution. The research backtest (docs/model-experiments.md) scored it for the two events
  * shown here; it is not offered for much higher levels, where it did not beat persistence.
  */
 export function exceedance(point: Pick<ForecastPoint, "p10" | "p50" | "p90">, threshold: number): number | null {
-  if (!(point.p10 > 0) || !(point.p50 > 0) || !(point.p90 > point.p10) || !(threshold > 0)) return null;
-  const sigma = Math.max((Math.log(point.p90) - Math.log(point.p10)) / (2 * Z90), 1e-3);
-  return 1 - normalCdf((Math.log(threshold) - Math.log(point.p50)) / sigma);
+  const dist = logNormalOf(point);
+  if (dist === null || !(threshold > 0)) return null;
+  return 1 - normalCdf((Math.log(threshold) - dist.mu) / dist.sigma);
 }
 
 export function spikeOutlook(

@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type ConsoleMessage } from "@playwright/test";
 
-const PAGES = ["", "/demand", "/price", "/hydrology", "/map", "/anomalies", "/models", "/analyst", "/business", "/about"];
+const PAGES = ["", "/demand", "/price", "/hydrology", "/map", "/anomalies", "/models", "/analyst", "/calculator", "/business", "/about"];
 const LANGS = ["es", "en"] as const;
 
 test.describe("every page, in both languages", () => {
@@ -169,5 +169,30 @@ test.describe("security headers", () => {
     const response = await request.get("/api/v1/series?names=nope");
     expect(response.status()).toBe(400);
     expect(response.headers()["content-type"]).toContain("application/problem+json");
+  });
+});
+
+test.describe("cost calculator", () => {
+  test.beforeEach(async ({ page }) => {
+    // The fixture forecast covers 24 Oct to 6 Nov 2026; a fixed clock keeps the window from drifting out of it.
+    await page.clock.setFixedTime(new Date("2026-10-27T17:00:00Z"));
+  });
+
+  test("estimates a cost, scales it with the volume and compares with a contract", async ({ page }) => {
+    await page.goto("/en/calculator");
+    await expect(page.getByText("Median cost").first()).toBeVisible();
+    const cost = page.locator("dl dd").first();
+    const before = await cost.innerText();
+    await page.getByLabel("Energy per day (MWh)").fill("400");
+    await expect(cost).not.toHaveText(before);
+    await page.getByLabel("Contract price, optional (COP/kWh)").fill("450");
+    await expect(page.getByText(/Chance that the spot market costs more than the contract/)).toBeVisible();
+  });
+
+  test("rejects a volume that is not a positive number", async ({ page }) => {
+    await page.goto("/en/calculator");
+    await page.getByLabel("Energy per day (MWh)").fill("abc");
+    await expect(page.getByText(/Enter a number greater than zero/)).toBeVisible();
+    await expect(page.getByText("Median cost")).toHaveCount(0);
   });
 });
