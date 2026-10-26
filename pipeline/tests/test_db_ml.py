@@ -158,3 +158,38 @@ def test_forecast_log_survives_pruning_and_is_never_revised(engine: Engine) -> N
 def test_archiving_with_no_forecasts_is_a_no_op(engine: Engine) -> None:
     with engine.begin() as conn:
         assert db.archive_forecasts(conn) == 0
+
+
+def test_weather_forecast_log_keeps_the_first_issue_of_a_day(engine: Engine) -> None:
+    frame = pd.DataFrame(
+        {
+            "issued": pd.Timestamp("2026-10-26"),
+            "location": ["chivor", "chivor"],
+            "day": pd.to_datetime(["2026-10-26", "2026-10-27"]),
+            "lead_days": [0, 1],
+            "precip_mm": [3.0, 8.0],
+            "temp_c": [17.0, 16.0],
+            "model": "gfs_seamless",
+        }
+    )
+    assert db.archive_weather_forecast(engine, frame) == 2
+    revised = frame.assign(precip_mm=[99.0, 99.0])
+    assert db.archive_weather_forecast(engine, revised) == 0  # never rewritten
+    # a later run of the same date cannot add rows the first one did not have
+    extra = frame.assign(location="betania")
+    assert db.archive_weather_forecast(engine, extra) == 0
+    with engine.connect() as conn:
+        stored = [
+            r[0]
+            for r in conn.exec_driver_sql("SELECT precip_mm FROM weather_forecast_log ORDER BY day")
+        ]
+    assert stored == [3.0, 8.0]
+    with engine.connect() as conn:
+        assert (
+            conn.exec_driver_sql(
+                "SELECT COUNT(*) FROM weather_forecast_log WHERE fetched_at IS NULL"
+            ).scalar()
+            == 0
+        )
+    later = frame.assign(issued=pd.Timestamp("2026-10-27"), precip_mm=[5.0, 6.0])
+    assert db.archive_weather_forecast(engine, later) == 2  # a new issue date adds its own rows

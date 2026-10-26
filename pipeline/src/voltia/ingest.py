@@ -17,6 +17,7 @@ from voltia.schemas import (
     validate_daily,
     validate_entities,
     validate_hourly,
+    validate_weather_forecast,
 )
 from voltia.sources.oni import OniClient
 from voltia.sources.openmeteo import OpenMeteoClient
@@ -73,11 +74,14 @@ class Batch:
     # region); they go to their own tables, not to series_daily.
     entities: pd.DataFrame | None = None
     catalog: pd.DataFrame | None = None
+    # Weather forecasts issued today, archived as first issued (not a daily series).
+    weather_forecast: pd.DataFrame | None = None
 
     @property
     def is_empty(self) -> bool:
         no_entities = self.entities is None or self.entities.empty
-        return self.daily.empty and no_entities
+        no_forecast = self.weather_forecast is None or self.weather_forecast.empty
+        return self.daily.empty and no_entities and no_forecast
 
 
 @dataclass(frozen=True)
@@ -253,6 +257,12 @@ def fetch_xm_mix(c: Clients, s: Settings, start: date, end: date, today: date) -
     return Batch(daily=long[["series", "day", "value"]])
 
 
+def fetch_weather_forecast(c: Clients, s: Settings, start: date, end: date, today: date) -> Batch:
+    """The 16-day forecast issued today. It cannot be fetched for past days, so start and end are
+    ignored; the dataset keeps what each day's run archives."""
+    return Batch(weather_forecast=c.meteo.forecast(today))
+
+
 def fetch_weather(c: Clients, s: Settings, start: date, end: date, today: date) -> Batch:
     weather = c.meteo.weather(start, end, today)
     if weather.empty:
@@ -278,7 +288,7 @@ Fetcher = Callable[[Clients, Settings, date, date, date], Batch]
 
 # Datasets only the price model's market features need. When one fails the run goes on: the
 # features are then missing (NaN) for the newest days, which the trees treat as unknown.
-OPTIONAL_DATASETS = frozenset({"xm_market", "xm_contracts", "xm_regional"})
+OPTIONAL_DATASETS = frozenset({"xm_market", "xm_contracts", "xm_regional", "weather_forecast"})
 
 DATASETS: dict[str, Fetcher] = {
     "xm_daily": fetch_xm_daily,
@@ -289,6 +299,7 @@ DATASETS: dict[str, Fetcher] = {
     "xm_generation": fetch_xm_generation,
     "xm_mix": fetch_xm_mix,
     "weather": fetch_weather,
+    "weather_forecast": fetch_weather_forecast,
     "oni": fetch_oni,
 }
 
@@ -326,6 +337,10 @@ def run_dataset(
             if batch.catalog is not None:
                 db.replace_entity_catalog(engine, batch.catalog)
             days.append(entities["day"].max())
+        if batch.weather_forecast is not None and not batch.weather_forecast.empty:
+            forecast = validate_weather_forecast(batch.weather_forecast)
+            rows += db.archive_weather_forecast(engine, forecast)
+            days.append(forecast["issued"].max())
         if batch.hourly is not None and not batch.hourly.empty:
             rows += db.upsert_series_hourly(engine, validate_hourly(batch.hourly))
         db.prune_hourly(engine, today, settings.hourly_retention_days)

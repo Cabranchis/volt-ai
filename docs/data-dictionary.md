@@ -47,8 +47,9 @@ All daily values live in `series_daily (series, day, value)`; hourly values in `
 | `forecasts` | P10/P50/P90 per target and day, with top SHAP drivers. Only the 10 most recent runs are kept |
 | `entity_daily` | Per reservoir and per river: `reservoir_kwh`, `reservoir_capacity_kwh`, `inflows_kwh`, `inflows_hist_mean_kwh` (XM metrics VoluUtilDiarEner, CapaUtilDiarEner, AporEner, AporEnerMediHist), loaded by the optional dataset `xm_regional` |
 | `entity_catalog` | Hydrological region of each reservoir and river (XM ListadoEmbalses and ListadoRios), replaced on every ingest |
+| `weather_forecast_log` | Open-Meteo's forecast for today and the next 15 days, as issued on each day, at the four demand cities and five points near reservoirs (Guatapé, San Carlos, Chivor, Betania, Salvajina): `precip_mm`, `temp_c`, `lead_days`, plus the `model` (pinned to `gfs_seamless`, which serves all 16 days) and `fetched_at`. Loaded by the optional dataset `weather_forecast`; an incomplete forecast is refused, the first complete one of each date is kept as a unit, and rows are never pruned or revised. It exists to test, once a few months have accumulated, whether rain forecasts help the price model: forecasts issued in the past cannot be recovered |
 | `forecast_log` | Every forecast as first issued, keyed by target, origin and day, never pruned or revised. The web scores it against the settled series on the models page |
 | `anomalies` | Atypical days per target with severity, direction and method |
 | `briefings` | Daily executive summary per language and its origin (`gemini` or `template`) |
 | `rate_limits` | Counters for the chat endpoint |
-| `ingest_log` | Last outcome per dataset (`xm_daily`, `xm_price`, `xm_market`, `xm_contracts`, `xm_generation`, `xm_mix`, `weather`, `oni`) |
+| `ingest_log` | Last outcome per dataset (`xm_daily`, `xm_price`, `xm_market`, `xm_contracts`, `xm_regional`, `xm_generation`, `xm_mix`, `weather`, `weather_forecast`, `oni`) |

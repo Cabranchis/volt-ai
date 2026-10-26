@@ -3,7 +3,13 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from voltia.schemas import BatchValidationError, longest_gap, validate_daily, validate_hourly
+from voltia.schemas import (
+    BatchValidationError,
+    longest_gap,
+    validate_daily,
+    validate_hourly,
+    validate_weather_forecast,
+)
 
 
 def _daily(series: str, values: list[float], start: str = "2026-10-01") -> pd.DataFrame:
@@ -71,3 +77,41 @@ def test_hourly_validation() -> None:
     bad = ok.assign(hour=[1, 25])
     with pytest.raises(BatchValidationError):
         validate_hourly(bad)
+
+
+def _forecast_frame(**overrides: object) -> pd.DataFrame:
+    row = {
+        "issued": pd.Timestamp("2026-10-26"),
+        "location": "chivor",
+        "day": pd.Timestamp("2026-10-28"),
+        "lead_days": 2,
+        "precip_mm": 12.5,
+        "temp_c": 17.0,
+        "model": "gfs_seamless",
+    }
+    return pd.DataFrame([{**row, **overrides}])
+
+
+def test_valid_weather_forecast_passes() -> None:
+    assert len(validate_weather_forecast(_forecast_frame())) == 1
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"precip_mm": -1.0},
+        {"precip_mm": 5000.0},
+        {"temp_c": 80.0},
+        {"lead_days": 30},
+        {"location": ""},
+    ],
+)
+def test_weather_forecast_out_of_range_is_rejected(bad: dict[str, object]) -> None:
+    with pytest.raises(BatchValidationError):
+        validate_weather_forecast(_forecast_frame(**bad))
+
+
+def test_weather_forecast_duplicates_are_rejected() -> None:
+    twice = pd.concat([_forecast_frame(), _forecast_frame()], ignore_index=True)
+    with pytest.raises(BatchValidationError, match="duplicated"):
+        validate_weather_forecast(twice)

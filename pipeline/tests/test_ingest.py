@@ -103,16 +103,25 @@ def _daily_payload(request: httpx.Request) -> httpx.Response:
     return httpx.Response(200, json={"Items": items})
 
 
-def _weather_payload(_request: httpx.Request) -> httpx.Response:
-    days = [(SINCE + timedelta(days=i)).isoformat() for i in range(3)]
-    city = {
+MOCK = {"forecast_first": TODAY}
+
+
+def _weather_payload(request: httpx.Request) -> httpx.Response:
+    places = len(request.url.params["latitude"].split(","))
+    if request.url.params.get("forecast_days") == "16":
+        # the forecast request: the issue date and the 15 days after it
+        count, first = 16, MOCK["forecast_first"]
+    else:
+        count, first = 3, SINCE
+    days = [(first + timedelta(days=i)).isoformat() for i in range(count)]
+    place = {
         "daily": {
             "time": days,
-            "temperature_2m_mean": [18.0, 19.0, 20.0],
-            "precipitation_sum": [1.0, 0.0, 4.0],
+            "temperature_2m_mean": [18.0 + i for i in range(count)],
+            "precipitation_sum": [float(i % 5) for i in range(count)],
         }
     }
-    return httpx.Response(200, json=[city, city, city, city])
+    return httpx.Response(200, json=[place] * places)
 
 
 @pytest.fixture
@@ -218,6 +227,47 @@ def test_regional_dataset_failure_only_warns_and_keeps_what_was_stored(
     [second] = run_all(engine, clients, settings, SINCE, TODAY, False, ["xm_regional"])
     assert not second.ok
     assert db.table_counts(engine, ["entity_daily", "entity_catalog"]) == stored
+
+
+def test_weather_forecast_is_archived_once_per_issue_date(
+    monkeypatch: pytest.MonkeyPatch,
+    mocked_apis: respx.MockRouter,
+    engine: Engine,
+    clients: Clients,
+    settings: Settings,
+) -> None:
+    [first] = run_all(engine, clients, settings, SINCE, TODAY, False, ["weather_forecast"])
+    assert first.ok
+    assert first.last_day == TODAY
+    # 4 cities and 5 reservoir areas, today and the next 15 days
+    assert db.table_counts(engine, ["weather_forecast_log"]) == {"weather_forecast_log": 9 * 16}
+    # the same day again changes nothing; the next day adds its own forecast beside it
+    run_all(engine, clients, settings, SINCE, TODAY, False, ["weather_forecast"])
+    assert db.table_counts(engine, ["weather_forecast_log"]) == {"weather_forecast_log": 9 * 16}
+    monkeypatch.setitem(MOCK, "forecast_first", TODAY + timedelta(days=1))
+    run_all(
+        engine, clients, settings, SINCE, TODAY + timedelta(days=1), False, ["weather_forecast"]
+    )
+    assert db.table_counts(engine, ["weather_forecast_log"]) == {"weather_forecast_log": 9 * 16 * 2}
+    with engine.connect() as conn:
+        models = {
+            r[0] for r in conn.exec_driver_sql("SELECT DISTINCT model FROM weather_forecast_log")
+        }
+    assert models == {"gfs_seamless"}
+
+
+def test_an_incomplete_weather_forecast_is_refused_and_stores_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+    mocked_apis: respx.MockRouter,
+    engine: Engine,
+    clients: Clients,
+    settings: Settings,
+) -> None:
+    # the API answers one day early: the forecast would be short of its last day
+    monkeypatch.setitem(MOCK, "forecast_first", TODAY - timedelta(days=1))
+    [result] = run_all(engine, clients, settings, SINCE, TODAY, False, ["weather_forecast"])
+    assert not result.ok
+    assert db.table_counts(engine, ["weather_forecast_log"]) == {"weather_forecast_log": 0}
 
 
 def test_ingest_is_idempotent(

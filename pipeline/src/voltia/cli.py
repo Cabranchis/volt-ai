@@ -61,6 +61,9 @@ def _report(results: list[Result]) -> None:
         mark = "ok   " if r.ok else ("warn " if r.dataset in OPTIONAL_DATASETS else "FAIL ")
         extra = "" if r.ok else r.detail
         typer.echo(f"{mark}{r.dataset:<14} rows={r.rows:<8} last_day={r.last_day} {extra}")
+        if not r.ok and r.dataset in OPTIONAL_DATASETS:
+            # GitHub Actions shows this on the run summary; the job itself still succeeds.
+            typer.echo(f"::warning::optional dataset {r.dataset} failed: {r.detail}")
     if any(not r.ok and r.dataset not in OPTIONAL_DATASETS for r in results):
         raise typer.Exit(code=1)
 

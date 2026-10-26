@@ -106,6 +106,19 @@ _ENTITY = pa.DataFrameSchema(
     strict=True,
     coerce=True,
 )
+_WEATHER_FORECAST = pa.DataFrameSchema(
+    {
+        "issued": pa.Column("datetime64[ns]"),
+        "location": pa.Column(str, pa.Check.str_length(min_value=1)),
+        "day": pa.Column("datetime64[ns]"),
+        "lead_days": pa.Column(int, pa.Check.in_range(0, 16)),
+        "precip_mm": pa.Column(float, pa.Check.in_range(0, 1000), nullable=False),
+        "temp_c": pa.Column(float, pa.Check.in_range(-10, 45), nullable=False),
+        "model": pa.Column(str, pa.Check.str_length(min_value=1)),
+    },
+    strict=True,
+    coerce=True,
+)
 _HOURLY = _schema(HOURLY_BOUNDS, {"hour": pa.Column(int, pa.Check.in_range(1, 24))})
 
 
@@ -135,6 +148,11 @@ def validate_daily(frame: pd.DataFrame, continuous: bool = True) -> pd.DataFrame
 def validate_entities(frame: pd.DataFrame) -> pd.DataFrame:
     """Validate a long frame (metric, entity, day, value) of per-reservoir or per-river values."""
     return _run(_ENTITY, frame, ["metric", "entity", "day"])
+
+
+def validate_weather_forecast(frame: pd.DataFrame) -> pd.DataFrame:
+    """Validate the forecasts of one issue date (issued, location, day, lead_days, precip, temp)."""
+    return _run(_WEATHER_FORECAST, frame, ["issued", "location", "day"])
 
 
 def validate_hourly(frame: pd.DataFrame) -> pd.DataFrame:

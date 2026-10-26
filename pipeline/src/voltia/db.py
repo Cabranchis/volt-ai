@@ -368,6 +368,52 @@ def archive_forecasts(conn: Connection) -> int:
     return added
 
 
+def archive_weather_forecast(engine: Engine, frame: pd.DataFrame) -> int:
+    """Store the weather forecasts of one issue date, as a unit; what is stored is never changed.
+
+    The first complete forecast of a date wins: if any row of that date is already stored, nothing
+    is added, so a later model run cannot fill in rows of an earlier one under the same date.
+    Returns the number of rows added.
+    """
+    fetched_at = utcnow()
+    rows = [
+        {
+            "issued": i,
+            "location": str(loc),
+            "day": d,
+            "lead_days": int(lead),
+            "precip_mm": float(p),
+            "temp_c": float(t),
+            "model": str(model),
+            "fetched_at": fetched_at,
+        }
+        for i, loc, d, lead, p, t, model in zip(
+            _as_dates(frame["issued"]),
+            frame["location"],
+            _as_dates(frame["day"]),
+            frame["lead_days"],
+            frame["precip_mm"],
+            frame["temp_c"],
+            frame["model"],
+            strict=True,
+        )
+    ]
+    with engine.begin() as conn:
+        log = _table(conn, "weather_forecast_log")
+        issue_dates = {row["issued"] for row in rows}
+        taken = conn.execute(
+            select(log.c.issued).where(log.c.issued.in_(issue_dates)).limit(1)
+        ).first()
+        if taken is not None:
+            return 0
+        insert_fn = postgresql.insert if conn.dialect.name == "postgresql" else sqlite.insert
+        stmt = insert_fn(log).on_conflict_do_nothing(index_elements=["issued", "location", "day"])
+        added = 0
+        for i in range(0, len(rows), _BATCH):
+            added += int(conn.execute(stmt, rows[i : i + _BATCH]).rowcount or 0)
+    return added
+
+
 def _prune_forecasts(conn: Connection, keep_runs: int) -> int:
     runs = _table(conn, "model_runs")
     forecasts = _table(conn, "forecasts")
