@@ -11,10 +11,19 @@ dependencies = [
   "quantile-forest>=1.4",
   "statsforecast>=2.0",
   "pytest>=8.3",
+  "torch>=2.8",
+  "chronos-forecasting>=2.0",
+  "neuralforecast>=3.0",
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
 
 [tool.uv.sources]
 voltia-pipeline = { path = "..", editable = true }
+torch = { index = "pytorch-cu128" }
 
 [tool.pytest.ini_options]
 addopts = "--no-cov"

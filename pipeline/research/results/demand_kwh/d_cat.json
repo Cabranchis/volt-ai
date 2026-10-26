@@ -1,0 +1,138 @@
+{
+  "ets": {
+    "by_bucket": {
+      "1-7": {
+        "mape": 2.7165,
+        "mase": 1.0124,
+        "pinball_mean": 1893434.5067
+      },
+      "15-30": {
+        "mape": 3.2064,
+        "mase": 1.2138,
+        "pinball_mean": 2452148.752
+      },
+      "8-14": {
+        "mape": 2.9998,
+        "mase": 1.1198,
+        "pinball_mean": 2174845.9805
+      }
+    },
+    "coverage": 0.9243,
+    "mape": 3.0439,
+    "mase": 1.1449,
+    "pinball_mean": 2257078.1148,
+    "pinball_p10": 1954431.8827,
+    "pinball_p50": 3090630.7441,
+    "pinball_p90": 1726171.7175,
+    "winkler80": 36806036.0019
+  },
+  "experiment": {
+    "blocks": [],
+    "family": "catboost",
+    "features": 39,
+    "name": "d_cat",
+    "options": {},
+    "reference": "last"
+  },
+  "model": {
+    "by_bucket": {
+      "1-7": {
+        "mape": 1.6337,
+        "mase": 0.6234,
+        "pinball_mean": 1143701.8819
+      },
+      "15-30": {
+        "mape": 2.1256,
+        "mase": 0.8184,
+        "pinball_mean": 1376723.3033
+      },
+      "8-14": {
+        "mape": 1.9452,
+        "mase": 0.7409,
+        "pinball_mean": 1356477.0621
+      }
+    },
+    "coverage": 0.8252,
+    "mape": 1.9687,
+    "mase": 0.7548,
+    "pinball_mean": 1317627.5154,
+    "pinball_p10": 1029331.2433,
+    "pinball_p50": 2039643.3835,
+    "pinball_p90": 883907.9193,
+    "winkler80": 19132391.6258
+  },
+  "model_raw": {
+    "by_bucket": {
+      "1-7": {
+        "mape": 1.6337,
+        "mase": 0.6234,
+        "pinball_mean": 1215066.3979
+      },
+      "15-30": {
+        "mape": 2.1256,
+        "mase": 0.8184,
+        "pinball_mean": 1583192.5479
+      },
+      "8-14": {
+        "mape": 1.9452,
+        "mase": 0.7409,
+        "pinball_mean": 1477030.1756
+      }
+    },
+    "coverage": 0.4351,
+    "mape": 1.9687,
+    "mase": 0.7548,
+    "pinball_mean": 1472525.226,
+    "pinball_p10": 1387943.8268,
+    "pinball_p50": 2039643.3835,
+    "pinball_p90": 989988.4678,
+    "winkler80": 23779322.9465
+  },
+  "n_origins": 37,
+  "n_rows": 1110,
+  "paired_vs_ets_mase": {
+    "ci_high": -0.2277,
+    "ci_low": -0.5693,
+    "mean_diff": -0.3901,
+    "origins": 37,
+    "wilcoxon_p": 0.0,
+    "wins": 28
+  },
+  "paired_vs_ets_pinball": {
+    "ci_high": -707614.8673,
+    "ci_low": -1195942.5124,
+    "mean_diff": -939450.5994,
+    "origins": 37,
+    "wilcoxon_p": 0.0,
+    "wins": 36
+  },
+  "seasonal_naive": {
+    "by_bucket": {
+      "1-7": {
+        "mape": 2.7351,
+        "mase": 1.0267,
+        "pinball_mean": 2012091.21
+      },
+      "15-30": {
+        "mape": 3.4528,
+        "mase": 1.3166,
+        "pinball_mean": 2469983.5122
+      },
+      "8-14": {
+        "mape": 3.181,
+        "mase": 1.1916,
+        "pinball_mean": 2297483.6591
+      }
+    },
+    "coverage": 0.8126,
+    "mape": 3.2219,
+    "mase": 1.2198,
+    "pinball_mean": 2322892.0093,
+    "pinball_p10": 1835859.2742,
+    "pinball_p50": 3294013.008,
+    "pinball_p90": 1838803.7458,
+    "winkler80": 36746630.1999
+  },
+  "seconds": 289.0,
+  "target": "demand_kwh"
+}

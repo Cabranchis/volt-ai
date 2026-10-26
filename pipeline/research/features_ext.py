@@ -14,7 +14,7 @@ import pandas as pd
 from harness import PUBLICATION_LAG, SETTLE_LAG
 from voltia.features import log_positive
 
-BLOCKS = ("dispatch", "offers", "contracts", "hydro_now", "trade")
+BLOCKS = ("dispatch", "offers", "contracts", "hydro_now", "trade", "nowcast")
 
 FEATURES: dict[str, list[str]] = {
     "dispatch": [
@@ -36,6 +36,9 @@ FEATURES: dict[str, list[str]] = {
         "reservoir_capacity_share",
     ],
     "trade": ["exports7", "imports7", "net_exports7"],
+    # Estimated price level on the newest days already priced by the dispatch: dispatch cost plus
+    # the recent gap between settled price and dispatch cost.
+    "nowcast": ["dc_corr_latest_rel", "dc_corr_mean3_rel"],
 }
 
 
@@ -111,6 +114,9 @@ def origin_blocks(data: pd.DataFrame, lags: dict[str, int] | None = None) -> pd.
     out["exports7"] = _roll(exports, 7, "exports_kwh", lags)
     out["imports7"] = _roll(imports, 7, "imports_kwh", lags)
     out["net_exports7"] = out["exports7"] - out["imports7"]
+
+    out["dc_corr_latest_rel"] = dc.shift(-k_dc) + basis14 - ref
+    out["dc_corr_mean3_rel"] = dc.rolling(3, min_periods=2).mean().shift(-k_dc) + basis14 - ref
 
     frame = pd.DataFrame(out, index=data.index)
     frame["_ref"] = ref

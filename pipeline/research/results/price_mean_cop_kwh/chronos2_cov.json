@@ -1,0 +1,143 @@
+{
+  "ets": {
+    "by_bucket": {
+      "1-3": {
+        "mape": 10.8814,
+        "mase": 0.7071,
+        "pinball_mean": 9.6557
+      },
+      "4-7": {
+        "mape": 21.8935,
+        "mase": 1.525,
+        "pinball_mean": 20.884
+      },
+      "8-14": {
+        "mape": 35.3688,
+        "mase": 2.4254,
+        "pinball_mean": 34.4565
+      }
+    },
+    "coverage": 0.7355,
+    "mape": 26.2714,
+    "mase": 1.7999,
+    "pinball_mean": 25.2642,
+    "pinball_p10": 15.2808,
+    "pinball_p50": 37.8403,
+    "pinball_p90": 22.6714,
+    "winkler80": 379.5225
+  },
+  "experiment": {
+    "context_days": 1000,
+    "future": [
+      "dc"
+    ],
+    "model": "amazon/chronos-2",
+    "name": "chronos2_cov",
+    "past": [
+      "dc",
+      "res",
+      "inflows",
+      "demand"
+    ]
+  },
+  "model": {
+    "by_bucket": {
+      "1-3": {
+        "mape": 9.5779,
+        "mase": 0.7597,
+        "pinball_mean": 11.9
+      },
+      "4-7": {
+        "mape": 20.5582,
+        "mase": 1.6943,
+        "pinball_mean": 23.5354
+      },
+      "8-14": {
+        "mape": 31.4407,
+        "mase": 2.3179,
+        "pinball_mean": 32.8084
+      }
+    },
+    "coverage": 0.751,
+    "mape": 23.6465,
+    "mase": 1.8058,
+    "pinball_mean": 25.6786,
+    "pinball_p10": 13.7347,
+    "pinball_p50": 39.3766,
+    "pinball_p90": 23.9245,
+    "winkler80": 376.5917
+  },
+  "model_raw": {
+    "by_bucket": {
+      "1-3": {
+        "mape": 9.5779,
+        "mase": 0.7597,
+        "pinball_mean": 13.0991
+      },
+      "4-7": {
+        "mape": 20.5582,
+        "mase": 1.6943,
+        "pinball_mean": 32.1603
+      },
+      "8-14": {
+        "mape": 31.4407,
+        "mase": 2.3179,
+        "pinball_mean": 43.3767
+      }
+    },
+    "coverage": 0.332,
+    "mape": 23.6465,
+    "mase": 1.8058,
+    "pinball_mean": 33.6839,
+    "pinball_p10": 18.5829,
+    "pinball_p50": 39.3766,
+    "pinball_p90": 43.0923,
+    "winkler80": 616.752
+  },
+  "n_origins": 37,
+  "n_rows": 518,
+  "paired_vs_ets_mase": {
+    "ci_high": 0.4477,
+    "ci_low": -0.3893,
+    "mean_diff": 0.0059,
+    "origins": 37,
+    "wilcoxon_p": 0.8347,
+    "wins": 18
+  },
+  "paired_vs_ets_pinball": {
+    "ci_high": 5.3746,
+    "ci_low": -4.3807,
+    "mean_diff": 0.4144,
+    "origins": 37,
+    "wilcoxon_p": 0.4026,
+    "wins": 21
+  },
+  "seasonal_naive": {
+    "by_bucket": {
+      "1-3": {
+        "mape": 19.1419,
+        "mase": 1.3527,
+        "pinball_mean": 18.6461
+      },
+      "4-7": {
+        "mape": 22.7371,
+        "mase": 1.5773,
+        "pinball_mean": 22.2464
+      },
+      "8-14": {
+        "mape": 34.695,
+        "mase": 2.398,
+        "pinball_mean": 35.9357
+      }
+    },
+    "coverage": 0.7278,
+    "mape": 27.9456,
+    "mase": 1.9395,
+    "pinball_mean": 28.3196,
+    "pinball_p10": 16.9508,
+    "pinball_p50": 40.4639,
+    "pinball_p90": 27.544,
+    "winkler80": 444.9478
+  },
+  "seconds": 2.9
+}

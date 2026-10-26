@@ -1,0 +1,187 @@
+{
+  "ets": {
+    "by_bucket": {
+      "1-3": {
+        "mape": 21.6962,
+        "mase": 1.2064,
+        "pinball_mean": 29.0661
+      },
+      "4-7": {
+        "mape": 28.5458,
+        "mase": 1.6566,
+        "pinball_mean": 43.201
+      },
+      "8-14": {
+        "mape": 36.4883,
+        "mase": 1.9947,
+        "pinball_mean": 53.0834
+      }
+    },
+    "coverage": 0.7798,
+    "mape": 31.0493,
+    "mase": 1.7292,
+    "pinball_mean": 45.1133,
+    "pinball_p10": 25.4755,
+    "pinball_p50": 62.4466,
+    "pinball_p90": 47.4178,
+    "winkler80": 728.933
+  },
+  "experiment": {
+    "ensemble_of": [
+      "dispatch+contracts+hydro",
+      "fs1_xgb"
+    ],
+    "name": "ens_lgb_xgb"
+  },
+  "model": {
+    "by_bucket": {
+      "1-3": {
+        "mape": 16.2445,
+        "mase": 1.0103,
+        "pinball_mean": 23.6064
+      },
+      "4-7": {
+        "mape": 26.0332,
+        "mase": 1.6506,
+        "pinball_mean": 42.3014
+      },
+      "8-14": {
+        "mape": 37.3091,
+        "mase": 2.2238,
+        "pinball_mean": 57.6777
+      }
+    },
+    "coverage": 0.8839,
+    "mape": 29.5736,
+    "mase": 1.8,
+    "pinball_mean": 45.9835,
+    "pinball_p10": 24.0057,
+    "pinball_p50": 64.0035,
+    "pinball_p90": 49.9412,
+    "winkler80": 739.4686
+  },
+  "model_raw": {
+    "by_bucket": {
+      "1-3": {
+        "mape": 16.2445,
+        "mase": 1.0103,
+        "pinball_mean": 23.3385
+      },
+      "4-7": {
+        "mape": 26.0332,
+        "mase": 1.6506,
+        "pinball_mean": 40.8204
+      },
+      "8-14": {
+        "mape": 37.3091,
+        "mase": 2.2238,
+        "pinball_mean": 50.6118
+      }
+    },
+    "coverage": 0.6577,
+    "mape": 29.5736,
+    "mase": 1.8,
+    "pinball_mean": 41.97,
+    "pinball_p10": 23.6431,
+    "pinball_p50": 64.0035,
+    "pinball_p90": 38.2632,
+    "winkler80": 619.0637
+  },
+  "n_origins": 24,
+  "n_rows": 336,
+  "origins": [
+    "2022-11-26",
+    "2023-01-10",
+    "2023-02-24",
+    "2023-04-10",
+    "2023-05-25",
+    "2023-07-09",
+    "2023-08-23",
+    "2023-10-07",
+    "2023-11-21",
+    "2024-01-05",
+    "2024-02-19",
+    "2024-04-04",
+    "2024-05-19",
+    "2024-07-03",
+    "2024-08-17",
+    "2024-10-01",
+    "2024-11-15",
+    "2024-12-30",
+    "2025-02-13",
+    "2025-03-30",
+    "2025-05-14",
+    "2025-06-28",
+    "2025-08-12",
+    "2025-09-26",
+    "2025-11-10",
+    "2025-12-25",
+    "2026-02-08",
+    "2026-03-25",
+    "2026-05-09",
+    "2026-06-23",
+    "2026-08-07",
+    "2026-09-21"
+  ],
+  "paired_vs_ets_mase": {
+    "ci_high": 0.4946,
+    "ci_low": -0.2964,
+    "mean_diff": 0.0708,
+    "origins": 24,
+    "wilcoxon_p": 0.4559,
+    "wins": 15
+  },
+  "paired_vs_ets_pinball": {
+    "ci_high": 10.3524,
+    "ci_low": -7.7847,
+    "mean_diff": 0.8702,
+    "origins": 24,
+    "wilcoxon_p": 0.5838,
+    "wins": 15
+  },
+  "paired_vs_sn_mase": {
+    "ci_high": -0.0956,
+    "ci_low": -0.6141,
+    "mean_diff": -0.3311,
+    "origins": 24,
+    "wilcoxon_p": 0.0059,
+    "wins": 17
+  },
+  "paired_vs_sn_pinball": {
+    "ci_high": -0.4446,
+    "ci_low": -9.5106,
+    "mean_diff": -4.9298,
+    "origins": 24,
+    "wilcoxon_p": 0.0315,
+    "wins": 17
+  },
+  "seasonal_naive": {
+    "by_bucket": {
+      "1-3": {
+        "mape": 32.8547,
+        "mase": 1.9349,
+        "pinball_mean": 45.479
+      },
+      "4-7": {
+        "mape": 31.3895,
+        "mase": 1.8695,
+        "pinball_mean": 45.0219
+      },
+      "8-14": {
+        "mape": 42.1613,
+        "mase": 2.3647,
+        "pinball_mean": 56.6088
+      }
+    },
+    "coverage": 0.7738,
+    "mape": 37.0893,
+    "mase": 2.1311,
+    "pinball_mean": 50.9133,
+    "pinball_p10": 26.3519,
+    "pinball_p50": 76.9037,
+    "pinball_p90": 49.4843,
+    "winkler80": 758.3617
+  },
+  "seconds": 0.0,
+  "target": "price_mean_cop_kwh"
+}

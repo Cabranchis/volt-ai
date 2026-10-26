@@ -15,11 +15,12 @@ import pandas as pd
 
 import features_ext
 import harness
-from voltia.features import TARGETS, feature_names
-from voltia.models.backtest import ModelConfig, Prepared, fit_at, predict_at, prepare
+import zoo
+from voltia.features import TARGETS
+from voltia.models.backtest import ModelConfig, Prepared, prepare, training_mask
 from voltia.models.gbm import GBMParams
 
-TARGET = TARGETS["price_mean_cop_kwh"]
+TARGET = TARGETS["demand_kwh" if "--demand" in sys.argv else "price_mean_cop_kwh"]
 PARAMS = GBMParams(num_threads=6)
 
 
@@ -30,6 +31,8 @@ class GBMExperiment:
     params: GBMParams = PARAMS
     lag_overrides: dict[str, int] = field(default_factory=dict)
     drop: tuple[str, ...] = ()
+    family: str = "lightgbm"
+    options: dict = field(default_factory=dict)
 
 
 EXPERIMENTS: dict[str, GBMExperiment] = {
@@ -44,10 +47,87 @@ EXPERIMENTS: dict[str, GBMExperiment] = {
     "dispatch+contracts+hydro": GBMExperiment(blocks=("dispatch", "contracts", "hydro_now")),
     "all_blocks": GBMExperiment(blocks=features_ext.BLOCKS),
 }
+FS1 = ("dispatch", "contracts", "hydro_now")
+EXPERIMENTS.update(
+    {
+        "fs1_xgb": GBMExperiment(blocks=FS1, family="xgboost"),
+        "fs1_cat": GBMExperiment(blocks=FS1, family="catboost"),
+        "fs1_qrf": GBMExperiment(blocks=FS1, family="quantile_forest"),
+        "fs1_linq": GBMExperiment(blocks=FS1, family="linear_quantile"),
+        "fs1_ref_level7": GBMExperiment(blocks=FS1, reference="level7"),
+        "fs1_ref_sn": GBMExperiment(blocks=FS1, reference="seasonal_naive"),
+        "fs1_leaves7": GBMExperiment(blocks=FS1, options={"num_leaves": 7}),
+        "fs1_leaves31": GBMExperiment(blocks=FS1, options={"num_leaves": 31}),
+        "fs1_slow": GBMExperiment(blocks=FS1, options={"learning_rate": 0.02, "num_boost_round": 800}),
+        "fs1_minleaf50": GBMExperiment(blocks=FS1, options={"min_data_in_leaf": 50}),
+        "fs1_minleaf200": GBMExperiment(blocks=FS1, options={"min_data_in_leaf": 200}),
+    }
+)
+EXPERIMENTS.update(
+    {
+        "d_current": GBMExperiment(),
+        "d_xgb": GBMExperiment(family="xgboost"),
+        "d_cat": GBMExperiment(family="catboost"),
+        "d_leaves31": GBMExperiment(options={"num_leaves": 31}),
+        "d_slow": GBMExperiment(options={"learning_rate": 0.02, "num_boost_round": 800}),
+        "d_hl1460": GBMExperiment(family="xgboost", options={"halflife_days": 1460}),
+        "d_ref_level7": GBMExperiment(reference="level7"),
+    }
+)
+FS2 = (*FS1, "nowcast")
+EXPERIMENTS.update(
+    {
+        "fs2_xgb": GBMExperiment(blocks=FS2, family="xgboost"),
+        "fs2_lgb": GBMExperiment(blocks=FS2),
+        "fs1_xgb_hybrid": GBMExperiment(blocks=FS1, family="xgboost", reference="ets"),
+        "fs2_xgb_hybrid": GBMExperiment(blocks=FS2, family="xgboost", reference="ets"),
+        "fs1_xgb_hl730": GBMExperiment(blocks=FS1, family="xgboost", options={"halflife_days": 730}),
+        "fs1_xgb_hl1460": GBMExperiment(blocks=FS1, family="xgboost", options={"halflife_days": 1460}),
+    }
+)
+
+
+def forecast_origin(prepared: Prepared, origin: pd.Timestamp, exp: GBMExperiment) -> pd.DataFrame:
+    """Raw quantile forecasts (log units) for one origin from the experiment's model family."""
+    mask = training_mask(prepared, origin)
+    rows = np.flatnonzero(prepared.table["origin"].to_numpy() == np.datetime64(origin))
+    options = dict(exp.options)
+    halflife = options.pop("halflife_days", None)
+    if halflife:
+        age = (np.datetime64(origin) - prepared.table["day"].to_numpy()[mask]).astype("timedelta64[D]").astype(float)
+        options["sample_weight"] = 0.5 ** (age / halflife)
+    q = zoo.fit_predict(
+        exp.family, prepared.x[mask], prepared.z[mask], prepared.x[rows], prepared.features, **options
+    )
+    q = q + prepared.offset_log[rows, None]
+    return pd.DataFrame(
+        {
+            "origin": origin,
+            "h": prepared.table["h"].to_numpy()[rows],
+            "day": prepared.table["day"].to_numpy()[rows],
+            "q10_log": q[:, 0],
+            "q50_log": q[:, 1],
+            "q90_log": q[:, 2],
+        }
+    )
+
+
+def with_ets_reference(prepared: Prepared) -> Prepared:
+    """Target relative to the ETS median at the same (origin, h); adds the ETS view as a feature."""
+    ets = pd.read_csv(harness.DATA / "ets_price.csv", parse_dates=["origin"])
+    key = pd.MultiIndex.from_arrays([prepared.table["origin"], prepared.table["h"]])
+    ets50 = ets.set_index(["origin", "h"])["ets50"].reindex(key).to_numpy()
+    offset = np.log(ets50)
+    rel = (offset - prepared.table["ref_log"].to_numpy()).astype(np.float32)
+    x = np.hstack([prepared.x, rel[:, None]])
+    return replace(prepared, x=x, offset_log=offset, features=[*prepared.features, "ets_rel"])
 
 
 def extended(data: pd.DataFrame, exp: GBMExperiment) -> Prepared:
-    prepared = prepare(data, TARGET, ModelConfig(reference=exp.reference, params=exp.params))  # type: ignore[arg-type]
+    base_reference = "last" if exp.reference == "ets" else exp.reference
+    prepared = prepare(data, TARGET, ModelConfig(reference=base_reference, params=exp.params))  # type: ignore[arg-type]
+    if exp.reference == "ets":
+        prepared = with_ets_reference(prepared)
     if not exp.blocks:
         return prepared
     extra = features_ext.add_blocks(prepared.table, data, exp.blocks, exp.lag_overrides)
@@ -60,18 +140,14 @@ def extended(data: pd.DataFrame, exp: GBMExperiment) -> Prepared:
 def run_gbm(name: str, exp: GBMExperiment, data: pd.DataFrame, origins: list[pd.Timestamp], base: pd.DataFrame) -> dict:
     start = time.perf_counter()
     prepared = extended(data, exp)
-    config = ModelConfig(reference=exp.reference, params=exp.params)  # type: ignore[arg-type]
     frames = []
     for origin in origins:
-        boosters = fit_at(prepared, origin, config)
-        pred = predict_at(prepared, boosters, origin)
-        pred = pred.drop(columns=["row"])
-        pred.insert(0, "origin", origin)
-        frames.append(pred)
+        frames.append(forecast_origin(prepared, origin, exp))
     rows = harness.finish_rows(pd.concat(frames, ignore_index=True), data, TARGET, base)
     rows.to_csv(harness.DATA / f"rows_{name}.csv", index=False)
     result = harness.score(rows)
-    result["experiment"] = {"name": name, "blocks": list(exp.blocks), "reference": exp.reference, "features": len(prepared.features)}
+    result["target"] = TARGET.name
+    result["experiment"] = {"name": name, "blocks": list(exp.blocks), "reference": exp.reference, "features": len(prepared.features), "family": exp.family, "options": exp.options}
     result["paired_vs_ets_mase"] = harness.paired(rows, "m", "ets", "mase")
     result["paired_vs_ets_pinball"] = harness.paired(rows, "m", "ets", "pinball")
     result["seconds"] = round(time.perf_counter() - start, 1)
@@ -100,4 +176,4 @@ def main(names: list[str]) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:] or list(EXPERIMENTS))
+    main([a for a in sys.argv[1:] if not a.startswith("--")] or list(EXPERIMENTS))

@@ -135,6 +135,7 @@ def baseline_rows(
 
 
 def cached_baselines(data: pd.DataFrame, target: TargetSpec, origins: list[pd.Timestamp], tag: str) -> pd.DataFrame:
+    """Baselines for `origins`, cached in data/baselines_<target>_<tag>.csv."""
     path = DATA / f"baselines_{target.name}_{tag}.csv"
     if path.exists():
         cached = pd.read_csv(path, parse_dates=["origin", "day"])
