@@ -140,6 +140,20 @@ export const en = {
     intradayWeek: "Previous week average",
     accuracyTitle: "How accurate has it been",
     tableCaption: "Daily price forecast",
+    spikes: {
+      title: "Price spike risk",
+      note: "Probability, for each forecast day, that the spot price exceeds a threshold",
+      aboveLevel: "Above {level} COP/kWh",
+      rise: "30 % above the 30-day average",
+      dayAhead: "Days ahead",
+      peakLevel: "The highest probability of exceeding {level} COP/kWh is {p}, on {date}.",
+      peakRise: "The highest probability of a price 30 % above the recent average ({base} COP/kWh) is {p}, on {date}.",
+      caveat:
+        "Computed from the forecast's own P10, P50 and P90 bands, with no separate model. In the backtest it separated expensive days from normal ones well (AUC 0.96 for 500 COP/kWh and 0.85 for the 30 % rise) and had a lower Brier error than repeating what just happened. It did not manage that for much higher levels, so those are not shown. It is an estimate, not a guarantee or a recommendation to trade.",
+      tableCaption: "Daily probability of price spikes",
+      level: "Above {level}",
+      riseShort: "30 % rise",
+    },
     hour: "Hour",
   },
   hydrology: {

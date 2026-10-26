@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { HourlyChart } from "@/components/charts/HourlyChart";
 import { ForecastPanel } from "@/components/pages/ForecastPanel";
+import { SpikePanel } from "@/components/pages/SpikePanel";
 import { DriversChart } from "@/components/ui/DriversChart";
 import { Freshness } from "@/components/ui/Freshness";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -10,6 +11,7 @@ import { getForecast, getHourly, getSeries } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 import { lastDayOf } from "@/lib/insights";
+import { spikeOutlook } from "@/lib/spikes";
 
 export async function generateMetadata(): Promise<Metadata> {
   const dict = await getDictionary();
@@ -46,6 +48,7 @@ export default async function PricePage() {
   const lastDay = lastDayOf(frame, "price_mean_cop_kwh");
   const drivers = forecast?.points[0]?.drivers ?? null;
   const intraday = intradayProfiles(hourly);
+  const spikes = forecast ? spikeOutlook(forecast.points, frame.series["price_mean_cop_kwh"] ?? []) : null;
 
   return (
     <>
@@ -79,6 +82,8 @@ export default async function PricePage() {
           history={{ dates: frame.dates, values: frame.series["price_mean_cop_kwh"] ?? [] }}
           forecast={forecast}
         />
+
+        {spikes ? <SpikePanel locale={locale} dict={dict} outlook={spikes} /> : null}
 
         <div className={`grid gap-6 ${drivers && drivers.length > 0 ? "lg:grid-cols-2" : ""}`}>
           {drivers && drivers.length > 0 ? (

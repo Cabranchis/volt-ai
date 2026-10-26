@@ -142,6 +142,20 @@ export const es: Dictionary = {
     intradayWeek: "Promedio de la semana anterior",
     accuracyTitle: "Qué tan preciso ha sido",
     tableCaption: "Pronóstico diario de precio",
+    spikes: {
+      title: "Riesgo de picos de precio",
+      note: "Probabilidad, para cada día del pronóstico, de que el precio de bolsa supere un umbral",
+      aboveLevel: "Más de {level} COP/kWh",
+      rise: "30 % sobre el promedio de los últimos 30 días",
+      dayAhead: "Días hacia adelante",
+      peakLevel: "La probabilidad más alta de superar {level} COP/kWh es {p}, el {date}.",
+      peakRise: "La probabilidad más alta de un precio 30 % sobre el promedio reciente ({base} COP/kWh) es {p}, el {date}.",
+      caveat:
+        "Se calcula a partir de las bandas P10, P50 y P90 del pronóstico, sin un modelo aparte. En el backtest separó bien los días caros de los normales (AUC de 0,96 para 500 COP/kWh y de 0,85 para el alza de 30 %) y tuvo menos error de Brier que repetir lo que acaba de pasar. Para niveles mucho más altos no lo logró, por eso no se muestran. Es una estimación, no una garantía ni una recomendación para operar.",
+      tableCaption: "Probabilidad diaria de picos de precio",
+      level: "Supera {level}",
+      riseShort: "Alza de 30 %",
+    },
     hour: "Hora",
   },
   hydrology: {
