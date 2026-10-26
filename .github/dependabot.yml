@@ -24,3 +24,11 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+
+  # The research environment (torch from the CUDA index) is never deployed and Dependabot cannot
+  # resolve that index, so its updates would only fail. Keep it current by hand.
+  - package-ecosystem: uv
+    directory: /pipeline/research
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
