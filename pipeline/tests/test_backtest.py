@@ -20,6 +20,8 @@ from voltia.forecast import (
 from voltia.models.backtest import (
     BacktestConfig,
     ModelConfig,
+    anchored_origins,
+    block_bootstrap_ci,
     prepare,
     reference_offset,
     select_origins,
@@ -28,7 +30,9 @@ from voltia.models.backtest import (
 from voltia.models.gbm import GBMParams, fit_quantiles, predict_quantiles
 
 FAST = GBMParams(num_boost_round=25, num_leaves=7, min_data_in_leaf=20)
-SMALL = BacktestConfig(n_origins=2, n_warmup=1, step_days=20, min_calibration_origins=1)
+SMALL = BacktestConfig(
+    n_origins=2, n_warmup=1, step_days=20, anchor=None, min_calibration_origins=1
+)
 TARGETS = {
     "demand_kwh": TargetSpec("demand_kwh", 10, ((1, 5), (6, 10))),
     "price_mean_cop_kwh": TargetSpec("price_mean_cop_kwh", 5, ((1, 5),)),
@@ -44,6 +48,50 @@ def test_select_origins_are_evenly_spaced_and_leave_room_for_the_horizon() -> No
     origins = select_origins(pd.Timestamp("2026-10-21"), 30, 4, 45)
     assert origins[-1] == pd.Timestamp("2026-09-21")
     assert [(b - a).days for a, b in itertools.pairwise(origins)] == [45, 45, 45]
+
+
+def test_anchored_origins_only_grow_at_the_end() -> None:
+    anchor = pd.Timestamp("2023-11-21")
+    early = anchored_origins(anchor, pd.Timestamp("2026-10-20"), 30, 15, 3)
+    later = anchored_origins(anchor, pd.Timestamp("2026-10-27"), 30, 15, 3)
+    assert early == later[: len(early)]  # a week of new data adds none that already exist
+    assert len(later) >= len(early)
+    assert later[3] == anchor
+    assert [(b - a).days for a, b in itertools.pairwise(later)] == [15] * (len(later) - 1)
+    assert later[-1] <= pd.Timestamp("2026-10-27") - pd.Timedelta(days=30)
+    assert later[-1] + pd.Timedelta(days=15) > pd.Timestamp("2026-10-27") - pd.Timedelta(days=30)
+
+
+def test_block_bootstrap_interval_brackets_the_mean_and_widens_with_dependence() -> None:
+    diff = np.sin(np.arange(60) / 4) + 0.2
+    lo, hi = block_bootstrap_ci(diff, 1)
+    assert lo < diff.mean() < hi
+    assert (lo, hi) == block_bootstrap_ci(diff, 1)  # fixed seed
+    wide = block_bootstrap_ci(diff, 8)
+    assert wide[1] - wide[0] > hi - lo  # a slowly varying series is not 60 independent draws
+
+
+def test_block_bootstrap_interval_is_undefined_without_enough_origins() -> None:
+    lo, hi = block_bootstrap_ci(np.array([0.3, -0.1]), 3)
+    assert np.isnan(lo)
+    assert np.isnan(hi)
+    assert all(np.isnan(v) for v in block_bootstrap_ci(np.array([0.3]), 1))
+
+
+def test_train_on_the_calendar_keeps_warmup_before_the_anchor_and_counts_origins() -> None:
+    history = make_history(days=560)
+    cfg = BacktestConfig(n_warmup=1, step_days=30, anchor="2024-03-01", min_calibration_origins=1)
+    result = train(history, FAST, cfg, TARGETS)
+    backtest = result.metrics["backtest"]
+    assert backtest["warmup_origins"] == ["2024-01-31"]
+    assert backtest["origins"][0] == "2024-03-01"
+    assert backtest["n_origins"] == len(backtest["origins"])
+    assert result.metrics["targets"]["demand_kwh"]["n_origins"] == len(backtest["origins"])
+
+
+def test_train_rejects_origins_closer_than_the_week_they_can_move(history: pd.DataFrame) -> None:
+    with pytest.raises(ValueError, match="at least 8"):
+        train(history, FAST, BacktestConfig(step_days=7), TARGETS)
 
 
 def test_training_rows_never_reach_past_the_cutoff(history: pd.DataFrame) -> None:
@@ -72,6 +120,9 @@ def test_train_reports_model_and_baselines(trained: TrainResult) -> None:
     assert set(demand["overall"]) == {"model", "model_raw", "seasonal_naive", "ets"}
     assert set(demand["by_bucket"]) == {"1-5", "6-10"}
     assert set(demand["paired"]) == {"seasonal_naive", "ets"}
+    assert (
+        demand["paired"]["ets"]["mase_diff_ci95"] is None
+    )  # two origins are too few for an interval
     assert len(demand["by_origin"]) == 2
     for key in ("mape", "smape", "mase", "pinball_p10", "pinball_p50", "pinball_p90"):
         assert np.isfinite(demand["overall"]["model"][key])

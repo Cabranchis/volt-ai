@@ -1,10 +1,11 @@
-"""Run finalists once on the reported origins (the 24 + 8 warm-up origins of docs/model-card.md).
+"""Run finalists once on the reported origins (the 24 + 8 warm-up origins that docs/model-card.md used until 2026-10-26).
 
 Usage: python run_reported.py [--demand] <experiment> ...   or   --ensemble <name> <member> <member> ...
 
 The reported origins must not drive model selection, so each name may run only once; the run is
 recorded in results/reported_runs.json and a second run needs --force. The origins are those of the
-published model card (data up to 2026-10-21, step 45 days, 32 origins).
+earlier model card (data up to 2026-10-21, step 45 days, 32 origins). The card now uses a fixed
+calendar (step 21 days from 2023-11-21), so these runs are not on its origins.
 """
 
 from __future__ import annotations

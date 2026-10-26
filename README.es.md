@@ -22,14 +22,14 @@
 
 ## Resultados medidos
 
-Backtesting de origen rodante, 24 orígenes, intervalos del 80 % (tablas y método completos en la [ficha del modelo](docs/model-card.md)):
+Backtesting de origen rodante, 50 orígenes en un calendario fijo (cada 21 días), intervalos del 80 % (tablas y método completos en la [ficha del modelo](docs/model-card.md)):
 
 | Objetivo | Frente a estacional ingenuo | Frente a ETS | Cobertura P10–P90 (nominal 80 %) |
 | --- | --- | --- | --- |
-| Demanda, 30 días | MASE 54,0 % menor, gana en 21 de 24 orígenes | MASE 49,5 % menor, gana en 21 de 24 | 0,83 |
-| Precio de bolsa, 14 días | 5,2 % menor, no significativo | **ETS es 16,9 % mejor** | 0,87 (cubre de más) |
+| Demanda, 30 días | MASE 42,3 % menor, gana en 46 de 50 orígenes | MASE 42,7 % menor, gana en 45 de 50 | 0,82 |
+| Precio de bolsa, 14 días | MASE 33,3 % menor, gana en 42 de 50 | 14,2 % menor, pero el intervalo de la diferencia incluye el cero; claramente mejor solo en los primeros días | 0,81 |
 
-El modelo de precio no supera a un suavizado exponencial simple. El sitio lo dice y presenta el pronóstico de precio como un rango calibrado, no como una mediana mejor.
+Frente a un suavizado exponencial simple, el modelo de precio gana en los primeros días y queda a la par pasada una semana. El sitio lo dice y presenta el pronóstico de precio como un rango calibrado, no como una mediana mejor.
 
 ## Tecnología
 

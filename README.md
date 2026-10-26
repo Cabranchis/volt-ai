@@ -22,14 +22,14 @@
 
 ## Results, as measured
 
-Rolling-origin backtest, 24 origins, 80 % intervals (full tables and method in the [model card](docs/model-card.md)):
+Rolling-origin backtest, 50 origins on a fixed calendar (21 days apart), 80 % intervals (full tables and method in the [model card](docs/model-card.md)):
 
 | Target | Against seasonal naive | Against ETS | P10–P90 coverage (nominal 80 %) |
 | --- | --- | --- | --- |
-| Demand, 30 days | MASE 54.0 % lower, wins 21 of 24 origins | MASE 49.5 % lower, wins 21 of 24 | 0.83 |
-| Spot price, 14 days | 5.2 % lower, not significant | **ETS is 16.9 % better** | 0.87 (over-covers) |
+| Demand, 30 days | MASE 42.3 % lower, wins 46 of 50 origins | MASE 42.7 % lower, wins 45 of 50 | 0.82 |
+| Spot price, 14 days | MASE 33.3 % lower, wins 42 of 50 | 14.2 % lower, but the interval of the difference includes zero; clearly better only in the first days | 0.81 |
 
-The price model does not beat a plain exponential-smoothing forecast. The site says so, and presents the price forecast as a calibrated range rather than a better median.
+Against a plain exponential-smoothing forecast the price model wins in the first days and is level with it beyond a week. The site says so, and presents the price forecast as a calibrated range rather than a better median.
 
 ## Stack
 

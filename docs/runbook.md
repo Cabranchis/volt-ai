@@ -22,7 +22,7 @@ What to check and do when VoltIA misbehaves. Every command runs from `pipeline/`
 
 - **`Secret DATABASE_URL is not set`**: add the secret in Settings → Secrets and variables → Actions, then re-run.
 - **A source step failed (XM, Open-Meteo, NOAA)**: the clients retry with backoff. If the provider is down, re-run later; the previous data stays and `ingest_log` keeps the old `last_day`. The run is idempotent, so a re-run never duplicates rows.
-- **`train` failed or timed out** (45-minute job limit, normal run about 6 minutes locally): run it locally against the same database with `uv run voltia train --predict`.
+- **`train` failed or timed out** (45-minute job limit; the run takes about 10 minutes locally with 50 reported backtest origins, and about 10 seconds more for every 21 days of new data, because the origins sit on a fixed calendar and none is dropped. Past about 15 minutes, raise `step_days` in `BacktestConfig` or move the first origin forward in whole steps, and say so in the model card): run it locally against the same database with `uv run voltia train --predict`.
 - **SSL connection closed**: Neon closes idle connections; the engine pings and recycles them. If it still happens, re-run.
 
 ### The chat answers with a fixed summary or says the model is unavailable

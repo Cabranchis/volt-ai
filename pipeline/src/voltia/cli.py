@@ -155,7 +155,9 @@ def _train_summary(metrics: dict[str, Any]) -> None:
 @app.command()
 def train(
     predict: Annotated[bool, typer.Option("--predict", help="Also write forecasts")] = False,
-    origins: Annotated[int | None, typer.Option(help="Reported backtest origins")] = None,
+    origins: Annotated[
+        int | None, typer.Option(help="Last N origins instead of the fixed calendar")
+    ] = None,
     warmup: Annotated[int | None, typer.Option(help="Calibration warm-up origins")] = None,
     step: Annotated[int | None, typer.Option(help="Days between origins")] = None,
     rounds: Annotated[int | None, typer.Option(help="Boosting rounds (smoke runs)")] = None,
@@ -168,6 +170,7 @@ def train(
     cfg = replace(
         cfg,
         n_origins=origins or cfg.n_origins,
+        anchor=None if origins else cfg.anchor,
         n_warmup=cfg.n_warmup if warmup is None else warmup,
         step_days=step or cfg.step_days,
     )

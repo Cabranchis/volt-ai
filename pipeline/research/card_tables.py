@@ -1,7 +1,9 @@
 """Write the "Results" section of docs/model-card.md from a training run's metrics JSON.
 
-Every figure and every win/loss statement is computed from the file; none is typed by hand.
-Run: uv run python card_tables.py results/production_backtest_2026-10-21.json > results_section.md
+Every figure and every win/loss statement of the tables and verdicts is computed from the file.
+Only the comparison with the previous card (PREVIOUS and the paragraph above its table) quotes
+figures from earlier documents and research runs, and says so.
+Run: uv run python card_tables.py results/calendar_backtest_2026-10-26.json > results_section.md
 """
 
 from __future__ import annotations
@@ -63,19 +65,30 @@ def verdicts(name: str, t: dict[str, Any]) -> list[str]:
         gain = base["mase_reduction_pct"]
         p = base["wilcoxon_p"]
         p_text = "p < 0.001" if p < 0.001 else f"p = {p:.3f}"
-        sig = "significant" if p < 0.05 else "not significant"
+        interval = base.get("mase_diff_ci95")
+        excludes = interval is not None and (interval[1] < 0 or interval[0] > 0)
+        sig = "interval excludes zero" if excludes else "interval includes zero"
         lead = (
             f"beats {label} on MASE by {gain:.1f} %"
             if gain > 0
             else f"does not beat {label}: its MASE is {abs(gain):.1f} % higher"
         )
-        return f"{lead} (it wins {base['origins_won']} of {base['origins']} origins, Wilcoxon {p_text}, {sig})"
+        ci = ""
+        if base.get("mase_diff_ci95"):
+            lo, hi = base["mase_diff_ci95"]
+            ci = f"; MASE difference {base['mase_diff']:+.3f}, 95 % block-bootstrap interval [{lo:+.3f}, {hi:+.3f}]"
+        return f"{lead} (it wins {base['origins_won']} of {base['origins']} origins, Wilcoxon {p_text}, {sig}{ci})"
 
     out.append(f"- **The model {vs(sn, 'seasonal naive')} and {vs(ets, 'ETS')}.**")
     wins_all = all(
-        b["model"]["mase"] < min(b["seasonal_naive"]["mase"], b["ets"]["mase"]) for b in t["by_bucket"].values()
+        b["model"]["mase"] < min(b["seasonal_naive"]["mase"], b["ets"]["mase"])
+        for b in t["by_bucket"].values()
     )
-    lost = [k for k, b in t["by_bucket"].items() if b["model"]["mase"] >= min(b["seasonal_naive"]["mase"], b["ets"]["mase"])]
+    lost = [
+        k
+        for k, b in t["by_bucket"].items()
+        if b["model"]["mase"] >= min(b["seasonal_naive"]["mase"], b["ets"]["mase"])
+    ]
     if wins_all:
         out.append("  - It has the lowest MASE in every horizon bucket.")
     else:
@@ -87,7 +100,9 @@ def verdicts(name: str, t: dict[str, Any]) -> list[str]:
         for h in horizons.values()
         if h["model"]["mase"] < min(h["seasonal_naive"]["mase"], h["ets"]["mase"])
     )
-    out.append(f"  - Per individual horizon it has the lowest MASE at {best_at} of {len(horizons)} horizons.")
+    out.append(
+        f"  - Per individual horizon it has the lowest MASE at {best_at} of {len(horizons)} horizons."
+    )
     cov = t["coverage"]
     m = t["overall"]["model"]
     out.append(
@@ -96,7 +111,10 @@ def verdicts(name: str, t: dict[str, Any]) -> list[str]:
         f"The P90 pinball loss goes from {t['overall']['model_raw']['pinball_p90']:.3g} (raw) to {m['pinball_p90']:.3g}."
     )
     by_origin = sorted(t["by_origin"], key=lambda r: -r["model_mase"])
-    worst = ", ".join(f"{r['origin']} (MASE {r['model_mase']:.2f}, coverage {r['model_coverage']:.2f})" for r in by_origin[:3])
+    worst = ", ".join(
+        f"{r['origin']} (MASE {r['model_mase']:.2f}, coverage {r['model_coverage']:.2f})"
+        for r in by_origin[:3]
+    )
     out.append(f"- The weakest origins are {worst}.")
     covs = [r["model_coverage"] for r in t["by_origin"]]
     out.append(f"  - Coverage per origin ranges from {min(covs):.2f} to {max(covs):.2f}.")
@@ -105,8 +123,18 @@ def verdicts(name: str, t: dict[str, Any]) -> list[str]:
 
 # Published in the previous model card (run 20261024T214240Z-280431a), before the market features.
 PREVIOUS = {
-    "demand_kwh": {"mape": 1.76, "mase": 0.718, "coverage": 0.83, "buckets": ("0.680", "0.643", "0.768")},
-    "price_mean_cop_kwh": {"mape": 34.75, "mase": 2.021, "coverage": 0.87, "buckets": ("1.270", "1.917", "2.403")},
+    "demand_kwh": {
+        "mape": 1.76,
+        "mase": 0.718,
+        "coverage": 0.83,
+        "buckets": ("0.680", "0.643", "0.768"),
+    },
+    "price_mean_cop_kwh": {
+        "mape": 34.75,
+        "mase": 2.021,
+        "coverage": 0.87,
+        "buckets": ("1.270", "1.917", "2.403"),
+    },
 }
 
 
@@ -159,7 +187,7 @@ def section(metrics: dict[str, Any]) -> str:
         "",
         "### Change against the previous run",
         "",
-        "The previous run's figures are those published in the earlier version of this card; its 24 origins ended one day earlier, so the two sets are not identical, and a one-day shift moves the price MASE of ETS alone by about 0.2. On identical origins the research harness measured 2.02 to 1.80 for the price and 0.722 to 0.706 for the demand. Buckets are 1-7, 8-14 and 15-30 days for demand and 1-3, 4-7 and 8-14 days for price.",
+        "The previous run's figures are those published in the earlier version of this card. They come from 24 origins counted back from the newest data, which moved by one day with every run, so they are not comparable with the fixed calendar of this run: the absolute MASE depends on which origins are scored (the same model scored 1.63 on every 15th day and 1.49 on every 21st day), while its difference from ETS and seasonal naive, which is paired by origin, is the figure to read. On identical origins the research harness measured 2.02 to 1.80 for the price and 0.722 to 0.706 for the demand. Buckets are 1-7, 8-14 and 15-30 days for demand and 1-3, 4-7 and 8-14 days for price.",
         "",
         *change_table(d, p),
         "",

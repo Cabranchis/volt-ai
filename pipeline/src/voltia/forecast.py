@@ -37,6 +37,7 @@ from voltia.models.backtest import (
     BacktestConfig,
     ModelConfig,
     Reference,
+    anchored_origins,
     backtest_target,
     bucket_offsets,
     fit_at,
@@ -127,8 +128,17 @@ def train(
     # origins stop at `end` and a fit only uses rows whose target day is on or before its cutoff.
     hist = complete_daily(history)
     max_horizon = max(spec.horizon for spec in targets.values())
-    planned = select_origins(end, max_horizon, cfg.n_warmup + cfg.n_origins, cfg.step_days)
+    if cfg.anchor:
+        planned = anchored_origins(
+            pd.Timestamp(cfg.anchor), end, max_horizon, cfg.step_days, cfg.n_warmup
+        )
+    else:
+        planned = select_origins(end, max_horizon, cfg.n_warmup + cfg.n_origins, cfg.step_days)
+    if cfg.step_days < 8:
+        raise ValueError("step_days must be at least 8: origins can move back up to 7 days")
     origins = [observed_origin(hist, list(targets), o) for o in planned]
+    if len(set(origins)) != len(origins):
+        raise ValueError("two planned origins landed on the same observed day")
 
     target_metrics: dict[str, Any] = {}
     models: dict[str, TrainedTarget] = {}
@@ -164,7 +174,7 @@ def train(
     seconds = time.perf_counter() - start
     metrics = {
         "backtest": {
-            **cfg.to_dict(),
+            **{**cfg.to_dict(), "n_origins": len(origins) - cfg.n_warmup},
             "origins": [str(o.date()) for o in origins[cfg.n_warmup :]],
             "warmup_origins": [str(o.date()) for o in origins[: cfg.n_warmup]],
             "train_seconds": round(seconds, 1),

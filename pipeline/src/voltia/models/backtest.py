@@ -27,6 +27,8 @@ log = structlog.get_logger()
 
 Reference = Literal["level7", "seasonal_naive", "last"]
 METHODS = ("model", "model_raw", "seasonal_naive", "ets")
+# Shortest run of consecutive origins resampled together: neighbours share a price regime.
+BOOTSTRAP_MIN_BLOCK = 3
 _COLS = {"model": "m", "model_raw": "r", "seasonal_naive": "sn", "ets": "ets"}
 
 
@@ -40,9 +42,13 @@ class ModelConfig:
 
 @dataclass(frozen=True)
 class BacktestConfig:
+    """`anchor` pins the origins to the calendar (see `anchored_origins`); without it, the last
+    `n_origins` origins before the newest data are used and shift with every new day."""
+
     n_origins: int = 24
     n_warmup: int = 8
-    step_days: int = 45
+    step_days: int = 21
+    anchor: str | None = "2023-11-21"
     min_calibration_origins: int = 4
     ets_window_days: int = 1092
     sn_error_window_days: int = 728
@@ -97,6 +103,24 @@ def select_origins(
     """n origins `step` days apart, the last one leaving `max_horizon` observed days after it."""
     last = pd.Timestamp(last_day).as_unit("ns") - pd.Timedelta(days=max_horizon)
     return [last - pd.Timedelta(days=step * i) for i in reversed(range(n))]
+
+
+def anchored_origins(
+    anchor: pd.Timestamp, last_day: pd.Timestamp, max_horizon: int, step: int, n_warmup: int
+) -> list[pd.Timestamp]:
+    """Origins on a fixed calendar: `anchor` + k * `step` days, up to `last_day - max_horizon`.
+
+    New data only adds origins at the end, so two runs on different days share every earlier origin
+    and their errors can be compared origin by origin. `n_warmup` origins before the anchor, on the
+    same calendar, only seed the online interval calibration.
+    """
+    first = pd.Timestamp(anchor).as_unit("ns")
+    last = pd.Timestamp(last_day).as_unit("ns") - pd.Timedelta(days=max_horizon)
+    reported = first + pd.to_timedelta(
+        np.arange(0, (last - first).days // step + 1) * step, unit="D"
+    )
+    warmup = [first - pd.Timedelta(days=step * i) for i in reversed(range(1, n_warmup + 1))]
+    return [*warmup, *[pd.Timestamp(o) for o in reported]]
 
 
 def training_mask(prepared: Prepared, cutoff: pd.Timestamp) -> np.ndarray:
@@ -229,9 +253,32 @@ def _all_methods(part: pd.DataFrame) -> dict[str, dict[str, float]]:
     return {m: _method_metrics(part, _COLS[m]) for m in METHODS}
 
 
-def _paired(per_origin: pd.DataFrame, baseline: str) -> dict[str, Any]:
+def block_bootstrap_ci(
+    diff: np.ndarray, block: int, draws: int = 2000, seed: int = 0
+) -> tuple[float, float]:
+    """95 % interval of the mean of `diff`, resampling runs of `block` consecutive origins.
+
+    Resampling runs instead of single origins keeps some of the dependence between neighbours
+    (shared outcome days, a price regime that lasts several origins); it does not remove it, and a
+    longer block gives a wider interval. The seed is fixed so the same data gives the same interval.
+    The interval is undefined (NaN) with fewer than two blocks' worth of origins.
+    """
+    n = len(diff)
+    if n < 2 or block >= n:
+        return float("nan"), float("nan")
+    block = max(1, block)
+    rng = np.random.default_rng(seed)
+    starts = rng.integers(0, n - block + 1, size=(draws, -(-n // block)))
+    picks = (starts[:, :, None] + np.arange(block)).reshape(draws, -1)[:, :n]
+    means = diff[picks].mean(axis=1)
+    lo, hi = np.percentile(means, [2.5, 97.5])
+    return float(lo), float(hi)
+
+
+def _paired(per_origin: pd.DataFrame, baseline: str, block: int = 1) -> dict[str, Any]:
     model = per_origin["model"].to_numpy()
     base = per_origin[baseline].to_numpy()
+    lo, hi = block_bootstrap_ci(model - base, block)
     try:
         p_value: float | None = float(wilcoxon(model, base).pvalue)
     except ValueError:
@@ -243,6 +290,8 @@ def _paired(per_origin: pd.DataFrame, baseline: str) -> dict[str, Any]:
         "origins_won": int((model < base).sum()),
         "origins": len(model),
         "wilcoxon_p": p_value,
+        "mase_diff": float((model - base).mean()),
+        "mase_diff_ci95": None if np.isnan(lo) else [lo, hi],
     }
 
 
@@ -264,6 +313,8 @@ def summarise(rows: pd.DataFrame, spec: TargetSpec) -> dict[str, Any]:
             }
         )
     per_origin = pd.DataFrame(mase_rows)
+    steps = np.diff(sorted(rep["origin"].unique())).astype("timedelta64[D]").astype(int)
+    block = max(BOOTSTRAP_MIN_BLOCK, -(-spec.horizon // int(steps.min()))) if len(steps) else 1
     by_horizon = {
         str(h): {
             m: {
@@ -287,7 +338,7 @@ def summarise(rows: pd.DataFrame, spec: TargetSpec) -> dict[str, Any]:
         },
         "by_horizon": by_horizon,
         "by_origin": per_origin_records,
-        "paired": {b: _paired(per_origin, b) for b in ("seasonal_naive", "ets")},
+        "paired": {b: _paired(per_origin, b, block) for b in ("seasonal_naive", "ets")},
         "coverage": {
             "raw": _method_metrics(rep, "r")["coverage_p10_p90"],
             "calibrated": _method_metrics(rep[rep["calibrated"]], "m")["coverage_p10_p90"]
