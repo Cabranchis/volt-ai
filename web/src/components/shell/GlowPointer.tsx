@@ -26,6 +26,25 @@ const shortestTurn = (from: number, to: number) => ((((to - from) % 360) + 540) 
 export function GlowPointer() {
   useEffect(() => {
     if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    let stop = () => {};
+    let timer = 0;
+    // Styles written before React hydrates a surface make its server HTML differ from the client, so
+    // the listener starts once the page has loaded and hydration has had a moment to finish.
+    const start = () => {
+      timer = window.setTimeout(() => (stop = listen()), 500);
+    };
+    if (document.readyState === "complete") start();
+    else window.addEventListener("load", start, { once: true });
+    return () => {
+      window.removeEventListener("load", start);
+      window.clearTimeout(timer);
+      stop();
+    };
+  }, []);
+  return null;
+}
+
+function listen(): () => void {
     const glows = new Map<HTMLElement, Glow>();
     let frame = 0;
     let last = 0;
@@ -74,13 +93,19 @@ export function GlowPointer() {
         glow.x += (t.x - glow.x) * k;
         glow.y += (t.y - glow.y) * k;
         el.style.setProperty("--edge-proximity", glow.edge.toFixed(2));
-        el.style.setProperty("--cursor-angle", `${((glow.angle + 360) % 360).toFixed(1)}deg`);
+        el.style.setProperty(
+          "--cursor-angle",
+          `${((glow.angle + 360) % 360).toFixed(1)}deg`,
+        );
         el.style.setProperty("--mx", `${glow.x.toFixed(1)}px`);
         el.style.setProperty("--my", `${glow.y.toFixed(1)}px`);
         if (t.edge === 0 && glow.edge < 0.05) {
           el.style.setProperty("--edge-proximity", "0");
           glows.delete(el);
-        } else if (Math.abs(t.edge - glow.edge) > 0.05 || Math.abs(shortestTurn(glow.angle, t.angle)) > 0.1) {
+        } else if (
+          Math.abs(t.edge - glow.edge) > 0.05 ||
+          Math.abs(shortestTurn(glow.angle, t.angle)) > 0.1
+        ) {
           moving = true;
         }
       }
@@ -120,6 +145,4 @@ export function GlowPointer() {
       window.removeEventListener("scroll", onScroll);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, []);
-  return null;
 }
