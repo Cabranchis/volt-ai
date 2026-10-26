@@ -22,6 +22,7 @@ const paired = z.object({
 });
 
 const horizonMethod = z.object({ mase: z.number(), coverage_p10_p90: z.number() });
+const bucketMethod = z.object({ mape: z.number() });
 
 export const targetMetricsSchema = z.object({
   horizon: z.number(),
@@ -34,6 +35,11 @@ export const targetMetricsSchema = z.object({
     z.string(),
     z.object({ model: horizonMethod, seasonal_naive: horizonMethod, ets: horizonMethod }),
   ),
+  by_bucket: z
+    .record(z.string(), z.object({ model: bucketMethod, seasonal_naive: bucketMethod, ets: bucketMethod }))
+    .optional()
+    // Extra detail: if it is malformed the rest of the metrics still read.
+    .catch(undefined),
   paired: z.object({ seasonal_naive: paired, ets: paired }),
   coverage: z.object({ raw: z.number(), calibrated: z.number().nullable() }),
 });
@@ -68,4 +74,19 @@ export function horizonSeries(metrics: TargetMetrics) {
   const pick = (key: "model" | "seasonal_naive" | "ets") =>
     days.map((d) => metrics.by_horizon[String(d)]?.[key].mase ?? null);
   return { days, model: pick("model"), seasonalNaive: pick("seasonal_naive"), ets: pick("ets") };
+}
+
+export interface BucketError {
+  /** Horizon bucket as the backtest labels it, such as "1-3". */
+  label: string;
+  model: number;
+  seasonalNaive: number;
+  ets: number;
+}
+
+/** Mean percentage error by horizon bucket, shortest horizon first. Empty when the run has none. */
+export function bucketErrors(metrics: TargetMetrics): BucketError[] {
+  return Object.entries(metrics.by_bucket ?? {})
+    .map(([label, m]) => ({ label, model: m.model.mape, seasonalNaive: m.seasonal_naive.mape, ets: m.ets.mape }))
+    .sort((a, b) => Number.parseInt(a.label, 10) - Number.parseInt(b.label, 10));
 }

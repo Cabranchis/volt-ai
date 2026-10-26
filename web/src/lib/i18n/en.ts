@@ -15,6 +15,7 @@ export const en = {
     anomalies: "Anomalies",
     models: "Models",
     analyst: "Analyst",
+    business: "For business",
     about: "About",
     skip: "Skip to content",
     openMenu: "Open menu",
@@ -367,6 +368,64 @@ export const en = {
     ],
     authorTitle: "Author",
     authorBody: "Built by Miguel Angel as a data and AI engineering portfolio.",
+  },
+  business: {
+    title: "For business",
+    description:
+      "Forecasts of Colombian electricity demand and spot price, with their margin of error and a public record of how they did.",
+    forWhoTitle: "Who it is for",
+    forWho: [
+      "Electricity retailers (comercializadoras) that decide each week how much to buy in the spot market and how much to cover with contracts.",
+      "Large consumers on the unregulated market who plan consumption and contract renewals.",
+      "Anyone who wants a second, transparent opinion on where the spot price and the system's demand are heading.",
+    ],
+    getTitle: "What you get",
+    get: [
+      {
+        title: "Demand, up to 30 days ahead",
+        body: "Daily national demand with a P10 to P90 range, tested against what really happened.",
+      },
+      {
+        title: "Spot price, up to 14 days ahead",
+        body: "The daily mean price with a range calibrated so that, on average, about 80 % of outcomes fall inside it, and the chance that it rises above a threshold.",
+      },
+      {
+        title: "Hydrology",
+        body: "Reservoir level and inflows by hydrological region and by reservoir, which are what moves the price in the medium term.",
+      },
+      {
+        title: "A record you can check",
+        body: "Every forecast is stored as first issued, before XM's public data show the outcome. The pipeline never rewrites a stored forecast, and they are scored in public afterwards.",
+      },
+    ],
+    numbersTitle: "Measured accuracy",
+    numbersNote:
+      "Mean percentage error (MAPE) over {n} past dates the model had not seen, against two simple references. Lower is better. Days ahead are counted from the last day with a complete price in XM's public data, which is about three days before a forecast is published, so the first days are the nearest ones.",
+    horizon: "Forecast",
+    demandRow: "Demand, 1 to 30 days",
+    priceRow: "Spot price, {range} days",
+    numbersFoot:
+      "The price model beats both references in the first days and is level with ETS beyond a week. The method and the detailed comparison, with its intervals, are on the Models page.",
+    trackTitle: "Check it yourself",
+    trackBody:
+      "Each day VoltIA stores its forecast before the outcome is published. Once XM settles the day, the Models page compares them with what happened, including the cases where the forecast was worse than a simple reference.",
+    trackCta: "See the live record",
+    limitsTitle: "What it does not do",
+    limits: [
+      "It does not foresee rationing, regulatory decisions or events with no precedent in the history.",
+      "Beyond a week the price is no better than a simple statistical forecast, so read its range more than its central value.",
+      "XM's public data give the complete daily price about three days late (as observed), so the newest forecast starts from data that is three days old.",
+      "It supports decisions. It is not advice to buy, sell or hedge energy.",
+    ],
+    reportTitle: "Sample report",
+    reportBody:
+      "A short summary like the one that could be sent each week: forecast with ranges, price spike probabilities, hydrology and the record of hits. It uses real data: forecast issued on 26 October 2026, with prices complete up to 23 October.",
+    reportCta: "Download the sample report (PDF, in Spanish)",
+    contactTitle: "Let's talk",
+    contactBody:
+      "If you want to see how it would fit your portfolio, or need a forecast or a report adapted to your case, write to me.",
+    contactCta: "Write to me",
+    contactNote: "I reply in Spanish or English.",
   },
   errors: {
     title: "Something went wrong",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { horizonSeries, parseTargetMetrics, verdict } from "./model-metrics";
+import { bucketErrors, horizonSeries, parseTargetMetrics, verdict } from "./model-metrics";
 
 const method = (mase: number, coverage = 0.8) => ({ mape: 3.1, smape: 3.0, mase, coverage_p10_p90: coverage });
 const horizon = (a: number, b: number, c: number) => ({
@@ -68,5 +68,24 @@ describe("horizonSeries", () => {
     expect(series.days).toEqual([1, 2, 3]);
     expect(series.model).toEqual([0.6, 0.7, 0.9]);
     expect(series.seasonalNaive).toEqual([1.0, 1.1, 1.3]);
+  });
+});
+
+describe("bucketErrors", () => {
+  it("lists the mean error by horizon bucket, shortest first", () => {
+    const pct = (mape: number) => ({ mape });
+    const bucket = (m: number, n: number, e: number) => ({ model: pct(m), seasonal_naive: pct(n), ets: pct(e) });
+    const withBuckets = {
+      ...target,
+      by_bucket: { "8-14": bucket(35, 41, 34), "1-3": bucket(10, 30, 15), "4-7": bucket(25, 40, 28) },
+    };
+    const parsed = parseTargetMetrics({ targets: { price_mean_cop_kwh: withBuckets } }, "price_mean_cop_kwh");
+    expect(parsed && bucketErrors(parsed).map((b) => b.label)).toEqual(["1-3", "4-7", "8-14"]);
+    expect(parsed && bucketErrors(parsed)[0]).toEqual({ label: "1-3", model: 10, seasonalNaive: 30, ets: 15 });
+  });
+
+  it("is empty for a run that stored no buckets", () => {
+    const parsed = parseTargetMetrics({ targets: { demand_kwh: target } }, "demand_kwh");
+    expect(parsed && bucketErrors(parsed)).toEqual([]);
   });
 });

@@ -3,10 +3,13 @@ import type { Locale } from "./i18n/config";
 /** The public repository link stays hidden until NEXT_PUBLIC_REPO_URL is set. */
 export const REPO_URL = process.env.NEXT_PUBLIC_REPO_URL || null;
 
+/** Where businesses write to. Shown on the page For business. */
+export const CONTACT_EMAIL = "miguelangel.14130@gmail.com";
+
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
 export interface NavItem {
-  key: "overview" | "demand" | "price" | "hydrology" | "map" | "anomalies" | "models" | "analyst" | "about";
+  key: "overview" | "demand" | "price" | "hydrology" | "map" | "anomalies" | "models" | "analyst" | "business" | "about";
   path: string;
 }
 
@@ -19,6 +22,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: "anomalies", path: "/anomalies" },
   { key: "models", path: "/models" },
   { key: "analyst", path: "/analyst" },
+  { key: "business", path: "/business" },
   { key: "about", path: "/about" },
 ];
 

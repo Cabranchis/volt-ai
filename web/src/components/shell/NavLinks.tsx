@@ -3,6 +3,7 @@
 import {
   Activity,
   BrainCircuit,
+  Briefcase,
   CloudRain,
   Gauge,
   Info,
@@ -27,6 +28,7 @@ const ICONS: Record<NavItem["key"], LucideIcon> = {
   anomalies: Activity,
   models: BrainCircuit,
   analyst: MessageSquareText,
+  business: Briefcase,
   about: Info,
 };
 

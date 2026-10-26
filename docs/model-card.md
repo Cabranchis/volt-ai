@@ -1,15 +1,16 @@
 # Model card: VoltIA demand and spot-price forecasters
 
-Last training run: `20261026T032630Z-eb8f132`, trained 2026-10-26 03:26 UTC by the scheduled workflow on data from 2018-01-01 to 2026-10-22 (the last day XM had settled for both demand and price). Every number below comes from that run's `model_runs.metrics` row, also saved in [`pipeline/research/results/stored_run_20261026.json`](../pipeline/research/results/stored_run_20261026.json). The previous version of this card described run `20261024T214240Z-280431a`, whose data ended one day earlier. The experiments behind the changes are in [`model-experiments.md`](model-experiments.md).
+Last training run: `20261026T145436Z-d78e8d1`, trained 2026-10-26 14:54 UTC on data from 2018-01-01 to 2026-10-23 (the last day with a complete price in XM's public data). The results and the backtest protocol below come from that run's `model_runs.metrics` row, also saved in [`pipeline/research/results/calendar_backtest_2026-10-26.json`](../pipeline/research/results/calendar_backtest_2026-10-26.json); the sections on how the design was chosen quote earlier runs and say so. The previous version of this card described run `20261024T214240Z-280431a`, whose data ended one day earlier. The experiments behind the changes are in [`model-experiments.md`](model-experiments.md).
 
-**This is a portfolio project. The forecasts are not suitable for trading, bidding, hedging or any operational or financial decision.**
+**This is a portfolio project in active development. The forecasts are statistical estimates meant to support decisions made by people who understand their limits. They are not a trading signal, not advice to buy, sell or hedge energy, and not suited to automated bidding.**
 
 ## Intended use
 
 - Show, on the VoltIA site, where daily national electricity demand (next 30 days) and the daily mean spot price (next 14 days) are likely to go, with an 80 % interval (P10 to P90) and the main drivers of each forecast.
 - Explain the method and its measured accuracy to a technical reader, including where it fails.
+- Support a person who decides on energy purchases or consumption, next to the forecast's interval and the limits listed in this card.
 
-Out of scope: hourly or intraday forecasts, regional prices, market bidding, and any use where a wrong forecast has a cost.
+Out of scope: hourly or intraday forecasts, regional prices, automated market bidding, and any use that treats a forecast as certain. A wrong forecast has a cost, so the interval and the limits below are part of the forecast.
 
 ## Data
 

@@ -17,6 +17,7 @@ export const es: Dictionary = {
     anomalies: "Anomalías",
     models: "Modelos",
     analyst: "Analista",
+    business: "Para empresas",
     about: "Acerca de",
     skip: "Saltar al contenido",
     openMenu: "Abrir menú",
@@ -369,6 +370,64 @@ export const es: Dictionary = {
     ],
     authorTitle: "Autor",
     authorBody: "Construido por Miguel Angel como portafolio de ingeniería de datos e IA.",
+  },
+  business: {
+    title: "Para empresas",
+    description:
+      "Pronósticos de demanda y precio de bolsa de la electricidad en Colombia, con su margen de error y un historial público de cómo les fue.",
+    forWhoTitle: "Para quién es",
+    forWho: [
+      "Comercializadoras de energía que deciden cada semana cuánto comprar en bolsa y cuánto cubrir con contratos.",
+      "Grandes consumidores del mercado no regulado que planean su consumo y la renovación de contratos.",
+      "Quien quiera una segunda opinión transparente sobre hacia dónde van el precio de bolsa y la demanda del sistema.",
+    ],
+    getTitle: "Qué recibes",
+    get: [
+      {
+        title: "Demanda, hasta 30 días",
+        body: "La demanda nacional diaria con un rango P10 a P90, probada contra lo que realmente pasó.",
+      },
+      {
+        title: "Precio de bolsa, hasta 14 días",
+        body: "El precio medio diario con un rango calibrado para que, en promedio, cerca del 80 % de los resultados caiga dentro, y la probabilidad de que supere un umbral.",
+      },
+      {
+        title: "Hidrología",
+        body: "Nivel de embalses y aportes por región hidrológica y por embalse, que es lo que mueve el precio a mediano plazo.",
+      },
+      {
+        title: "Un historial verificable",
+        body: "Cada pronóstico se guarda tal como se emitió, antes de que los datos públicos de XM muestren el resultado. El pipeline nunca reescribe un pronóstico guardado, y después se evalúan en público.",
+      },
+    ],
+    numbersTitle: "Precisión medida",
+    numbersNote:
+      "Error porcentual medio (MAPE) en {n} fechas pasadas que el modelo no había visto, frente a dos referencias simples. Menor es mejor. Los días se cuentan desde el último día con precio completo en los datos públicos de XM, unos tres días antes de que se publique el pronóstico, así que los primeros días son los más cercanos.",
+    horizon: "Pronóstico",
+    demandRow: "Demanda, 1 a 30 días",
+    priceRow: "Precio de bolsa, {range} días",
+    numbersFoot:
+      "El modelo de precio supera a las dos referencias en los primeros días y queda a la par con ETS pasada una semana. El método y la comparación detallada, con sus intervalos, están en la página de Modelos.",
+    trackTitle: "Compruébalo tú",
+    trackBody:
+      "Cada día VoltIA guarda su pronóstico antes de que se publique el resultado. Cuando XM liquida el día, la página de Modelos los compara con lo que pasó, incluidos los casos en que el pronóstico fue peor que una referencia simple.",
+    trackCta: "Ver el historial en vivo",
+    limitsTitle: "Qué no hace",
+    limits: [
+      "No anticipa racionamientos, decisiones regulatorias ni hechos sin precedente en la historia.",
+      "Pasada una semana el precio no es mejor que un pronóstico estadístico simple, así que conviene leer su rango más que el valor central.",
+      "Los datos públicos de XM traen el precio diario completo con unos tres días de retraso (según lo observado), así que el pronóstico más nuevo parte de datos de hace tres días.",
+      "Apoya decisiones. No es una recomendación para comprar, vender ni cubrir energía.",
+    ],
+    reportTitle: "Informe de ejemplo",
+    reportBody:
+      "Un resumen corto como el que se podría enviar cada semana: pronóstico con rangos, probabilidad de picos de precio, hidrología y el historial de aciertos. Usa datos reales: pronóstico emitido el 26 de octubre de 2026, con precios completos hasta el 23 de octubre.",
+    reportCta: "Descargar el informe de ejemplo (PDF)",
+    contactTitle: "Hablemos",
+    contactBody:
+      "Si quieres ver cómo encajaría en tu portafolio, o necesitas un pronóstico o un informe adaptado a tu caso, escríbeme.",
+    contactCta: "Escríbeme",
+    contactNote: "Respondo en español o en inglés.",
   },
   errors: {
     title: "Algo salió mal",
