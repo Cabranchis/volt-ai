@@ -572,7 +572,7 @@ textarea {
 }
 
 /*
- * First-visit intro (components/shell/Splash.tsx), about 2.9 s: the bolt draws itself inside the
+ * First-visit intro (components/shell/Splash.tsx), about 1.5 s: the bolt draws itself inside the
  * amber tile, two rings of energy leave it along a current line, then the name and tagline settle
  * in and the veil lifts. Only transform, opacity and stroke offset move. Skipped for reduced motion
  * and after the first page of a tab.
@@ -589,7 +589,7 @@ textarea {
     radial-gradient(44rem 34rem at 85% 90%, var(--mesh-2), transparent 62%),
     radial-gradient(34rem 28rem at 50% 50%, var(--mesh-3), transparent 70%),
     var(--bg);
-  animation: splash-out 650ms cubic-bezier(0.65, 0, 0.35, 1) 2.25s both;
+  animation: splash-out 340ms cubic-bezier(0.65, 0, 0.35, 1) 1.15s both;
 }
 html[data-splash="done"] .splash {
   display: none;
@@ -601,7 +601,7 @@ html[data-splash="done"] .splash {
   gap: 1.6rem;
   padding: 0 1.5rem;
   text-align: center;
-  animation: splash-stage-out 650ms cubic-bezier(0.65, 0, 0.35, 1) 2.25s both;
+  animation: splash-stage-out 340ms cubic-bezier(0.65, 0, 0.35, 1) 1.15s both;
 }
 .splash-mark {
   position: relative;
@@ -623,8 +623,8 @@ html[data-splash="done"] .splash {
     0 0 0 1px color-mix(in srgb, var(--accent) 60%, black),
     0 18px 40px -12px color-mix(in srgb, var(--accent) 70%, transparent);
   animation:
-    splash-tile-in 560ms cubic-bezier(0.34, 1.56, 0.64, 1) 120ms both,
-    splash-tile-charge 520ms ease-out 1s both;
+    splash-tile-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1) 60ms both,
+    splash-tile-charge 280ms ease-out 520ms both;
 }
 .splash-bolt {
   width: 3rem;
@@ -635,8 +635,8 @@ html[data-splash="done"] .splash {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
   animation:
-    splash-draw 700ms cubic-bezier(0.65, 0, 0.35, 1) 520ms forwards,
-    splash-fill 260ms ease-out 1.1s forwards;
+    splash-draw 370ms cubic-bezier(0.65, 0, 0.35, 1) 270ms forwards,
+    splash-fill 140ms ease-out 570ms forwards;
 }
 .splash-ring {
   position: absolute;
@@ -644,11 +644,11 @@ html[data-splash="done"] .splash {
   border-radius: 1.5rem;
   border: 2px solid var(--accent);
   opacity: 0;
-  animation: splash-ring 900ms cubic-bezier(0.2, 0.7, 0.2, 1) 1s both;
+  animation: splash-ring 470ms cubic-bezier(0.2, 0.7, 0.2, 1) 520ms both;
 }
 .splash-ring-2 {
   border-color: var(--c-demand);
-  animation-delay: 1.2s;
+  animation-delay: 620ms;
 }
 /* the current line: a hairline through the tile that widens as the rings leave */
 .splash-line {
@@ -662,7 +662,7 @@ html[data-splash="done"] .splash {
   background: linear-gradient(90deg, transparent, var(--accent) 35%, var(--c-demand) 65%, transparent);
   opacity: 0;
   transform-origin: center;
-  animation: splash-line 1000ms cubic-bezier(0.2, 0.7, 0.2, 1) 1s both;
+  animation: splash-line 520ms cubic-bezier(0.2, 0.7, 0.2, 1) 520ms both;
 }
 .splash-name {
   display: flex;
@@ -679,7 +679,7 @@ html[data-splash="done"] .splash {
 }
 .splash-name > span > span {
   display: inline-block;
-  animation: splash-letter 640ms cubic-bezier(0.16, 1, 0.3, 1) calc(1.05s + var(--i) * 70ms) both;
+  animation: splash-letter 340ms cubic-bezier(0.16, 1, 0.3, 1) calc(550ms + var(--i) * 40ms) both;
 }
 .splash-accent {
   color: var(--accent-text);
@@ -688,7 +688,7 @@ html[data-splash="done"] .splash {
   font-size: clamp(0.8rem, 2.6vw, 0.95rem);
   color: var(--text-muted);
   text-transform: uppercase;
-  animation: splash-tagline 900ms cubic-bezier(0.16, 1, 0.3, 1) 1.6s both;
+  animation: splash-tagline 450ms cubic-bezier(0.16, 1, 0.3, 1) 680ms both;
 }
 
 @keyframes splash-out {
