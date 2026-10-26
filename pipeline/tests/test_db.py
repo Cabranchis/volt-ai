@@ -22,7 +22,7 @@ def _frame(
 def test_migrate_creates_tables_and_is_idempotent(tmp_path: Path) -> None:
     engine = db.make_engine(f"sqlite:///{(tmp_path / 'm.sqlite').as_posix()}")
     first = db.migrate(engine)
-    assert first == ["0001_init"]  # the .pg.sql file is skipped on SQLite
+    assert first == ["0001_init", "0003_forecast_log"]  # the .pg.sql file is skipped on SQLite
     assert db.migrate(engine) == []
     counts = db.table_counts(engine, ["series_daily", "forecasts", "briefings", "rate_limits"])
     assert counts == {"series_daily": 0, "forecasts": 0, "briefings": 0, "rate_limits": 0}

@@ -10,6 +10,7 @@ import type {
   LatestPoint,
   ModelRun,
   SeriesFrame,
+  TrackRow,
 } from "./types";
 
 /*
@@ -61,6 +62,12 @@ export async function getHourly(series: string, days: number): Promise<HourlyPoi
   "use cache";
   cacheLife("hours");
   return (await getRepository()).hourly(series, days);
+}
+
+export async function getTrackRecord(target: ForecastTarget): Promise<TrackRow[]> {
+  "use cache";
+  cacheLife("hours");
+  return (await getRepository()).trackRecord(target);
 }
 
 export async function getHealth(): Promise<Health> {

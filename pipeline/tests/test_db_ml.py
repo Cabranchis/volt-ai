@@ -119,3 +119,42 @@ def test_postgres_engine_survives_idle_connections() -> None:
     engine = db.make_engine("postgresql+psycopg://u:p@localhost:1/x")
     assert engine.pool._pre_ping is True
     assert engine.pool._recycle == 240
+
+
+def _log(engine: Engine) -> pd.DataFrame:
+    with engine.connect() as conn:
+        rows = conn.exec_driver_sql(
+            "SELECT target, origin, day, horizon, run_id, p50 FROM forecast_log ORDER BY day"
+        ).all()
+    return pd.DataFrame(rows, columns=["target", "origin", "day", "horizon", "run_id", "p50"])
+
+
+def test_forecast_log_survives_pruning_and_is_never_revised(engine: Engine) -> None:
+    for i in range(3):
+        _run(engine, f"r{i}", minutes=i)
+        frame = _forecasts(days=2, start=f"2026-10-{22 + i}")  # the origin moves one day per run
+        frame["p50"], frame["p90"] = 2.0 + i, 3.0 + i
+        db.upsert_forecasts(engine, f"r{i}", frame, keep_runs=1)
+    with engine.connect() as conn:
+        kept = {r[0] for r in conn.exec_driver_sql("SELECT DISTINCT run_id FROM forecasts")}
+    assert kept == {"r2"}
+    log = _log(engine)
+    assert len(log) == 6  # three origins, two days each
+    assert sorted({str(d) for d in log["origin"]}) == ["2026-10-21", "2026-10-22", "2026-10-23"]
+    assert set(log["run_id"]) == {"r0", "r1", "r2"}
+    first = log[(log["run_id"] == "r0")]
+    assert first["p50"].tolist() == [2.0, 2.0]
+
+    # the same origin issued again later does not replace what was logged first
+    _run(engine, "r9", minutes=9)
+    again = _forecasts(days=2, start="2026-10-22")
+    again["p50"], again["p90"] = 9.0, 10.0
+    db.upsert_forecasts(engine, "r9", again, keep_runs=1)
+    after = _log(engine)
+    assert len(after) == 6
+    assert 9.0 not in after["p50"].tolist()
+
+
+def test_archiving_with_no_forecasts_is_a_no_op(engine: Engine) -> None:
+    with engine.begin() as conn:
+        assert db.archive_forecasts(conn) == 0

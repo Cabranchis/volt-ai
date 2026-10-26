@@ -10,6 +10,7 @@ import {
   forecastPointSchema,
   isoDate,
   modelRunSchema,
+  trackRowSchema,
   type Repository,
 } from "./types";
 
@@ -131,6 +132,25 @@ export function createPostgresRepository(sql: Sql): Repository {
       return z
         .array(z.object({ day: isoDate, hour: z.number().int(), value: z.number() }))
         .parse(rows);
+    },
+
+    async trackRecord(target) {
+      try {
+        const rows = await sql`
+          SELECT to_char(l.origin, 'YYYY-MM-DD') AS origin, to_char(l.day, 'YYYY-MM-DD') AS day, l.horizon,
+                 l.p10, l.p50, l.p90, a.value AS actual, n.value AS naive
+          FROM forecast_log l
+          LEFT JOIN series_daily a ON a.series = l.target AND a.day = l.day
+          LEFT JOIN series_daily n ON n.series = l.target
+            AND n.day = CASE WHEN l.target = 'demand_kwh' THEN l.day - 7 ELSE l.origin END
+          WHERE l.target = ${target}
+          ORDER BY l.day, l.origin`;
+        return z.array(trackRowSchema).parse(rows);
+      } catch (error) {
+        // The table arrives with migration 0003, applied by the daily pipeline run.
+        if ((error as { code?: string }).code === "42P01") return [];
+        throw error;
+      }
     },
 
     async health() {

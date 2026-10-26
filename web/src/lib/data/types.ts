@@ -107,6 +107,23 @@ export const hourlyPointSchema = z.object({
 });
 export type HourlyPoint = z.infer<typeof hourlyPointSchema>;
 
+/**
+ * One forecast from forecast_log (as first issued) next to what happened. `actual` is null while XM
+ * has not settled the day. `naive` is the reference a forecaster must beat: the same weekday of the
+ * previous week for demand, the last settled price at the origin for the price.
+ */
+export const trackRowSchema = z.object({
+  origin: isoDate,
+  day: isoDate,
+  horizon: z.number().int().min(1),
+  p10: z.number(),
+  p50: z.number(),
+  p90: z.number(),
+  actual: z.number().nullable(),
+  naive: z.number().nullable(),
+});
+export type TrackRow = z.infer<typeof trackRowSchema>;
+
 export const dataSourceSchema = z.enum(["postgres", "fixtures"]);
 export type DataSource = z.infer<typeof dataSourceSchema>;
 
@@ -140,5 +157,6 @@ export interface Repository {
   modelRun(): Promise<ModelRun | null>;
   briefing(lang: "es" | "en"): Promise<Briefing | null>;
   hourly(series: string, days: number): Promise<HourlyPoint[]>;
+  trackRecord(target: ForecastTarget): Promise<TrackRow[]>;
   health(): Promise<Health>;
 }

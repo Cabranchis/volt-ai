@@ -1,10 +1,11 @@
 import { CircleCheck, CircleX } from "lucide-react";
 import type { Metadata } from "next";
 import { HorizonChart } from "@/components/charts/HorizonChart";
+import { TrackRecordPanel } from "@/components/pages/TrackRecordPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { EmptyState } from "@/components/ui/States";
-import { getModelRun } from "@/lib/data";
+import { getModelRun, getTrackRecord } from "@/lib/data";
 import type { ForecastTarget } from "@/lib/data/types";
 import { formatDate, formatNumber, formatPercent } from "@/lib/format";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
@@ -13,6 +14,7 @@ import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/en";
 import { horizonSeries, parseTargetMetrics, verdict, type TargetMetrics } from "@/lib/model-metrics";
 import { REPO_URL } from "@/lib/site";
+import { scoreTrackRecord } from "@/lib/track-record";
 
 export async function generateMetadata(): Promise<Metadata> {
   const dict = await getDictionary();
@@ -105,7 +107,11 @@ function CoverageFigures({ metrics, locale, dict }: { metrics: TargetMetrics; lo
 export default async function ModelsPage() {
   const locale = await getLocale();
   const dict = await getDictionary();
-  const run = await getModelRun();
+  const [run, demandLog, priceLog] = await Promise.all([
+    getModelRun(),
+    getTrackRecord("demand_kwh"),
+    getTrackRecord("price_mean_cop_kwh"),
+  ]);
   const m = dict.models;
 
   return (
@@ -176,6 +182,15 @@ export default async function ModelsPage() {
               );
             })
           : null}
+
+        <TrackRecordPanel
+          locale={locale}
+          dict={m}
+          entries={[
+            { key: "demand", title: m.targetDemand, record: scoreTrackRecord(demandLog) },
+            { key: "price", title: m.targetPrice, record: scoreTrackRecord(priceLog) },
+          ]}
+        />
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Panel title={m.methodTitle}>

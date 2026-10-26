@@ -278,8 +278,70 @@ def upsert_forecasts(engine: Engine, run_id: str, frame: pd.DataFrame, keep_runs
         targets = sorted({r["target"] for r in rows})
         conn.execute(delete(table).where(table.c.run_id == run_id, table.c.target.in_(targets)))
         written = _upsert(conn, "forecasts", rows, ["run_id", "target", "day"])
+        archive_forecasts(conn)
         _prune_forecasts(conn, keep_runs)
     return written
+
+
+def archive_forecasts(conn: Connection) -> int:
+    """Copy forecasts that are not yet in `forecast_log`, each as it was first issued.
+
+    A forecast is identified by (target, origin, day). If two runs share an origin the earliest one
+    is kept, and an existing row is never changed, so the log cannot be revised after the fact.
+    Called before old runs are pruned, so the retained runs are archived the first time.
+    """
+    forecasts = _table(conn, "forecasts")
+    runs = _table(conn, "model_runs")
+    stmt = select(
+        forecasts.c.target,
+        forecasts.c.day,
+        forecasts.c.horizon,
+        forecasts.c.run_id,
+        runs.c.trained_at.label("issued_at"),
+        forecasts.c.p10,
+        forecasts.c.p50,
+        forecasts.c.p90,
+    ).join(runs, runs.c.run_id == forecasts.c.run_id)
+    frame = pd.DataFrame(conn.execute(stmt).mappings().all())
+    if frame.empty:
+        return 0
+    frame["day"] = pd.to_datetime(frame["day"])
+    frame["origin"] = frame["day"] - pd.to_timedelta(frame["horizon"], unit="D")
+    frame = frame.sort_values(["issued_at", "run_id"]).drop_duplicates(
+        ["target", "origin", "day"], keep="first"
+    )
+    rows = [
+        {
+            "target": str(t),
+            "origin": o,
+            "day": d,
+            "horizon": int(h),
+            "run_id": str(rid),
+            "issued_at": at,
+            "p10": float(lo),
+            "p50": float(mid),
+            "p90": float(hi),
+        }
+        for t, o, d, h, rid, at, lo, mid, hi in zip(
+            frame["target"],
+            _as_dates(frame["origin"]),
+            _as_dates(frame["day"]),
+            frame["horizon"],
+            frame["run_id"],
+            frame["issued_at"],
+            frame["p10"],
+            frame["p50"],
+            frame["p90"],
+            strict=True,
+        )
+    ]
+    log = _table(conn, "forecast_log")
+    insert_fn = postgresql.insert if conn.dialect.name == "postgresql" else sqlite.insert
+    stmt_insert = insert_fn(log).on_conflict_do_nothing(index_elements=["target", "origin", "day"])
+    added = 0
+    for i in range(0, len(rows), _BATCH):
+        added += int(conn.execute(stmt_insert, rows[i : i + _BATCH]).rowcount or 0)
+    return added
 
 
 def _prune_forecasts(conn: Connection, keep_runs: int) -> int:

@@ -38,7 +38,7 @@ What to check and do when VoltIA misbehaves. Every command runs from `pipeline/`
 ### The forecasts look wrong
 
 - Check `/models` on the site and the [model card](model-card.md): the price median is not better than ETS, and intervals are calibrated on average, not per regime.
-- Retrain: `uv run voltia train --predict`. The run is deterministic for the same data. Forecasts of the 10 most recent runs are kept.
+- Retrain: `uv run voltia train --predict`. The run is deterministic for the same data. Forecasts of the 10 most recent runs are kept; `forecast_log` keeps every forecast as first issued, for the live track record.
 - Regime shifts (a new El Niño phase, reservoir emergencies) are the known weak spot.
 
 ## Rotating secrets

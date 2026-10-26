@@ -61,6 +61,9 @@ export function createFixtureRepository(): Repository {
         .filter((r) => r.day >= from)
         .map(({ day, hour, value }) => ({ day, hour, value }));
     },
+    async trackRecord() {
+      return [];
+    },
     async health() {
       return { ...health, source: "fixtures" as const };
     },
