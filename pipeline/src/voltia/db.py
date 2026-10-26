@@ -408,10 +408,11 @@ def archive_weather_forecast(engine: Engine, frame: pd.DataFrame) -> int:
             return 0
         insert_fn = postgresql.insert if conn.dialect.name == "postgresql" else sqlite.insert
         stmt = insert_fn(log).on_conflict_do_nothing(index_elements=["issued", "location", "day"])
-        added = 0
         for i in range(0, len(rows), _BATCH):
-            added += int(conn.execute(stmt, rows[i : i + _BATCH]).rowcount or 0)
-    return added
+            conn.execute(stmt, rows[i : i + _BATCH])
+    # No row of this date existed, so every row sent was added (Postgres does not report a row
+    # count for batched inserts: it answers -1).
+    return len(rows)
 
 
 def _prune_forecasts(conn: Connection, keep_runs: int) -> int:
