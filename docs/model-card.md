@@ -208,6 +208,23 @@ The previous run's figures are those published in the earlier version of this ca
 | Spot price | previous run | 34.75 | 2.021 | 0.87 | 1.270 / 1.917 / 2.403 |
 | Spot price | this run | 28.38 | 1.485 | 0.81 | 0.694 / 1.176 / 2.000 |
 
+## Cost of a window (the calculator)
+
+The web calculator turns the daily price forecast into the cost of buying a constant volume on the spot market over a window of days. Daily bands cannot be added: the P10 of a window equals the sum of the daily P10 only if the days move together perfectly. The calculator simulates each day as the log-normal with the day's calibrated median (P50) and the log-spread between its P10 and P90, with a common factor so that the errors of any two days have correlation rho. With asymmetric bands the implied P10 and P90 differ somewhat from the stored ones; the measurement below uses the same construction, so it applies to what the calculator shows.
+
+The correlation was measured, not assumed. [`pipeline/research/run_cost_window.py`](../pipeline/research/run_cost_window.py) runs the production price backtest on the fixed calendar (51 scored origins, 21 days apart, data to 2026-10-23) and counts how often the real mean price of a window falls inside the simulated P10 to P90 range. Windows start at horizon 3, the day the forecast is issued (the first day the calculator counts), and the longest is 12 days because the price horizon is 14.
+
+| rho | 3-day window | 7-day window | 12-day window |
+| --- | --- | --- | --- |
+| 0 (independent days) | 0.63 | 0.55 | 0.45 |
+| 0.5 | 0.80 | 0.78 | 0.73 |
+| **0.7 (used)** | **0.84** | **0.82** | **0.78** |
+| 1 (days move together) | 0.90 | 0.94 | 0.90 |
+
+The nominal coverage is 0.80. rho 0.7 is the value closest to 0.80 on average over the three lengths; the 95 % intervals of its coverage are 0.71 to 0.94, 0.73 to 0.92 and 0.69 to 0.90, so they include 0.80, and with 51 windows the estimate is noisy. For that reason rho is fixed at a coarse 0.7 and not tuned further. For 12-day windows 0.7 is slightly below the nominal level. Summing the daily quantiles (rho 1) over-covers and independence under-covers.
+
+Where the misses fall matters to a buyer: at rho 0.7 the real mean price was below the range in 14 % to 18 % of the windows and above it in 2 % to 4 %, depending on the length. The high end of the range was rarely exceeded; the low end was exceeded more often. The 95th percentile of the cost that the calculator shows as the high case comes from the same simulation and was not measured on its own. Results: [`results/cost_window_2026-10-26.json`](../pipeline/research/results/cost_window_2026-10-26.json). The calculator assumes the same volume every day and prices all of it at the day's mean price, so it ignores the hourly shape of a real load.
+
 ## Anomaly detection (FR-09)
 
 **Method.**

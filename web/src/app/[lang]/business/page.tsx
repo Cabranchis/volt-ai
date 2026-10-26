@@ -1,4 +1,4 @@
-import { CloudRain, FileText, Gauge, Mail, ShieldCheck, Zap } from "lucide-react";
+import { Calculator, CloudRain, FileText, Gauge, Mail, ShieldCheck, Zap } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -76,8 +76,8 @@ export default async function BusinessPage() {
             <dl className="grid gap-5 sm:grid-cols-3">
               {hero.map((item) => (
                 <div key={item.label} className="flex flex-col gap-1">
-                  <dd className="order-1 text-3xl font-semibold tracking-tight text-accent-ink tabular-nums">{item.value}</dd>
                   <dt className="order-2 text-sm text-muted">{item.label}</dt>
+                  <dd className="order-1 text-3xl font-semibold tracking-tight text-accent-ink tabular-nums">{item.value}</dd>
                 </div>
               ))}
             </dl>
@@ -99,6 +99,13 @@ export default async function BusinessPage() {
                 <FileText aria-hidden="true" size={16} strokeWidth={1.75} />
                 {b.reportCta}
               </a>
+              <Link
+                href={hrefFor(locale, "/calculator")}
+                className="btn-glass inline-flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium"
+              >
+                <Calculator aria-hidden="true" size={16} strokeWidth={1.75} />
+                {b.calculatorCta}
+              </Link>
             </div>
           </section>
         ) : null}

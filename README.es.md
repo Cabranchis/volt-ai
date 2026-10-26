@@ -13,6 +13,7 @@
 - **Explica** cada pronóstico con los factores SHAP en lenguaje claro.
 - **Vigila la hidrología y El Niño**: nivel de embalses, aportes y el índice ONI.
 - **Detecta anomalías** como el confinamiento de 2020 y los años de El Niño.
+- **Calcula una compra**: una calculadora convierte el pronóstico de precio en el rango de costo de comprar un volumen en bolsa y la probabilidad de pagar más que un contrato. Su rango se comprueba en el backtest (80 % nominal, 78 a 84 % medido).
 - **Responde preguntas** con un analista de IA limitado a herramientas tipadas y validadas. Nunca ejecuta SQL libre y, si el modelo no está disponible, responde con resúmenes fijos.
 - **Escribe un informe diario** en los dos idiomas a partir de las cifras del día.
 - **Expone una API REST** en `/api/v1` con especificación OpenAPI.

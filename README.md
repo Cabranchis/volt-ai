@@ -13,6 +13,7 @@
 - **Explains** each forecast with SHAP drivers in plain language.
 - **Watches hydrology and El Niño**: reservoir level, inflows and the ONI index.
 - **Detects anomalies** such as the 2020 lockdown and the El Niño years.
+- **Prices a purchase**: a calculator turns the price forecast into the cost range of buying a volume on the spot market, and the chance of paying more than a contract. Its range is checked in the backtest (80 % nominal, 78 to 84 % measured).
 - **Answers questions** through an AI analyst limited to typed, validated tools. It never runs free-form SQL, and it still answers from fixed summaries when the model is unavailable.
 - **Writes a daily briefing** in both languages from the day's figures.
 - **Exposes a REST API** under `/api/v1` with an OpenAPI specification.

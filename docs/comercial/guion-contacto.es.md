@@ -45,6 +45,10 @@ Empieza por los consultores y por las empresas medianas: contestan más y no tie
 
 > Hola [nombre], construí un pronóstico de demanda y precio de bolsa de Colombia con historial público de aciertos. Me gustaría conocer su opinión sobre si le sirve a un equipo de compras de energía. ¿Le parece una charla de 20 minutos?
 
+## La calculadora en la llamada
+
+Pídele su volumen diario y el número de días que compra en bolsa, y ábrela en <https://voltia-xi-five.vercel.app/es/calculator> con la pantalla compartida: te dará el costo esperado, el rango y, si te dice su precio de contrato, la probabilidad de que la bolsa salga más cara. Di siempre que es una estimación con un rango medido (cubre cerca del 80 % de los casos pasados), que usa un volumen constante y que apoya su decisión, no la reemplaza. Anota qué le falta: es lo más útil que sacas de la llamada.
+
 ## La llamada, minuto a minuto
 
 1. **Apertura (1 minuto).** "Gracias por el tiempo. Quiero entender cómo toman hoy sus decisiones de compra y mostrarle algo que estoy construyendo. No voy a venderle nada hoy."
