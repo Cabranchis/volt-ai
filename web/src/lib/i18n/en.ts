@@ -185,6 +185,7 @@ export const en = {
     levelDelta: "{delta} points against 7 days ago",
     inflows: "River inflows",
     inflowsNote: "Against the historical mean for the day",
+    focus: "{name}: {level} full · {capacity} GWh of capacity",
     reservoirsCount: "{n} reservoirs",
     capacity: "{gwh} GWh of capacity",
     levelChartTitle: "Reservoir level over the last year",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TimeSeriesChart } from "@/components/charts/TimeSeriesChart";
 import { Panel } from "@/components/ui/Panel";
 import { RangeControl } from "@/components/ui/RangeControl";
@@ -41,35 +41,58 @@ const levelColor = (level: number): string =>
   `color-mix(in oklab, var(--c-water) ${Math.round(18 + 82 * level)}%, var(--surface))`;
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const MOVE_MS = 900;
 
-/** Eases the SVG view box toward its target; it jumps when the visitor prefers reduced motion. */
-function useAnimatedBox(target: Box): Box {
-  const [box, setBox] = useState(target);
+/**
+ * Moves the SVG view box toward its target like a camera: the centre travels in a straight line and
+ * the zoom in log space, so the speed feels even from far to near. It jumps when the visitor
+ * prefers reduced motion. `moving` is true while it travels.
+ */
+function useAnimatedBox(target: Box): { box: Box; moving: boolean } {
+  const [state, setState] = useState({ box: target, moving: false });
   const current = useRef(target);
   useEffect(() => {
-    // With reduced motion the first frame is already the end of the move.
-    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 600;
+    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : MOVE_MS;
     const from = current.current;
     const start = performance.now();
+    const aspect = target.h / target.w;
     let frame = 0;
     const tick = (now: number) => {
       const t = duration === 0 ? 1 : Math.min(1, (now - start) / duration);
-      const e = 1 - Math.pow(1 - t, 3);
-      const next = {
-        x: lerp(from.x, target.x, e),
-        y: lerp(from.y, target.y, e),
-        w: lerp(from.w, target.w, e),
-        h: lerp(from.h, target.h, e),
-      };
+      const e = easeInOutCubic(t);
+      const w = Math.exp(lerp(Math.log(from.w), Math.log(target.w), e));
+      const cx = lerp(from.x + from.w / 2, target.x + target.w / 2, e);
+      const cy = lerp(from.y + from.h / 2, target.y + target.h / 2, e);
+      const h = w * aspect;
+      const next = t === 1 ? target : { x: cx - w / 2, y: cy - h / 2, w, h };
       current.current = next;
-      setBox(next);
+      setState({ box: next, moving: t < 1 });
       if (t < 1) frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [target]);
-  return box;
+  return state;
 }
+
+/** The department outlines never change, so they are drawn once and skipped while the camera moves. */
+const Departments = memo(function Departments() {
+  return (
+    <g aria-hidden="true">
+      {DEPARTMENTS.map((d) => (
+        <path
+          key={d.code}
+          d={d.path}
+          fill="var(--surface-2)"
+          stroke="var(--border)"
+          strokeWidth={1}
+          vectorEffect="non-scaling-stroke"
+        />
+      ))}
+    </g>
+  );
+});
 
 const lastValue = (values: readonly (number | null)[]): number | null => {
   for (let i = values.length - 1; i >= 0; i--) {
@@ -81,6 +104,7 @@ const lastValue = (values: readonly (number | null)[]): number | null => {
 
 export function ReservoirMap({ locale, labels, day, reservoirs, history, national }: Props) {
   const [selected, setSelected] = useState<Selection>("all");
+  const [focus, setFocus] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [pixelWidth, setPixelWidth] = useState(560);
@@ -109,7 +133,7 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
     () => (selected === "all" ? FULL_BOX : framing(byRegion.get(selected) ?? [], 90, 300)),
     [selected, byRegion],
   );
-  const box = useAnimatedBox(target);
+  const { box, moving } = useAnimatedBox(target);
   const unit = box.w / pixelWidth; // map units per screen pixel, to keep bubbles and text a steady size
   const sizeScale = Math.min(1, Math.max(0.7, pixelWidth / 560));
   const radiusOf = (r: MapReservoir) => bubbleRadius(r.capacityKwh, maxCapacity) * sizeScale;
@@ -118,9 +142,10 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
   const labelSpots = useMemo(() => {
     const targetUnit = target.w / pixelWidth;
     const scale = Math.min(1, Math.max(0.7, pixelWidth / 560));
+    const rank = (r: MapReservoir) => (r.name === hovered ? 2 : r.name === focus ? 1 : 0);
     const wanted = reservoirs
-      .filter((r) => r.name === hovered || (selected !== "all" && r.region === selected))
-      .sort((a, b) => Number(b.name === hovered) - Number(a.name === hovered) || b.capacityKwh - a.capacityKwh);
+      .filter((r) => r.name === hovered || r.name === focus || (selected !== "all" && r.region === selected))
+      .sort((a, b) => rank(b) - rank(a) || b.capacityKwh - a.capacityKwh);
     return placeLabels(
       reservoirs.map((r) => ({
         name: r.name,
@@ -133,10 +158,18 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
       4,
       wanted.map((r) => r.name),
     );
-  }, [reservoirs, hovered, selected, target, pixelWidth, maxCapacity]);
+  }, [reservoirs, hovered, focus, selected, target, pixelWidth, maxCapacity]);
 
-  const choose = useCallback((region: string) => {
-    setSelected((now) => (isRegion(region) && now !== region ? region : "all"));
+  /** Picking a region zooms to it. Going back to the whole country is done from "Todo el país". */
+  const chooseRegion = useCallback((region: Selection) => {
+    setSelected(region);
+    setFocus(null);
+  }, []);
+
+  /** Picking a reservoir keeps the zoom if it is in the region on screen and moves to its region if not. */
+  const pick = useCallback((reservoir: MapReservoir) => {
+    if (isRegion(reservoir.region)) setSelected(reservoir.region);
+    setFocus((now) => (now === reservoir.name ? null : reservoir.name));
   }, []);
 
   const regionOptions = [
@@ -156,6 +189,7 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
   const title = selected === "all" ? labels.all : labels.regions[selected];
 
   const rows = [...shown].sort((a, b) => b.capacityKwh - a.capacityKwh);
+  const focused = reservoirs.find((r) => r.name === focus) ?? null;
   const mapLabel = fmt(labels.mapLabel, {
     n: reservoirs.length,
     level: summarise(reservoirs) ? `${formatNumber((summarise(reservoirs)?.level ?? 0) * 100, locale, 0)} %` : "",
@@ -170,7 +204,7 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
               label={labels.regionsLabel}
               options={regionOptions}
               value={selected}
-              onChange={setSelected}
+              onChange={chooseRegion}
               wrap
             />
             <svg
@@ -181,18 +215,7 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
               className="mx-auto block h-auto max-h-[78vh] w-full select-none"
               style={{ aspectRatio: `${FULL_BOX.w} / ${FULL_BOX.h}` }}
             >
-              <g aria-hidden="true">
-                {DEPARTMENTS.map((d) => (
-                  <path
-                    key={d.code}
-                    d={d.path}
-                    fill="var(--surface-2)"
-                    stroke="var(--border)"
-                    strokeWidth={1}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                ))}
-              </g>
+              <Departments />
               <g>
                 {REGIONS.map((id) => {
                   const group = byRegion.get(id);
@@ -208,7 +231,7 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
                     strokeWidth: 90,
                     opacity: selected === "all" ? 0.07 : active ? 0.2 : 0.03,
                     className: "cursor-pointer transition-opacity duration-300 motion-reduce:transition-none",
-                    onClick: () => choose(id),
+                    onClick: () => chooseRegion(id),
                   };
                   return points.length >= 2 ? (
                     <polygon key={id} points={points.map((p) => `${p.x},${p.y}`).join(" ")} {...common} />
@@ -223,7 +246,8 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
                   const radius = radiusOf(r) * unit;
                   const label = reservoirLabel(r.name);
                   const levelText = `${formatNumber(r.level * 100, locale, 0)} %`;
-                  const spot = labelSpots.get(r.name);
+                  const spot = moving ? undefined : labelSpots.get(r.name);
+                  const isFocus = focus === r.name;
                   return (
                     <g
                       key={r.name}
@@ -234,13 +258,14 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
                         level: levelText,
                         capacity: formatGWh(r.capacityKwh, locale, 0),
                       })}
+                      aria-pressed={isFocus}
                       className="cursor-pointer outline-none transition-opacity duration-300 focus-visible:[&>circle]:stroke-[var(--focus)] motion-reduce:transition-none"
                       opacity={inRegion ? 1 : 0.18}
-                      onClick={() => choose(r.region)}
+                      onClick={() => pick(r)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
-                          choose(r.region);
+                          pick(r);
                         }
                       }}
                       onPointerEnter={() => setHovered(r.name)}
@@ -248,13 +273,24 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
                       onFocus={() => setHovered(r.name)}
                       onBlur={() => setHovered((now) => (now === r.name ? null : now))}
                     >
+                      {isFocus ? (
+                        <circle
+                          cx={r.x}
+                          cy={r.y}
+                          r={radius + 5 * unit}
+                          fill="none"
+                          stroke="var(--accent)"
+                          strokeWidth={3}
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      ) : null}
                       <circle
                         cx={r.x}
                         cy={r.y}
                         r={radius}
                         fill={levelColor(r.level)}
-                        stroke="var(--text-muted)"
-                        strokeWidth={hovered === r.name ? 2.5 : 1.25}
+                        stroke={isFocus ? "var(--accent)" : "var(--text-muted)"}
+                        strokeWidth={isFocus ? 2.5 : hovered === r.name ? 2.5 : 1.25}
                         vectorEffect="non-scaling-stroke"
                       />
                       {spot ? (
@@ -328,6 +364,15 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
                 </dd>
               </div>
             </dl>
+            {focused ? (
+              <p className="rounded-lg border border-line bg-[var(--surface-2)] px-3 py-2 text-sm">
+                {fmt(labels.focus, {
+                  name: reservoirLabel(focused.name),
+                  level: `${formatNumber(focused.level * 100, locale, 0)} %`,
+                  capacity: formatGWh(focused.capacityKwh, locale, 0),
+                })}
+              </p>
+            ) : null}
             <div>
               <h3 className="font-semibold">{labels.levelChartTitle}</h3>
               <p className="mb-2 text-sm text-muted">{labels.levelChartNote}</p>
@@ -382,11 +427,28 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
               {rows.map((r) => (
                 <tr
                   key={r.name}
-                  className="border-t border-line"
+                  aria-current={focus === r.name ? "true" : undefined}
+                  className={[
+                    "border-t border-line transition-colors duration-200 motion-reduce:transition-none",
+                    focus === r.name
+                      ? "bg-[color-mix(in_oklab,var(--accent)_16%,transparent)] shadow-[inset_3px_0_0_var(--accent)]"
+                      : hovered === r.name
+                        ? "bg-[color-mix(in_oklab,var(--accent)_7%,transparent)]"
+                        : "",
+                  ].join(" ")}
                   onPointerEnter={() => setHovered(r.name)}
                   onPointerLeave={() => setHovered((now) => (now === r.name ? null : now))}
                 >
-                  <th scope="row" className="px-2 py-2 text-left font-normal sm:px-3">{reservoirLabel(r.name)}</th>
+                  <th scope="row" className={`px-2 py-2 text-left sm:px-3 ${focus === r.name ? "font-semibold" : "font-normal"}`}>
+                    <button
+                      type="button"
+                      aria-pressed={focus === r.name}
+                      onClick={() => pick(r)}
+                      className="rounded text-left underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    >
+                      {reservoirLabel(r.name)}
+                    </button>
+                  </th>
                   <td className="px-2 py-2 text-left sm:px-3">{isRegion(r.region) ? labels.regions[r.region] : r.region}</td>
                   <td className="px-2 py-2 sm:px-3">
                     <span className="flex items-center justify-end gap-2">

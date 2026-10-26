@@ -187,6 +187,7 @@ export const es: Dictionary = {
     levelDelta: "{delta} puntos frente a hace 7 días",
     inflows: "Aportes de los ríos",
     inflowsNote: "Frente a la media histórica del día",
+    focus: "{name}: {level} lleno · {capacity} GWh de capacidad",
     reservoirsCount: "{n} embalses",
     capacity: "{gwh} GWh de capacidad",
     levelChartTitle: "Nivel de embalses en el último año",
