@@ -49,6 +49,8 @@ packages = ["src/voltia"]
 line-length = 100
 target-version = "py312"
 src = ["src", "tests"]
+# The experiments are scripts with their own environment (research/pyproject.toml), not product code.
+extend-exclude = ["research"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4", "PL", "RUF", "S", "N", "PT", "DTZ"]
