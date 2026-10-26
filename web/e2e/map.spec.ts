@@ -19,15 +19,21 @@ test("map keeps its zoom while another reservoir is picked", async ({ page }) =>
   expect(await box()).toBe(antioquia);
   await expect(page.locator("tr[aria-current=true]")).toContainText("Ituango");
 
-  // clicking it again clears the highlight but keeps the zoom
+  // clicking the chosen one again steps back out to the whole country
   await page.locator("tr[aria-current=true] button").click();
-  await page.waitForTimeout(500);
-  expect(await box()).toBe(antioquia);
+  await page.waitForTimeout(1300);
+  expect(await box()).toBe(full);
   await expect(page.locator("tr[aria-current=true]")).toHaveCount(0);
 
-  // a reservoir of another region moves there directly
-  await page.getByText("Todo el país").first().click();
+  // clicking the empty map while zoomed in does the same
+  await page.getByText("Antioquia", { exact: true }).first().click();
   await page.waitForTimeout(1300);
+  expect(await box()).not.toBe(full);
+  await svg.click({ position: { x: 20, y: 20 } });
+  await page.waitForTimeout(1300);
+  expect(await box()).toBe(full);
+
+  // a reservoir of another region moves there directly
   await page.locator("table button", { hasText: "Betania" }).click();
   await page.waitForTimeout(1300);
   expect(await box()).not.toBe(full);

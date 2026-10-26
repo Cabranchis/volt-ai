@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { TimeSeriesChart } from "@/components/charts/TimeSeriesChart";
 import { Panel } from "@/components/ui/Panel";
 import { RangeControl } from "@/components/ui/RangeControl";
@@ -166,11 +166,21 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
     setFocus(null);
   }, []);
 
-  /** Picking a reservoir keeps the zoom if it is in the region on screen and moves to its region if not. */
-  const pick = useCallback((reservoir: MapReservoir) => {
-    if (isRegion(reservoir.region)) setSelected(reservoir.region);
-    setFocus((now) => (now === reservoir.name ? null : reservoir.name));
-  }, []);
+  /**
+   * Picking a reservoir keeps the zoom if it is in the region on screen and moves to its region if
+   * not. Picking the one already chosen steps back out to the whole country.
+   */
+  const pick = useCallback(
+    (reservoir: MapReservoir) => {
+      if (focus === reservoir.name) {
+        chooseRegion("all");
+        return;
+      }
+      if (isRegion(reservoir.region)) setSelected(reservoir.region);
+      setFocus(reservoir.name);
+    },
+    [focus, chooseRegion],
+  );
 
   const regionOptions = [
     { value: "all" as const, label: labels.all },
@@ -212,6 +222,7 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
               viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
               role="group"
               aria-label={mapLabel}
+              onClick={() => chooseRegion("all")}
               className="mx-auto block h-auto max-h-[78vh] w-full select-none"
               style={{ aspectRatio: `${FULL_BOX.w} / ${FULL_BOX.h}` }}
             >
@@ -231,7 +242,10 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
                     strokeWidth: 90,
                     opacity: selected === "all" ? 0.07 : active ? 0.2 : 0.03,
                     className: "cursor-pointer transition-opacity duration-300 motion-reduce:transition-none",
-                    onClick: () => chooseRegion(id),
+                    onClick: (event: MouseEvent) => {
+                      event.stopPropagation();
+                      chooseRegion(id);
+                    },
                   };
                   return points.length >= 2 ? (
                     <polygon key={id} points={points.map((p) => `${p.x},${p.y}`).join(" ")} {...common} />
@@ -261,7 +275,10 @@ export function ReservoirMap({ locale, labels, day, reservoirs, history, nationa
                       aria-pressed={isFocus}
                       className="cursor-pointer outline-none transition-opacity duration-300 focus-visible:[&>circle]:stroke-[var(--focus)] motion-reduce:transition-none"
                       opacity={inRegion ? 1 : 0.18}
-                      onClick={() => pick(r)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        pick(r);
+                      }}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
