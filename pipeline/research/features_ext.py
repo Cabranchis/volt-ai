@@ -11,10 +11,11 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from harness import PUBLICATION_LAG, SETTLE_LAG
+from harness import PUBLICATION_LAG, REGIONS, SETTLE_LAG
 from voltia.features import log_positive
 
 BLOCKS = ("dispatch", "offers", "contracts", "hydro_now", "trade", "nowcast")
+PHASE_B_BLOCKS = ("regional", "profile", "restrictions", "availability")
 
 FEATURES: dict[str, list[str]] = {
     "dispatch": [
@@ -39,6 +40,29 @@ FEATURES: dict[str, list[str]] = {
     # Estimated price level on the newest days already priced by the dispatch: dispatch cost plus
     # the recent gap between settled price and dispatch cost.
     "nowcast": ["dc_corr_latest_rel", "dc_corr_mean3_rel"],
+    # Hydrology by XM region: share of the region's usable capacity that is full, and its inflows
+    # (last 7 days) against their historical mean; the spread says where the water is.
+    "regional": [
+        *[f"reg_level_{r}" for r in REGIONS],
+        *[f"reg_inflow_{r}" for r in REGIONS],
+        "reg_level_spread",
+        "reg_inflow_spread",
+    ],
+    # Shape of the hourly price over the last 7 settled days.
+    "profile": ["peak_gap7", "night_gap7", "hour_std7", "hour_min_gap7"],
+    # Cost of the constraints (restrictions) against its own 90-day mean.
+    "restrictions": ["restr_plain_rel90", "restr_relief_rel90"],
+    # Generation capacity that was available (real and declared) against its own 90-day mean, the
+    # share of declared thermal capacity that was not really available, and the cost of generating
+    # out of merit order for security.
+    "availability": [
+        "thermal_real_rel90",
+        "thermal_decl_rel90",
+        "thermal_outage7",
+        "hydro_real_rel90",
+        "margin_rel90",
+        "oom_thermal_rel90",
+    ],
 }
 
 
@@ -118,9 +142,78 @@ def origin_blocks(data: pd.DataFrame, lags: dict[str, int] | None = None) -> pd.
     out["dc_corr_latest_rel"] = dc.shift(-k_dc) + basis14 - ref
     out["dc_corr_mean3_rel"] = dc.rolling(3, min_periods=2).mean().shift(-k_dc) + basis14 - ref
 
+    _regional_blocks(data, out, lags)
+    _profile_blocks(data, out, lags, price)
+
     frame = pd.DataFrame(out, index=data.index)
     frame["_ref"] = ref
     return frame
+
+
+def _col(data: pd.DataFrame, name: str) -> pd.Series:
+    return data[name].astype(float) if name in data.columns else pd.Series(np.nan, index=data.index)
+
+
+def _regional_blocks(data: pd.DataFrame, out: dict[str, pd.Series], lags: dict[str, int]) -> None:
+    levels, inflows = [], []
+    for region in REGIONS:
+        volume = _col(data, f"reg_reservoir_kwh_{region}")
+        capacity = _col(data, f"reg_reservoir_capacity_kwh_{region}")
+        flow = _col(data, f"reg_inflows_kwh_{region}")
+        mean = _col(data, f"reg_inflows_hist_mean_kwh_{region}")
+        level = _latest(volume / capacity.where(capacity > 0), f"reg_reservoir_kwh_{region}", lags)
+        ratio = np.log(
+            _roll(flow, 7, f"reg_inflows_kwh_{region}", lags).clip(lower=1.0)
+            / _roll(mean, 7, f"reg_inflows_hist_mean_kwh_{region}", lags).clip(lower=1.0)
+        )
+        out[f"reg_level_{region}"] = level
+        out[f"reg_inflow_{region}"] = ratio
+        levels.append(level)
+        inflows.append(ratio)
+    out["reg_level_spread"] = pd.concat(levels, axis=1).max(axis=1) - pd.concat(levels, axis=1).min(axis=1)
+    out["reg_inflow_spread"] = pd.concat(inflows, axis=1).max(axis=1) - pd.concat(inflows, axis=1).min(axis=1)
+
+
+def _profile_blocks(
+    data: pd.DataFrame, out: dict[str, pd.Series], lags: dict[str, int], price: pd.Series
+) -> None:
+    peak = log_positive(_col(data, "price_peak"))
+    night = log_positive(_col(data, "price_night"))
+    low = log_positive(_col(data, "price_min"))
+    std = _col(data, "price_std")
+    mean = np.exp(price)
+    out["peak_gap7"] = _roll(peak - price, 7, "price_peak", lags)
+    out["night_gap7"] = _roll(night - price, 7, "price_night", lags)
+    out["hour_std7"] = _roll(std / mean, 7, "price_std", lags)
+    out["hour_min_gap7"] = _roll(low - price, 7, "price_min", lags)
+    plain = log_positive(_col(data, "restr_plain_cop"))
+    relief = log_positive(_col(data, "restr_relief_cop"))
+    thermal_real = _col(data, "dispo_real_thermal")
+    thermal_decl = _col(data, "dispo_decl_thermal")
+    hydro_real = _col(data, "dispo_real_hydro")
+    demand = _col(data, "demand_kwh")
+    out["thermal_real_rel90"] = np.log(_roll(thermal_real, 7, "dispo_real_thermal", lags)) - np.log(
+        _roll(thermal_real, 90, "dispo_real_thermal", lags)
+    )
+    out["thermal_decl_rel90"] = np.log(_roll(thermal_decl, 7, "dispo_decl_thermal", lags)) - np.log(
+        _roll(thermal_decl, 90, "dispo_decl_thermal", lags)
+    )
+    out["thermal_outage7"] = 1 - _roll(thermal_real, 7, "dispo_real_thermal", lags) / _roll(
+        thermal_decl, 7, "dispo_decl_thermal", lags
+    )
+    out["hydro_real_rel90"] = np.log(_roll(hydro_real, 7, "dispo_real_hydro", lags)) - np.log(
+        _roll(hydro_real, 90, "dispo_real_hydro", lags)
+    )
+    margin = np.log((thermal_real + hydro_real) / demand)
+    out["margin_rel90"] = _roll(margin, 7, "dispo_real_thermal", lags) - _roll(
+        margin, 90, "dispo_real_thermal", lags
+    )
+    oom = log_positive(_col(data, "out_of_merit_thermal"))
+    out["oom_thermal_rel90"] = _roll(oom, 7, "out_of_merit_thermal", lags) - _roll(
+        oom, 90, "out_of_merit_thermal", lags
+    )
+    out["restr_plain_rel90"] = _roll(plain, 7, "restr_plain_cop", lags) - _roll(plain, 90, "restr_plain_cop", lags)
+    out["restr_relief_rel90"] = _roll(relief, 7, "restr_relief_cop", lags) - _roll(relief, 90, "restr_relief_cop", lags)
 
 
 def add_blocks(

@@ -32,6 +32,10 @@ BLOCK_TEXT = {
     "hydro_now": "newest hydrology",
     "trade": "exports and imports",
     "nowcast": "bias-corrected nowcast",
+    "regional": "hydrology by XM region",
+    "profile": "hourly price profile",
+    "restrictions": "cost of constraints",
+    "availability": "generation availability and out-of-merit generation",
 }
 
 
@@ -39,6 +43,8 @@ def describe(name: str, result: dict) -> str:
     if name in DESCRIPTION:
         return DESCRIPTION[name]
     exp = result.get("experiment", {})
+    if "blend_of" in exp:
+        return "Blend of " + " and ".join(exp["blend_of"]) + " with a weight per horizon bucket learned online"
     if "ensemble_of" in exp:
         return "Mean of the log-quantiles of " + ", ".join(exp["ensemble_of"])
     parts = [exp.get("family", "lightgbm")]
@@ -158,6 +164,8 @@ def main() -> None:
         "",
         *table(price, dev_price),
         ets_row,
+        "",
+        "Second round (2026-10-26, `fb_*`): hydrology by region (six XM regions, level and inflows against their historical mean), the shape of the hourly price over the last 7 days, the cost of the constraints, generation availability by plant type and out-of-merit generation, each added to the production features. None improves on `dispatch+contracts+hydro` (MASE 1.504): the differences are +0.02, +0.01, +0.04, +0.03 and +0.015 for all together, each with a paired interval that includes zero. A blend with ETS whose weight per horizon bucket is learned only from earlier origins is worse (+0.055, interval above zero). The production price model is kept.",
         "",
         "## Demand, development origins (lower MASE first)",
         "",

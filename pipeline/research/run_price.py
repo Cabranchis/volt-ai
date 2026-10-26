@@ -87,6 +87,19 @@ EXPERIMENTS.update(
 )
 
 
+# Phase B: the production blocks plus one new block at a time, then all together (lightgbm, so the
+# reference is `dispatch+contracts+hydro` above).
+EXPERIMENTS.update(
+    {
+        "fb_regional": GBMExperiment(blocks=(*FS1, "regional")),
+        "fb_profile": GBMExperiment(blocks=(*FS1, "profile")),
+        "fb_restrictions": GBMExperiment(blocks=(*FS1, "restrictions")),
+        "fb_availability": GBMExperiment(blocks=(*FS1, "availability")),
+        "fb_all": GBMExperiment(blocks=(*FS1, *features_ext.PHASE_B_BLOCKS)),
+    }
+)
+
+
 def forecast_origin(prepared: Prepared, origin: pd.Timestamp, exp: GBMExperiment) -> pd.DataFrame:
     """Raw quantile forecasts (log units) for one origin from the experiment's model family."""
     mask = training_mask(prepared, origin)

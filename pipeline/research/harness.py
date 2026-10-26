@@ -71,6 +71,32 @@ PUBLICATION_LAG: dict[str, int] = {
     "dispatch_cost_max": 1,
 }
 
+# Phase B series (fetch_blocks.py). Hydrology by region follows the national series (one day);
+# the hourly price profile and the settlement restrictions arrive with the price; the plain
+# restriction cost is complete three days late, the relief variant five.
+REGIONS = ("ANTIOQUIA", "CENTRO", "ORIENTE", "CALDAS", "VALLE", "CARIBE")
+REGIONAL_METRICS = ("reservoir_kwh", "reservoir_capacity_kwh", "inflows_kwh", "inflows_hist_mean_kwh")
+for _region in REGIONS:
+    for _metric in REGIONAL_METRICS:
+        PUBLICATION_LAG[f"reg_{_metric}_{_region}"] = 1
+# Availability by plant type: the real and commercial values of a day complete three days later
+# (the newest days come as zeros), the declared one is filed the day before it applies.
+for _kind in ("thermal", "hydro"):
+    PUBLICATION_LAG[f"dispo_real_{_kind}"] = 3
+    PUBLICATION_LAG[f"dispo_come_{_kind}"] = 3
+    PUBLICATION_LAG[f"dispo_decl_{_kind}"] = 2
+PUBLICATION_LAG["out_of_merit_thermal"] = 3
+PUBLICATION_LAG.update(
+    {
+        "price_peak": 3,
+        "price_night": 3,
+        "price_min": 3,
+        "price_std": 3,
+        "restr_plain_cop": 3,
+        "restr_relief_cop": 5,
+    }
+)
+
 QUANTILES = (0.1, 0.5, 0.9)
 
 
@@ -79,6 +105,20 @@ def load_data() -> pd.DataFrame:
     history = pd.read_csv(DATA / "history.csv", index_col="day", parse_dates=True)
     extra = pd.read_csv(DATA / "extra.csv", index_col="day", parse_dates=True)
     merged = history.join(extra, how="outer")
+    for name in ("price_profile", "restrictions"):
+        path = DATA / f"blocks_{name}.csv"
+        if path.exists():
+            merged = merged.join(pd.read_csv(path, index_col="day", parse_dates=True), how="outer")
+    regional = DATA / "blocks_regional.csv"
+    if regional.exists():
+        table = pd.read_csv(regional, parse_dates=["day"])
+        wide = table.pivot_table(index="day", columns=["metric", "region"], values="value", aggfunc="sum")
+        wide.columns = [f"reg_{metric}_{region}" for metric, region in wide.columns]
+        merged = merged.join(wide, how="outer")
+    availability = DATA / "blocks_availability.csv"
+    if availability.exists():
+        avail = pd.read_csv(availability, index_col="day", parse_dates=True)
+        merged = merged.join(avail.where(avail > 0), how="outer")  # zeros are days not yet published
     return complete_daily(merged)
 
 

@@ -47,7 +47,7 @@ def _scramble_after_publication(data: pd.DataFrame, origin: pd.Timestamp, seed: 
     return mutated
 
 
-@pytest.mark.parametrize("block", features_ext.BLOCKS)
+@pytest.mark.parametrize("block", (*features_ext.BLOCKS, *features_ext.PHASE_B_BLOCKS))
 @pytest.mark.parametrize("origin", ORIGINS)
 def test_block_ignores_values_after_publication(
     data: pd.DataFrame, block: str, origin: pd.Timestamp
@@ -67,3 +67,24 @@ def test_scrambling_actually_changes_something(data: pd.DataFrame) -> None:
     later = early.index > cut
     early.loc[later, "dispatch_cost"] = early.loc[later, "dispatch_cost"] * 3 + 5
     assert not _features_at(early, origin, ("dispatch",)).equals(original)
+
+
+@pytest.mark.parametrize(
+    ("block", "column"),
+    [
+        ("regional", "reg_reservoir_kwh_ANTIOQUIA"),
+        ("profile", "price_peak"),
+        ("restrictions", "restr_plain_cop"),
+        ("availability", "dispo_real_thermal"),
+    ],
+)
+def test_phase_b_scrambling_one_day_early_moves_the_block(data: pd.DataFrame, block: str, column: str) -> None:
+    """Guard the guard for the phase B blocks: noise from one day before publication is seen."""
+    origin = ORIGINS[2]
+    original = _features_at(data, origin, (block,))
+    early = data.copy()
+    as_of = origin + pd.Timedelta(days=harness.SETTLE_LAG)
+    cut = harness.known_through(column, as_of) - pd.Timedelta(days=1)
+    later = early.index > cut
+    early.loc[later, column] = early.loc[later, column] * 3 + 5
+    assert not _features_at(early, origin, (block,)).equals(original)
