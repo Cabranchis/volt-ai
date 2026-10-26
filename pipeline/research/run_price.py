@@ -16,7 +16,7 @@ import pandas as pd
 import features_ext
 import harness
 import zoo
-from voltia.features import TARGETS
+from voltia.features import MARKET_FEATURES, TARGETS
 from voltia.models.backtest import ModelConfig, Prepared, prepare, training_mask
 from voltia.models.gbm import GBMParams
 
@@ -126,6 +126,12 @@ def with_ets_reference(prepared: Prepared) -> Prepared:
 def extended(data: pd.DataFrame, exp: GBMExperiment) -> Prepared:
     base_reference = "last" if exp.reference == "ets" else exp.reference
     prepared = prepare(data, TARGET, ModelConfig(reference=base_reference, params=exp.params))  # type: ignore[arg-type]
+    # Production now ships the market features; the experiments add them block by block, so the
+    # base here is the feature set the experiments were defined against.
+    shipped = set(MARKET_FEATURES.get(TARGET.name, []))
+    if shipped:
+        keep = [i for i, n in enumerate(prepared.features) if n not in shipped]
+        prepared = replace(prepared, x=prepared.x[:, keep], features=[prepared.features[i] for i in keep])
     if exp.reference == "ets":
         prepared = with_ets_reference(prepared)
     if not exp.blocks:

@@ -24,6 +24,13 @@ All daily values live in `series_daily (series, day, value)`; hourly values in `
 | `weather_temp_c` | Mean temperature, average of Bogotá, Medellín, Cali, Barranquilla | °C | Open-Meteo | |
 | `weather_precip_mm` | Precipitation, average of the same four cities | mm | Open-Meteo | |
 | `oni` | Oceanic Niño Index (3-month season), stored on the first day of the central month | °C anomaly | NOAA CPC | Monthly; values above +0.5 sustained are El Niño |
+| `dispatch_cost` | Marginal cost of the programmed dispatch, mean of the 24 hours | COP/kWh | XM `CostMargDesp` | Programmed the day before it applies, so it is known for days XM has not settled yet (ADR 0012) |
+| `scarcity_price` | Scarcity price | COP/kWh | XM `PrecEsca` | Published about 3 days late |
+| `contract_price` | Average contract price, all markets | COP/kWh | XM `PrecPromCont` | Published about 5 days late; has gaps of weeks |
+| `contract_price_unreg` | Average contract price, unregulated market, mean of the 24 hours | COP/kWh | XM `PrecPromContNoRegu` | Same gaps as `contract_price` |
+| `spill_kwh` | Energy spilled by the reservoirs | kWh/day | XM `VertEner` | XM lists only days with spilling; days with a turbined volume and no listing are stored as 0 |
+| `turbined_m3` | Water turbined by the hydro plants | m³/day | XM `VolTurbMasa` | |
+| `reservoir_capacity_kwh` | Usable reservoir capacity, system | kWh of energy | XM `CapaUtilDiarEner` | |
 
 ## Hourly series (last 90 days only)
 
@@ -41,4 +48,4 @@ All daily values live in `series_daily (series, day, value)`; hourly values in `
 | `anomalies` | Atypical days per target with severity, direction and method |
 | `briefings` | Daily executive summary per language and its origin (`gemini` or `template`) |
 | `rate_limits` | Counters for the chat endpoint |
-| `ingest_log` | Last outcome per dataset (`xm_daily`, `xm_price`, `xm_generation`, `xm_mix`, `weather`, `oni`) |
+| `ingest_log` | Last outcome per dataset (`xm_daily`, `xm_price`, `xm_market`, `xm_contracts`, `xm_generation`, `xm_mix`, `weather`, `oni`) |

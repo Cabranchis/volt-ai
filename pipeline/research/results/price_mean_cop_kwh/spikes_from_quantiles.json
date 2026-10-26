@@ -1,0 +1,96 @@
+{
+  "development": {
+    "above_500": {
+      "ets": {
+        "auc": 0.9677,
+        "brier": 0.0677
+      },
+      "event_rate": 0.1467,
+      "forecast_quantiles": {
+        "auc": 0.9656,
+        "brier": 0.0532
+      },
+      "persistence_in_sample": {
+        "auc": 0.844,
+        "brier": 0.0768
+      }
+    },
+    "above_800": {
+      "ets": {
+        "auc": 0.9871,
+        "brier": 0.0206
+      },
+      "event_rate": 0.0656,
+      "forecast_quantiles": {
+        "auc": 0.9848,
+        "brier": 0.0165
+      },
+      "persistence_in_sample": {
+        "auc": 0.896,
+        "brier": 0.0152
+      }
+    },
+    "rise_1.3x_30d": {
+      "ets": {
+        "auc": 0.7823,
+        "brier": 0.1474
+      },
+      "event_rate": 0.2181,
+      "forecast_quantiles": {
+        "auc": 0.8665,
+        "brier": 0.1134
+      },
+      "persistence_in_sample": {
+        "auc": 0.6733,
+        "brier": 0.1478
+      }
+    }
+  },
+  "reported_post_hoc": {
+    "above_500": {
+      "ets": {
+        "auc": 0.9309,
+        "brier": 0.1133
+      },
+      "event_rate": 0.4077,
+      "forecast_quantiles": {
+        "auc": 0.9587,
+        "brier": 0.0868
+      },
+      "persistence_in_sample": {
+        "auc": 0.8569,
+        "brier": 0.1192
+      }
+    },
+    "above_800": {
+      "ets": {
+        "auc": 0.9476,
+        "brier": 0.0502
+      },
+      "event_rate": 0.1399,
+      "forecast_quantiles": {
+        "auc": 0.9227,
+        "brier": 0.0782
+      },
+      "persistence_in_sample": {
+        "auc": 0.8973,
+        "brier": 0.0367
+      }
+    },
+    "rise_1.3x_30d": {
+      "ets": {
+        "auc": 0.7655,
+        "brier": 0.1738
+      },
+      "event_rate": 0.2976,
+      "forecast_quantiles": {
+        "auc": 0.84,
+        "brier": 0.1443
+      },
+      "persistence_in_sample": {
+        "auc": 0.6981,
+        "brier": 0.1758
+      }
+    }
+  }
+}

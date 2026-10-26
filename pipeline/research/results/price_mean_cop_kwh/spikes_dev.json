@@ -1,0 +1,304 @@
+{
+  "events": {
+    "above_500": {
+      "base_rate": {
+        "auc": 0.9143,
+        "brier": 0.1336,
+        "log_loss": 0.4839
+      },
+      "brier_diff_vs_base_rate": {
+        "ci": [
+          -0.1318296777270392,
+          0.008714267351709902
+        ],
+        "mean": -0.0554,
+        "origins": 37,
+        "wins": 31
+      },
+      "brier_diff_vs_ets": {
+        "ci": [
+          -0.012061515384915017,
+          0.031224270616051212
+        ],
+        "mean": 0.0105,
+        "origins": 37,
+        "wins": 20
+      },
+      "brier_diff_vs_persistence": {
+        "ci": [
+          -0.020567794856102523,
+          0.03169377355879667
+        ],
+        "mean": 0.0042,
+        "origins": 37,
+        "wins": 30
+      },
+      "ets": {
+        "auc": 0.9677,
+        "brier": 0.0677,
+        "log_loss": 0.2021
+      },
+      "event_rate": 0.1467,
+      "from_below": {
+        "base_rate": {
+          "auc": 0.7994,
+          "brier": 0.0386
+        },
+        "ets": {
+          "auc": 0.9529,
+          "brier": 0.0337
+        },
+        "event_rate": 0.0405,
+        "model": {
+          "auc": 0.9095,
+          "brier": 0.0404
+        },
+        "n_rows": 420,
+        "persistence": {
+          "auc": 0.8035,
+          "brier": 0.0393
+        }
+      },
+      "model": {
+        "auc": 0.9354,
+        "brier": 0.0782,
+        "log_loss": 0.4164
+      },
+      "n_rows": 518,
+      "persistence": {
+        "auc": 0.923,
+        "brier": 0.0741,
+        "log_loss": 0.2658
+      },
+      "reliability": {
+        "(-0.001, 0.05]": {
+          "n": 420,
+          "observed": 0.0405,
+          "predicted": 0.0004
+        },
+        "(0.05, 0.15]": {
+          "n": 12,
+          "observed": 0.5833,
+          "predicted": 0.0908
+        },
+        "(0.15, 0.3]": {
+          "n": 15,
+          "observed": 0.1333,
+          "predicted": 0.2566
+        },
+        "(0.3, 0.5]": {
+          "n": 6,
+          "observed": 0.1667,
+          "predicted": 0.386
+        },
+        "(0.5, 0.7]": {
+          "n": 11,
+          "observed": 0.7273,
+          "predicted": 0.6307
+        },
+        "(0.7, 0.9]": {
+          "n": 9,
+          "observed": 0.7778,
+          "predicted": 0.8
+        },
+        "(0.9, 1.0]": {
+          "n": 45,
+          "observed": 0.7556,
+          "predicted": 0.9737
+        }
+      }
+    },
+    "above_800": {
+      "base_rate": {
+        "auc": 0.9147,
+        "brier": 0.0639,
+        "log_loss": 0.3317
+      },
+      "brier_diff_vs_base_rate": {
+        "ci": [
+          -0.12348065695988934,
+          2.875213641928037e-05
+        ],
+        "mean": -0.0485,
+        "origins": 37,
+        "wins": 5
+      },
+      "brier_diff_vs_ets": {
+        "ci": [
+          -0.016426514627614942,
+          0.00558629473270195
+        ],
+        "mean": -0.0052,
+        "origins": 37,
+        "wins": 35
+      },
+      "brier_diff_vs_persistence": {
+        "ci": [
+          -0.019835255426827195,
+          2.3514490192380426e-05
+        ],
+        "mean": -0.0066,
+        "origins": 37,
+        "wins": 5
+      },
+      "ets": {
+        "auc": 0.9871,
+        "brier": 0.0206,
+        "log_loss": 0.0799
+      },
+      "event_rate": 0.0656,
+      "from_below": {
+        "base_rate": {
+          "auc": 0.5932,
+          "brier": 0.0143
+        },
+        "ets": {
+          "auc": 0.9403,
+          "brier": 0.017
+        },
+        "event_rate": 0.0143,
+        "model": {
+          "auc": 0.6068,
+          "brier": 0.0143
+        },
+        "n_rows": 490,
+        "persistence": {
+          "auc": 0.5932,
+          "brier": 0.0143
+        }
+      },
+      "model": {
+        "auc": 0.9219,
+        "brier": 0.0154,
+        "log_loss": 0.1308
+      },
+      "n_rows": 518,
+      "persistence": {
+        "auc": 0.9147,
+        "brier": 0.022,
+        "log_loss": 0.139
+      },
+      "reliability": {
+        "(-0.001, 0.05]": {
+          "n": 490,
+          "observed": 0.0143,
+          "predicted": 0.0
+        },
+        "(0.9, 1.0]": {
+          "n": 28,
+          "observed": 0.9643,
+          "predicted": 0.9986
+        }
+      }
+    },
+    "rise_1.3x_30d": {
+      "base_rate": {
+        "auc": 0.5618,
+        "brier": 0.1718,
+        "log_loss": 0.5287
+      },
+      "brier_diff_vs_base_rate": {
+        "ci": [
+          -0.10977380197236948,
+          -0.010550624845835473
+        ],
+        "mean": -0.0566,
+        "origins": 37,
+        "wins": 29
+      },
+      "brier_diff_vs_ets": {
+        "ci": [
+          -0.05798537931425483,
+          -0.006351972765970969
+        ],
+        "mean": -0.0321,
+        "origins": 37,
+        "wins": 27
+      },
+      "brier_diff_vs_persistence": {
+        "ci": [
+          -0.06660472141959352,
+          -0.009301557839727578
+        ],
+        "mean": -0.0335,
+        "origins": 37,
+        "wins": 30
+      },
+      "ets": {
+        "auc": 0.7827,
+        "brier": 0.1473,
+        "log_loss": 0.4587
+      },
+      "event_rate": 0.2181,
+      "from_below": {
+        "base_rate": {
+          "auc": 0.4818,
+          "brier": 0.1252
+        },
+        "ets": {
+          "auc": 0.7029,
+          "brier": 0.122
+        },
+        "event_rate": 0.1452,
+        "model": {
+          "auc": 0.8849,
+          "brier": 0.0996
+        },
+        "n_rows": 420,
+        "persistence": {
+          "auc": 0.3859,
+          "brier": 0.1256
+        }
+      },
+      "model": {
+        "auc": 0.8841,
+        "brier": 0.1152,
+        "log_loss": 0.3776
+      },
+      "n_rows": 518,
+      "persistence": {
+        "auc": 0.6218,
+        "brier": 0.1487,
+        "log_loss": 0.4717
+      },
+      "reliability": {
+        "(-0.001, 0.05]": {
+          "n": 314,
+          "observed": 0.051,
+          "predicted": 0.0103
+        },
+        "(0.05, 0.15]": {
+          "n": 61,
+          "observed": 0.2459,
+          "predicted": 0.0905
+        },
+        "(0.15, 0.3]": {
+          "n": 29,
+          "observed": 0.3793,
+          "predicted": 0.2182
+        },
+        "(0.3, 0.5]": {
+          "n": 46,
+          "observed": 0.4783,
+          "predicted": 0.393
+        },
+        "(0.5, 0.7]": {
+          "n": 41,
+          "observed": 0.6098,
+          "predicted": 0.6207
+        },
+        "(0.7, 0.9]": {
+          "n": 13,
+          "observed": 0.7692,
+          "predicted": 0.7685
+        },
+        "(0.9, 1.0]": {
+          "n": 14,
+          "observed": 1.0,
+          "predicted": 0.9608
+        }
+      }
+    }
+  },
+  "seconds": 58.7
+}

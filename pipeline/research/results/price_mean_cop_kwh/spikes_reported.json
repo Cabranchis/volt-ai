@@ -1,0 +1,324 @@
+{
+  "events": {
+    "above_500": {
+      "base_rate": {
+        "auc": 0.3154,
+        "brier": 0.3144,
+        "log_loss": 0.9021
+      },
+      "brier_diff_vs_base_rate": {
+        "ci": [
+          -0.3149475403729129,
+          -0.07676915330699952
+        ],
+        "mean": -0.1907,
+        "origins": 24,
+        "wins": 21
+      },
+      "brier_diff_vs_ets": {
+        "ci": [
+          -0.03300919466423712,
+          0.05725866950400096
+        ],
+        "mean": 0.0105,
+        "origins": 24,
+        "wins": 18
+      },
+      "brier_diff_vs_persistence": {
+        "ci": [
+          -0.061845299133484626,
+          0.04785416524873585
+        ],
+        "mean": -0.0048,
+        "origins": 24,
+        "wins": 17
+      },
+      "ets": {
+        "auc": 0.9309,
+        "brier": 0.1133,
+        "log_loss": 0.3874
+      },
+      "event_rate": 0.4077,
+      "from_below": {
+        "base_rate": {
+          "auc": 0.1489,
+          "brier": 0.1087
+        },
+        "ets": {
+          "auc": 0.7085,
+          "brier": 0.1176
+        },
+        "event_rate": 0.1122,
+        "model": {
+          "auc": 0.9057,
+          "brier": 0.1158
+        },
+        "n_rows": 196,
+        "persistence": {
+          "auc": 0.0575,
+          "brier": 0.1052
+        }
+      },
+      "model": {
+        "auc": 0.9435,
+        "brier": 0.1237,
+        "log_loss": 0.3918
+      },
+      "n_rows": 336,
+      "persistence": {
+        "auc": 0.7868,
+        "brier": 0.1285,
+        "log_loss": 0.4453
+      },
+      "reliability": {
+        "(-0.001, 0.05]": {
+          "n": 171,
+          "observed": 0.0702,
+          "predicted": 0.0054
+        },
+        "(0.05, 0.15]": {
+          "n": 20,
+          "observed": 0.4,
+          "predicted": 0.1168
+        },
+        "(0.15, 0.3]": {
+          "n": 18,
+          "observed": 0.7222,
+          "predicted": 0.2166
+        },
+        "(0.3, 0.5]": {
+          "n": 24,
+          "observed": 0.5417,
+          "predicted": 0.4012
+        },
+        "(0.5, 0.7]": {
+          "n": 15,
+          "observed": 0.8,
+          "predicted": 0.6182
+        },
+        "(0.7, 0.9]": {
+          "n": 23,
+          "observed": 0.6522,
+          "predicted": 0.8141
+        },
+        "(0.9, 1.0]": {
+          "n": 65,
+          "observed": 0.9846,
+          "predicted": 0.9717
+        }
+      }
+    },
+    "above_800": {
+      "base_rate": {
+        "auc": 0.3645,
+        "brier": 0.129,
+        "log_loss": 0.4708
+      },
+      "brier_diff_vs_base_rate": {
+        "ci": [
+          -0.17182703015434245,
+          -0.0002188813881865837
+        ],
+        "mean": -0.0709,
+        "origins": 24,
+        "wins": 19
+      },
+      "brier_diff_vs_ets": {
+        "ci": [
+          -0.022177791435391454,
+          0.05542357678045068
+        ],
+        "mean": 0.0079,
+        "origins": 24,
+        "wins": 20
+      },
+      "brier_diff_vs_persistence": {
+        "ci": [
+          -0.009101876849696164,
+          0.058636437749098845
+        ],
+        "mean": 0.0165,
+        "origins": 24,
+        "wins": 18
+      },
+      "ets": {
+        "auc": 0.9476,
+        "brier": 0.0502,
+        "log_loss": 0.2067
+      },
+      "event_rate": 0.1399,
+      "from_below": {
+        "base_rate": {
+          "auc": 0.369,
+          "brier": 0.0304
+        },
+        "ets": {
+          "auc": 0.7657,
+          "brier": 0.0394
+        },
+        "event_rate": 0.0306,
+        "model": {
+          "auc": 0.7887,
+          "brier": 0.0304
+        },
+        "n_rows": 294,
+        "persistence": {
+          "auc": 0.4345,
+          "brier": 0.0299
+        }
+      },
+      "model": {
+        "auc": 0.947,
+        "brier": 0.0581,
+        "log_loss": 0.2611
+      },
+      "n_rows": 336,
+      "persistence": {
+        "auc": 0.887,
+        "brier": 0.0415,
+        "log_loss": 0.1783
+      },
+      "reliability": {
+        "(-0.001, 0.05]": {
+          "n": 289,
+          "observed": 0.0381,
+          "predicted": 0.0027
+        },
+        "(0.05, 0.15]": {
+          "n": 13,
+          "observed": 0.3846,
+          "predicted": 0.1073
+        },
+        "(0.15, 0.3]": {
+          "n": 5,
+          "observed": 0.8,
+          "predicted": 0.1873
+        },
+        "(0.5, 0.7]": {
+          "n": 1,
+          "observed": 1.0,
+          "predicted": 0.6789
+        },
+        "(0.7, 0.9]": {
+          "n": 2,
+          "observed": 1.0,
+          "predicted": 0.7409
+        },
+        "(0.9, 1.0]": {
+          "n": 26,
+          "observed": 0.9231,
+          "predicted": 0.9799
+        }
+      }
+    },
+    "rise_1.3x_30d": {
+      "base_rate": {
+        "auc": 0.4431,
+        "brier": 0.2167,
+        "log_loss": 0.63
+      },
+      "brier_diff_vs_base_rate": {
+        "ci": [
+          -0.10750656365159884,
+          0.027471844480211952
+        ],
+        "mean": -0.0374,
+        "origins": 24,
+        "wins": 16
+      },
+      "brier_diff_vs_ets": {
+        "ci": [
+          -0.025818995648268166,
+          0.03844002716749566
+        ],
+        "mean": 0.0054,
+        "origins": 24,
+        "wins": 14
+      },
+      "brier_diff_vs_persistence": {
+        "ci": [
+          -0.03806974747689578,
+          0.03848523665290335
+        ],
+        "mean": 0.001,
+        "origins": 24,
+        "wins": 17
+      },
+      "ets": {
+        "auc": 0.7655,
+        "brier": 0.1738,
+        "log_loss": 0.5247
+      },
+      "event_rate": 0.2976,
+      "from_below": {
+        "base_rate": {
+          "auc": 0.4265,
+          "brier": 0.1494
+        },
+        "ets": {
+          "auc": 0.71,
+          "brier": 0.1378
+        },
+        "event_rate": 0.1807,
+        "model": {
+          "auc": 0.7219,
+          "brier": 0.152
+        },
+        "n_rows": 238,
+        "persistence": {
+          "auc": 0.4482,
+          "brier": 0.15
+        }
+      },
+      "model": {
+        "auc": 0.777,
+        "brier": 0.1793,
+        "log_loss": 0.5634
+      },
+      "n_rows": 336,
+      "persistence": {
+        "auc": 0.6436,
+        "brier": 0.1783,
+        "log_loss": 0.5405
+      },
+      "reliability": {
+        "(-0.001, 0.05]": {
+          "n": 134,
+          "observed": 0.1119,
+          "predicted": 0.0206
+        },
+        "(0.05, 0.15]": {
+          "n": 46,
+          "observed": 0.2174,
+          "predicted": 0.0886
+        },
+        "(0.15, 0.3]": {
+          "n": 43,
+          "observed": 0.2791,
+          "predicted": 0.2194
+        },
+        "(0.3, 0.5]": {
+          "n": 46,
+          "observed": 0.5435,
+          "predicted": 0.3928
+        },
+        "(0.5, 0.7]": {
+          "n": 33,
+          "observed": 0.303,
+          "predicted": 0.5941
+        },
+        "(0.7, 0.9]": {
+          "n": 29,
+          "observed": 0.8276,
+          "predicted": 0.8076
+        },
+        "(0.9, 1.0]": {
+          "n": 5,
+          "observed": 0.8,
+          "predicted": 0.9322
+        }
+      }
+    }
+  },
+  "seconds": 81.6
+}

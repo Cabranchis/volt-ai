@@ -217,7 +217,7 @@ export const es: Dictionary = {
     unavailable: "Las métricas de este pronóstico no están disponibles en la última corrida.",
     methodTitle: "Método",
     method:
-      "Árboles de gradiente (LightGBM) con objetivos cuantílicos producen los percentiles 10, 50 y 90. Las entradas son solo lo que se conoce el día del pronóstico: historia reciente, niveles de embalses y aportes, el índice climático y el calendario. Los intervalos se calibran con errores pasados.",
+      "Árboles de gradiente (LightGBM) con objetivos cuantílicos producen los percentiles 10, 50 y 90. Las entradas son solo lo que se conoce el día del pronóstico: historia reciente, niveles de embalses y aportes, el índice climático, el calendario y, para el precio, el costo del despacho programado que XM publica antes de liquidar los precios. Los intervalos se calibran con errores pasados.",
     limitsTitle: "Límites",
     limits:
       "Los precios reaccionan a hechos que ningún modelo anticipa, como fallas de plantas, regulación o lluvias repentinas. El pronóstico es una estimación estadística, no una recomendación para operar en el mercado. Los backtests describen el pasado y no garantizan el futuro.",
@@ -275,7 +275,7 @@ export const es: Dictionary = {
     webBody: "Next.js lee la base con un rol de solo lectura y muestra páginas en caché.",
     sourcesTitle: "Fuentes de datos",
     sources: [
-      "XM: demanda, precio de bolsa, generación, embalses y aportes (API pública)",
+      "XM: demanda, precio de bolsa, costo del despacho, contratos, generación, embalses y aportes (API pública)",
       "Open-Meteo: temperatura y lluvia en cuatro ciudades",
       "Centro de Predicción del Clima de NOAA: Índice Oceánico de El Niño",
     ],

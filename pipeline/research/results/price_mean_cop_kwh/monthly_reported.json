@@ -1,0 +1,229 @@
+{
+  "methods": {
+    "analog": {
+      "window_1": {
+        "bias_pct": 19.6862,
+        "coverage": 0.8333,
+        "mape": 44.1379,
+        "n_origins": 24,
+        "pinball_diff_vs_persistence": {
+          "ci": [
+            -0.31322523466858776,
+            16.99037260116813
+          ],
+          "mean": 8.1339,
+          "origins": 24,
+          "wins": 8
+        },
+        "pinball_mean": 60.8365
+      },
+      "window_2": {
+        "bias_pct": 31.9987,
+        "coverage": 0.8261,
+        "mape": 71.639,
+        "n_origins": 23,
+        "pinball_diff_vs_persistence": {
+          "ci": [
+            6.301038148514485,
+            20.99147659772296
+          ],
+          "mean": 13.1793,
+          "origins": 23,
+          "wins": 5
+        },
+        "pinball_mean": 95.7044
+      },
+      "window_3": {
+        "bias_pct": 47.2923,
+        "coverage": 0.8182,
+        "mape": 84.2724,
+        "n_origins": 22,
+        "pinball_diff_vs_persistence": {
+          "ci": [
+            -9.71474195798897,
+            35.649420599521626
+          ],
+          "mean": 11.2387,
+          "origins": 22,
+          "wins": 9
+        },
+        "pinball_mean": 111.4128
+      }
+    },
+    "lgbm": {
+      "window_1": {
+        "bias_pct": 3.7041,
+        "coverage": 0.7917,
+        "mape": 32.1828,
+        "n_origins": 24,
+        "pinball_diff_vs_persistence": {
+          "ci": [
+            -18.075389079174943,
+            7.834641293821813
+          ],
+          "mean": -2.358,
+          "origins": 24,
+          "wins": 11
+        },
+        "pinball_mean": 50.3446
+      },
+      "window_2": {
+        "bias_pct": 12.2265,
+        "coverage": 0.8261,
+        "mape": 59.512,
+        "n_origins": 23,
+        "pinball_diff_vs_persistence": {
+          "ci": [
+            -0.6477417111735584,
+            22.697148970177604
+          ],
+          "mean": 10.9149,
+          "origins": 23,
+          "wins": 7
+        },
+        "pinball_mean": 93.44
+      },
+      "window_3": {
+        "bias_pct": 34.5287,
+        "coverage": 0.8636,
+        "mape": 74.447,
+        "n_origins": 22,
+        "pinball_diff_vs_persistence": {
+          "ci": [
+            -12.910954709299855,
+            18.96415670757457
+          ],
+          "mean": 3.3539,
+          "origins": 22,
+          "wins": 9
+        },
+        "pinball_mean": 103.528
+      }
+    },
+    "persistence": {
+      "window_1": {
+        "bias_pct": 8.6308,
+        "coverage": 0.8333,
+        "mape": 36.7109,
+        "n_origins": 24,
+        "pinball_mean": 52.7026
+      },
+      "window_2": {
+        "bias_pct": 18.8249,
+        "coverage": 0.913,
+        "mape": 62.6574,
+        "n_origins": 23,
+        "pinball_mean": 82.5251
+      },
+      "window_3": {
+        "bias_pct": 34.1111,
+        "coverage": 0.7727,
+        "mape": 78.5471,
+        "n_origins": 22,
+        "pinball_mean": 100.1741
+      }
+    },
+    "ridge": {
+      "window_1": {
+        "bias_pct": 11.7917,
+        "coverage": 0.8333,
+        "mape": 32.729,
+        "n_origins": 24,
+        "pinball_diff_vs_persistence": {
+          "ci": [
+            -30.588568064373536,
+            10.50309112895782
+          ],
+          "mean": -5.553,
+          "origins": 24,
+          "wins": 11
+        },
+        "pinball_mean": 47.1495
+      },
+      "window_2": {
+        "bias_pct": 28.2806,
+        "coverage": 0.7391,
+        "mape": 61.2072,
+        "n_origins": 23,
+        "pinball_diff_vs_persistence": {
+          "ci": [
+            -10.279877466652168,
+            29.991905402387033
+          ],
+          "mean": 11.0721,
+          "origins": 23,
+          "wins": 9
+        },
+        "pinball_mean": 93.5972
+      },
+      "window_3": {
+        "bias_pct": 53.5244,
+        "coverage": 0.7727,
+        "mape": 85.6676,
+        "n_origins": 22,
+        "pinball_diff_vs_persistence": {
+          "ci": [
+            -24.401634923464183,
+            25.988940787395073
+          ],
+          "mean": 1.3689,
+          "origins": 22,
+          "wins": 12
+        },
+        "pinball_mean": 101.543
+      }
+    },
+    "seasonal_ratio": {
+      "window_1": {
+        "bias_pct": 11.0361,
+        "coverage": 0.875,
+        "mape": 40.1158,
+        "n_origins": 24,
+        "pinball_diff_vs_persistence": {
+          "ci": [
+            1.5802757353724577,
+            13.901890319188793
+          ],
+          "mean": 7.5205,
+          "origins": 24,
+          "wins": 6
+        },
+        "pinball_mean": 60.2231
+      },
+      "window_2": {
+        "bias_pct": 31.566,
+        "coverage": 0.8261,
+        "mape": 75.4646,
+        "n_origins": 23,
+        "pinball_diff_vs_persistence": {
+          "ci": [
+            16.51995219954658,
+            107.8380216340422
+          ],
+          "mean": 55.8136,
+          "origins": 23,
+          "wins": 5
+        },
+        "pinball_mean": 138.3387
+      },
+      "window_3": {
+        "bias_pct": 43.0506,
+        "coverage": 0.7273,
+        "mape": 86.6426,
+        "n_origins": 22,
+        "pinball_diff_vs_persistence": {
+          "ci": [
+            4.238024254863196,
+            121.72702105712722
+          ],
+          "mean": 52.7099,
+          "origins": 22,
+          "wins": 8
+        },
+        "pinball_mean": 152.8841
+      }
+    }
+  },
+  "origins": 32,
+  "seconds": 11.1
+}

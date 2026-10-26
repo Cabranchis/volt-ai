@@ -215,7 +215,7 @@ export const en = {
     unavailable: "Metrics for this forecast are not available in the latest run.",
     methodTitle: "Method",
     method:
-      "Gradient-boosted trees (LightGBM) with quantile objectives produce the 10th, 50th and 90th percentile. Inputs are only what is known on the forecast day: recent history, reservoir and inflow levels, the climate index, and the calendar. Intervals are calibrated on past errors.",
+      "Gradient-boosted trees (LightGBM) with quantile objectives produce the 10th, 50th and 90th percentile. Inputs are only what is known on the forecast day: recent history, reservoir and inflow levels, the climate index, the calendar and, for the price, the programmed dispatch cost XM publishes before it settles prices. Intervals are calibrated on past errors.",
     limitsTitle: "Limits",
     limits:
       "Prices react to events no model sees coming, such as plant outages, regulation or sudden rain. The forecast is a statistical estimate, not advice for trading. Backtests describe the past and do not guarantee the future.",
@@ -273,7 +273,7 @@ export const en = {
     webBody: "Next.js reads the database with a read-only role and renders cached pages.",
     sourcesTitle: "Data sources",
     sources: [
-      "XM: demand, spot price, generation, reservoirs and inflows (public API)",
+      "XM: demand, spot price, dispatch cost, contracts, generation, reservoirs and inflows (public API)",
       "Open-Meteo: temperature and rainfall in four cities",
       "NOAA Climate Prediction Center: Oceanic Niño Index",
     ],
