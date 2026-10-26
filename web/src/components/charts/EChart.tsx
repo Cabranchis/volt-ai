@@ -12,25 +12,29 @@ interface Props {
   label: string;
   /** Charts that share a group get linked tooltips and cross-hairs. */
   group?: string;
+  /** Called once the chart exists, to attach events; the function it returns runs on teardown. */
+  onChart?: (chart: ReturnType<typeof echarts.init>) => void | (() => void);
 }
 
 /**
  * Thin, theme-aware wrapper around an ECharts canvas.
  * It never owns data: callers pass a `build` function, so this stays reusable and testable.
  */
-export function EChart({ build, height, label, group }: Props) {
+export function EChart({ build, height, label, group, onChart }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof echarts.init> | null>(null);
   const buildRef = useRef(build);
+  const onChartRef = useRef(onChart);
 
   useEffect(() => {
     buildRef.current = build;
+    onChartRef.current = onChart;
     const chart = chartRef.current;
     if (chart) {
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       chart.setOption(buildRef.current(readTokens(), reduced), { notMerge: true });
     }
-  }, [build]);
+  }, [build, onChart]);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -54,6 +58,7 @@ export function EChart({ build, height, label, group }: Props) {
       chart.setOption(buildRef.current(readTokens(), reduced), { notMerge: true });
     };
     render();
+    const detach = onChartRef.current?.(chart);
 
     const resizeObserver = new ResizeObserver(() => chart.resize());
     resizeObserver.observe(element);
@@ -68,6 +73,7 @@ export function EChart({ build, height, label, group }: Props) {
     media.addEventListener("change", render);
 
     return () => {
+      detach?.();
       resizeObserver.disconnect();
       themeObserver.disconnect();
       media.removeEventListener("change", render);

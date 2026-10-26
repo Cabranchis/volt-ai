@@ -63,6 +63,16 @@ export function monthTickRule(spanDays: number): (index: number, value: string) 
   return (_i, value) => value.endsWith("-01-01");
 }
 
+/**
+ * Label rule for a zoomed window of `visible` days starting at index `start`: the usual rule for
+ * long windows, and about six evenly spaced labels for short ones, which may hold no month start.
+ */
+export function zoomTickRule(start: number, visible: number): (index: number, value: string) => boolean {
+  if (visible > 45) return monthTickRule(visible);
+  const every = Math.max(1, Math.round(visible / 6));
+  return (index) => (index - start) % every === 0;
+}
+
 export function compactNumber(value: number, locale: string): string {
   return new Intl.NumberFormat(locale === "es" ? "es-CO" : "en-US", {
     notation: "compact",

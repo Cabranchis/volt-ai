@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, type ComponentProps } from "react";
 import { formatDate, formatNumber } from "@/lib/format";
 import type { Locale } from "@/lib/i18n/config";
-import { baseOption, monthTickRule, tooltipHtml } from "./chart-utils";
+import { baseOption, monthTickRule, tooltipHtml, zoomTickRule } from "./chart-utils";
 import { EChart } from "./EChart";
 import { withAlpha, type ChartTokens } from "./tokens";
 
@@ -44,6 +44,8 @@ interface Props {
   /** Anomaly markers drawn on the first series, as up or down triangles. */
   markers?: readonly MarkerSpec[];
   markerLabels?: { high: string; low: string };
+  /** A range slider under the chart, to zoom into any window of a long history. */
+  zoom?: boolean;
 }
 
 const colorOf = (tokens: ChartTokens, key: ColorKey): string => (key === "text" ? tokens.text : tokens[key]);
@@ -63,6 +65,7 @@ export function TimeSeriesChart({
   referenceLines,
   markers,
   markerLabels,
+  zoom = false,
 }: Props) {
   const build = useCallback(
     (tokens: ChartTokens, reducedMotion: boolean) => {
@@ -130,7 +133,37 @@ export function TimeSeriesChart({
 
       return {
         ...baseOption(tokens, reducedMotion),
-        grid: { left: 4, right: 16, top: 26, bottom: 8, containLabel: true },
+        grid: { left: 4, right: zoom ? 28 : 16, top: 26, bottom: zoom ? 40 : 8, containLabel: true },
+        dataZoom: zoom
+          ? [
+              {
+                type: "slider",
+                xAxisIndex: 0,
+                height: 18,
+                bottom: 4,
+                // room on each side for the dates at the two ends
+                left: 84,
+                right: 84,
+                filterMode: "none",
+                brushSelect: false,
+                borderColor: tokens.border,
+                backgroundColor: "transparent",
+                fillerColor: withAlpha(tokens.faint, 0.18),
+                dataBackground: {
+                  lineStyle: { color: tokens.border },
+                  areaStyle: { color: withAlpha(tokens.faint, 0.12) },
+                },
+                selectedDataBackground: {
+                  lineStyle: { color: tokens.faint },
+                  areaStyle: { color: withAlpha(tokens.faint, 0.2) },
+                },
+                handleStyle: { color: tokens.surface, borderColor: tokens.faint },
+                moveHandleStyle: { color: tokens.faint },
+                textStyle: { color: tokens.faint, fontSize: 10 },
+                labelFormatter: (_index: number, label: string) => formatDate(label, locale, "month"),
+              },
+            ]
+          : undefined,
         tooltip: {
           ...baseOption(tokens, reducedMotion).tooltip,
           formatter: (params: unknown) => {
@@ -185,8 +218,31 @@ export function TimeSeriesChart({
         series: echartSeries,
       };
     },
-    [dates, series, scale, decimals, unit, locale, yMin, yMax, referenceLines, markers, markerLabels],
+    [dates, series, scale, decimals, unit, locale, yMin, yMax, referenceLines, markers, markerLabels, zoom],
   );
 
-  return <EChart build={build} height={height} label={ariaLabel} group={group} />;
+  // When the visitor zooms, the labels follow the window on screen instead of the whole history.
+  const onChart = useCallback(
+    (chart: Parameters<NonNullable<ComponentProps<typeof EChart>["onChart"]>>[0]) => {
+      if (!zoom) return;
+      const relabel = () => {
+        const state = (chart.getOption() as { dataZoom?: { startValue?: number; endValue?: number }[] }).dataZoom?.[0];
+        const start = Math.round(state?.startValue ?? 0);
+        const visible = Math.max(1, Math.round(state?.endValue ?? dates.length - 1) - start + 1);
+        chart.setOption({
+          xAxis: {
+            axisLabel: {
+              interval: zoomTickRule(start, visible),
+              formatter: (value: string) => formatDate(value, locale, visible > 300 ? "month" : "short"),
+            },
+          },
+        });
+      };
+      chart.on("datazoom", relabel);
+      return () => chart.off("datazoom", relabel);
+    },
+    [zoom, dates.length, locale],
+  );
+
+  return <EChart build={build} height={height} label={ariaLabel} group={group} onChart={onChart} />;
 }

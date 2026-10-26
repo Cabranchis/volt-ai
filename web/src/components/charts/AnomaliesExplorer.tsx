@@ -103,6 +103,7 @@ export function AnomaliesExplorer({ locale, dict, dates, values, anomalies }: Pr
           unit={unit}
           height={320}
           markers={view.markers}
+          zoom
           markerLabels={{ high: dict.charts.anomalyHigh, low: dict.charts.anomalyLow }}
           ariaLabel={`${dict.anomalies.chartTitle}: ${view.markers.length}`}
         />
