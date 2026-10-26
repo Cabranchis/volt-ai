@@ -22,6 +22,8 @@ from voltia.ingest import (
     XM_DAILY_METRICS,
     XM_MARKET_DAILY,
     XM_MARKET_HOURLY,
+    XM_RESERVOIR_METRICS,
+    XM_RIVER_METRICS,
     XM_SPILL_METRIC,
     Clients,
     fetch_xm_market,
@@ -48,8 +50,42 @@ DAILY_METRICS = {
 HOURLY_METRICS = {**XM_MARKET_HOURLY, **XM_CONTRACT_HOURLY}
 
 
+RESERVOIRS = {"PENOL": "ANTIOQUIA", "GUAVIO": "ORIENTE", "FLORIDA II": "RIOS ESTIMADOS"}
+RIVERS = {"GUATAPE": "ANTIOQUIA", "GUAVIO": "ORIENTE"}
+# Reported by XM but not listed: a reservoir to drop and Amoya, which has a fixed region.
+REPORTED = {"Embalse": [*RESERVOIRS, "NUEVO"], "Rio": [*RIVERS, "AMOYA"]}
+
+
+def _entity_payload(body: dict[str, Any]) -> httpx.Response:
+    start, end = date.fromisoformat(body["StartDate"]), date.fromisoformat(body["EndDate"])
+    items = [
+        {
+            "Date": (start + timedelta(days=i)).isoformat(),
+            "DailyEntities": [
+                {"Id": body["Entity"], "Name": name, "Value": 1000.0 * (k + 1)}
+                for k, name in enumerate(REPORTED[body["Entity"]])
+            ],
+        }
+        for i in range((end - start).days + 1)
+    ]
+    return httpx.Response(200, json={"Items": items})
+
+
+def _list_payload(regions: dict[str, str]) -> httpx.Response:
+    items = [
+        {
+            "Date": "2026-10-25",
+            "ListEntities": [{"Id": "Sistema", "Values": {"Name": name, "HydroRegion": region}}],
+        }
+        for name, region in regions.items()
+    ]
+    return httpx.Response(200, json={"Items": [*items, items[0]]})  # XM repeats some entries
+
+
 def _daily_payload(request: httpx.Request) -> httpx.Response:
     body = json.loads(request.content)
+    if body["Entity"] in REPORTED:
+        return _entity_payload(body)
     series = DAILY_METRICS[body["MetricId"]]
     low, high = DAILY_BOUNDS[series]
     value = DEMAND_KWH if series == "demand_kwh" else (low + high) / 2
@@ -95,9 +131,16 @@ def mocked_apis(
             return httpx.Response(200, json=load_json("xm/hourly_gene_system.json"))
 
         router.post(f"{BASE}/hourly").mock(side_effect=hourly)
-        router.post(f"{BASE}/lists").mock(
-            return_value=httpx.Response(200, json=load_json("xm/resource_catalog.json"))
-        )
+
+        def lists(request: httpx.Request) -> httpx.Response:
+            metric = json.loads(request.content)["MetricId"]
+            if metric == "ListadoEmbalses":
+                return _list_payload(RESERVOIRS)
+            if metric == "ListadoRios":
+                return _list_payload(RIVERS)
+            return httpx.Response(200, json=load_json("xm/resource_catalog.json"))
+
+        router.post(f"{BASE}/lists").mock(side_effect=lists)
         router.get(FORECAST_URL).mock(side_effect=_weather_payload)
         router.get(ONI_URL).mock(
             return_value=httpx.Response(200, text=read_text("other/oni_sample.txt"))
@@ -144,6 +187,37 @@ def test_full_ingest_loads_every_dataset(
     assert spill.iloc[0] > 0
     assert wide["dispatch_cost"].dropna().gt(0).all()
     assert db.table_counts(engine, ["series_hourly"])["series_hourly"] == 48 + 24
+    # 2 reservoirs x 2 metrics and 3 rivers x 2 metrics, for the 2 days; the unlisted reservoir
+    # and the estimated-rivers region are dropped, Amoya gets its fixed region.
+    assert db.table_counts(engine, ["entity_daily", "entity_catalog"]) == {
+        "entity_daily": (2 * len(XM_RESERVOIR_METRICS) + 3 * len(XM_RIVER_METRICS)) * 2,
+        "entity_catalog": 5,
+    }
+    with engine.connect() as conn:
+        regions = dict(
+            conn.exec_driver_sql("SELECT kind || ':' || entity, region FROM entity_catalog").all()
+        )
+        names = {r[0] for r in conn.exec_driver_sql("SELECT DISTINCT entity FROM entity_daily")}
+    assert regions["river:AMOYA"] == "CENTRO"
+    assert "reservoir:FLORIDA II" not in regions
+    assert "NUEVO" not in names
+
+
+def test_regional_dataset_failure_only_warns_and_keeps_what_was_stored(
+    monkeypatch: pytest.MonkeyPatch,
+    mocked_apis: respx.MockRouter,
+    engine: Engine,
+    clients: Clients,
+    settings: Settings,
+) -> None:
+    monkeypatch.setattr(XMClient._post.retry, "sleep", lambda _s: None)  # type: ignore[attr-defined]
+    [first] = run_all(engine, clients, settings, SINCE, TODAY, True, ["xm_regional"])
+    assert first.ok
+    stored = db.table_counts(engine, ["entity_daily", "entity_catalog"])
+    mocked_apis.post(f"{BASE}/lists").mock(return_value=httpx.Response(503))
+    [second] = run_all(engine, clients, settings, SINCE, TODAY, False, ["xm_regional"])
+    assert not second.ok
+    assert db.table_counts(engine, ["entity_daily", "entity_catalog"]) == stored
 
 
 def test_ingest_is_idempotent(

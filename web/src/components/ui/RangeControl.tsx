@@ -12,14 +12,16 @@ interface Props<T extends string> {
   value: T;
   onChange: (value: T) => void;
   label: string;
+  /** Let the options flow onto several lines, for a long list on a narrow screen. */
+  wrap?: boolean;
 }
 
 /** Segmented control for choosing a time range. A radio group, so arrow keys move the selection. */
-export function RangeControl<T extends string>({ options, value, onChange, label }: Props<T>) {
+export function RangeControl<T extends string>({ options, value, onChange, label, wrap = false }: Props<T>) {
   const groupId = useId();
 
   return (
-    <div role="radiogroup" aria-label={label} className="glass inline-flex rounded-lg p-0.5">
+    <div role="radiogroup" aria-label={label} className={`glass inline-flex rounded-lg p-0.5 ${wrap ? "flex-wrap" : ""}`}>
       {options.map((option) => {
         const selected = option.value === value;
         return (

@@ -41,6 +41,14 @@ HOURLY_BOUNDS: dict[str, tuple[float, float]] = {
     "generation_kwh": (1e6, 40e6),
 }
 
+# Metrics reported per reservoir or river (table entity_daily).
+ENTITY_BOUNDS: dict[str, tuple[float, float]] = {
+    "reservoir_kwh": (0.0, 10e9),
+    "reservoir_capacity_kwh": (0.0, 10e9),
+    "inflows_kwh": (0.0, 1.5e9),
+    "inflows_hist_mean_kwh": (0.0, 1.5e9),
+}
+
 # A daily series may miss at most this many consecutive days inside a batch.
 MAX_GAP_DAYS = 3
 
@@ -78,6 +86,26 @@ def _schema(
 
 
 _DAILY = _schema(DAILY_BOUNDS, {})
+_ENTITY = pa.DataFrameSchema(
+    {
+        "metric": pa.Column(str, pa.Check.isin(list(ENTITY_BOUNDS))),
+        "entity": pa.Column(str, pa.Check.str_length(min_value=1)),
+        "day": pa.Column("datetime64[ns]"),
+        "value": pa.Column(float, nullable=False),
+    },
+    checks=[
+        pa.Check(lambda df: np.isfinite(df["value"]), error="value must be finite"),
+        pa.Check(
+            lambda df: (
+                (df["value"] >= df["metric"].map({k: v[0] for k, v in ENTITY_BOUNDS.items()}))
+                & (df["value"] <= df["metric"].map({k: v[1] for k, v in ENTITY_BOUNDS.items()}))
+            ),
+            error="value outside the plausible range for its metric",
+        ),
+    ],
+    strict=True,
+    coerce=True,
+)
 _HOURLY = _schema(HOURLY_BOUNDS, {"hour": pa.Column(int, pa.Check.in_range(1, 24))})
 
 
@@ -102,6 +130,11 @@ def validate_daily(frame: pd.DataFrame, continuous: bool = True) -> pd.DataFrame
             if gap > MAX_GAP_DAYS:
                 raise BatchValidationError(f"{name}: gap of {gap} consecutive missing days")
     return checked
+
+
+def validate_entities(frame: pd.DataFrame) -> pd.DataFrame:
+    """Validate a long frame (metric, entity, day, value) of per-reservoir or per-river values."""
+    return _run(_ENTITY, frame, ["metric", "entity", "day"])
 
 
 def validate_hourly(frame: pd.DataFrame) -> pd.DataFrame:

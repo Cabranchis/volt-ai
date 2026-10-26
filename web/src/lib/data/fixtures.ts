@@ -4,6 +4,7 @@ import forecastsJson from "./fixtures/forecasts.json";
 import healthJson from "./fixtures/health.json";
 import hourlyJson from "./fixtures/hourly.json";
 import modelRunJson from "./fixtures/model-run.json";
+import regionalJson from "./fixtures/regional.json";
 import seriesJson from "./fixtures/series.json";
 import { latestOf, sliceFrame } from "./shape";
 import {
@@ -13,6 +14,7 @@ import {
   healthSchema,
   hourlyPointSchema,
   modelRunSchema,
+  regionalSchema,
   seriesFrameSchema,
   type ForecastBundle,
   type Repository,
@@ -30,6 +32,7 @@ export function createFixtureRepository(): Repository {
   const briefings = z.array(briefingSchema).parse(briefingsJson);
   const modelRun = modelRunSchema.nullable().parse(modelRunJson);
   const hourly = z.array(hourlyPointSchema.extend({ series: z.string() })).parse(hourlyJson);
+  const regional = regionalSchema.nullable().parse(regionalJson);
   const health = healthSchema.omit({ source: true }).parse(healthJson);
 
   return {
@@ -63,6 +66,9 @@ export function createFixtureRepository(): Repository {
     },
     async trackRecord() {
       return [];
+    },
+    async regional() {
+      return regional;
     },
     async health() {
       return { ...health, source: "fixtures" as const };

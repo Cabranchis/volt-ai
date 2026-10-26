@@ -9,6 +9,7 @@ import type {
   HourlyPoint,
   LatestPoint,
   ModelRun,
+  RegionalData,
   SeriesFrame,
   TrackRow,
 } from "./types";
@@ -68,6 +69,12 @@ export async function getTrackRecord(target: ForecastTarget): Promise<TrackRow[]
   "use cache";
   cacheLife("hours");
   return (await getRepository()).trackRecord(target);
+}
+
+export async function getRegional(): Promise<RegionalData | null> {
+  "use cache";
+  cacheLife("hours");
+  return (await getRepository()).regional();
 }
 
 export async function getHealth(): Promise<Health> {

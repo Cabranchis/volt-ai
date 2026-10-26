@@ -134,6 +134,30 @@ def upsert_series_daily(engine: Engine, frame: pd.DataFrame) -> int:
         return _upsert(conn, "series_daily", rows, ["series", "day"])
 
 
+def upsert_entity_daily(engine: Engine, frame: pd.DataFrame) -> int:
+    """Upsert a long frame with columns metric, entity, day (date) and value."""
+    rows = [
+        {"metric": str(m), "entity": str(e), "day": d, "value": float(v)}
+        for m, e, d, v in zip(
+            frame["metric"], frame["entity"], _as_dates(frame["day"]), frame["value"], strict=True
+        )
+    ]
+    with engine.begin() as conn:
+        return _upsert(conn, "entity_daily", rows, ["metric", "entity", "day"])
+
+
+def replace_entity_catalog(engine: Engine, frame: pd.DataFrame) -> int:
+    """Replace the catalog (columns kind, entity, region) in one transaction."""
+    rows = [
+        {"kind": str(k), "entity": str(e), "region": str(r)}
+        for k, e, r in zip(frame["kind"], frame["entity"], frame["region"], strict=True)
+    ]
+    with engine.begin() as conn:
+        table = _table(conn, "entity_catalog")
+        conn.execute(delete(table))
+        return _upsert(conn, "entity_catalog", rows, ["kind", "entity"])
+
+
 def upsert_series_hourly(engine: Engine, frame: pd.DataFrame) -> int:
     """Upsert a long frame with columns series, day (date), hour (1..24) and value."""
     rows = [

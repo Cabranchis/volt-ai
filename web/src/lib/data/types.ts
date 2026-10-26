@@ -124,6 +124,35 @@ export const trackRowSchema = z.object({
 });
 export type TrackRow = z.infer<typeof trackRowSchema>;
 
+/**
+ * Reservoirs and rivers by hydrological region (table entity_daily). `reservoirs` is the latest day
+ * XM has settled; `history` aggregates each region by day: the share of its reservoirs' capacity that
+ * is full, and its rivers' inflow as a share of their historical mean for that day.
+ */
+export const regionalSchema = z.object({
+  day: isoDate,
+  reservoirs: z.array(
+    z.object({
+      name: z.string(),
+      region: z.string(),
+      volumeKwh: z.number(),
+      capacityKwh: z.number(),
+      weekAgoKwh: z.number().nullable(),
+    }),
+  ),
+  history: z.object({
+    dates: z.array(isoDate),
+    regions: z.record(
+      z.string(),
+      z.object({
+        reservoirPct: z.array(z.number().nullable()),
+        inflowPct: z.array(z.number().nullable()),
+      }),
+    ),
+  }),
+});
+export type RegionalData = z.infer<typeof regionalSchema>;
+
 export const dataSourceSchema = z.enum(["postgres", "fixtures"]);
 export type DataSource = z.infer<typeof dataSourceSchema>;
 
@@ -158,5 +187,6 @@ export interface Repository {
   briefing(lang: "es" | "en"): Promise<Briefing | null>;
   hourly(series: string, days: number): Promise<HourlyPoint[]>;
   trackRecord(target: ForecastTarget): Promise<TrackRow[]>;
+  regional(): Promise<RegionalData | null>;
   health(): Promise<Health>;
 }

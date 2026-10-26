@@ -44,11 +44,87 @@ def copy_feature_labels() -> None:
         write("feature-labels.json", json.loads(source.read_text(encoding="utf-8")))
 
 
+REGIONAL_HISTORY_DAYS = 365
+
+
+def export_regional(conn: sqlite3.Connection) -> None:
+    """Latest reservoirs and the by-region history of the map page (RegionalData in the web app)."""
+    last = conn.execute(
+        "SELECT MAX(day) FROM entity_daily WHERE metric = 'reservoir_kwh'"
+    ).fetchone()[0]
+    if last is None:
+        write("regional.json", None)
+        return
+    reservoirs = [
+        {
+            "name": r["name"],
+            "region": r["region"],
+            "volumeKwh": r["volume"],
+            "capacityKwh": r["capacity"],
+            "weekAgoKwh": r["week_ago"],
+        }
+        for r in conn.execute(
+            """
+            SELECT c.entity AS name, c.region, v.value AS volume, k.value AS capacity, w.value AS week_ago
+            FROM entity_daily v
+            JOIN entity_catalog c ON c.kind = 'reservoir' AND c.entity = v.entity
+            JOIN entity_daily k ON k.metric = 'reservoir_capacity_kwh' AND k.entity = v.entity AND k.day = v.day
+            LEFT JOIN entity_daily w ON w.metric = 'reservoir_kwh' AND w.entity = v.entity
+                 AND w.day = date(v.day, '-7 day')
+            WHERE v.metric = 'reservoir_kwh' AND v.day = ?
+            ORDER BY c.entity
+            """,
+            (last,),
+        )
+    ]
+    since = f"date(?, '-{REGIONAL_HISTORY_DAYS} day')"
+    level = conn.execute(
+        f"""
+        SELECT c.region, v.day, SUM(v.value) / SUM(k.value) AS pct
+        FROM entity_catalog c
+        JOIN entity_daily v ON v.metric = 'reservoir_kwh' AND v.entity = c.entity
+        JOIN entity_daily k ON k.metric = 'reservoir_capacity_kwh' AND k.entity = v.entity AND k.day = v.day
+        WHERE c.kind = 'reservoir' AND v.day > {since}
+        GROUP BY c.region, v.day
+        """,
+        (last,),
+    ).fetchall()
+    inflow = conn.execute(
+        f"""
+        SELECT c.region, a.day, SUM(a.value) / SUM(h.value) AS pct
+        FROM entity_catalog c
+        JOIN entity_daily a ON a.metric = 'inflows_kwh' AND a.entity = c.entity
+        JOIN entity_daily h ON h.metric = 'inflows_hist_mean_kwh' AND h.entity = a.entity AND h.day = a.day
+        WHERE c.kind = 'river' AND a.day > {since}
+        GROUP BY c.region, a.day
+        """,
+        (last,),
+    ).fetchall()
+    dates = sorted({r["day"] for r in level} | {r["day"] for r in inflow})
+    index = {d: i for i, d in enumerate(dates)}
+    regions: dict[str, dict[str, list[float | None]]] = {}
+    for key, rows in (("reservoirPct", level), ("inflowPct", inflow)):
+        for r in rows:
+            columns = regions.setdefault(
+                r["region"],
+                {"reservoirPct": [None] * len(dates), "inflowPct": [None] * len(dates)},
+            )
+            columns[key][index[r["day"]]] = round(r["pct"], 4)
+    write(
+        "regional.json",
+        {"day": last, "reservoirs": reservoirs, "history": {"dates": dates, "regions": regions}},
+    )
+
+
 def main() -> None:
     copy_feature_labels()
-    db_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_DB
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    db_path = Path(args[0]) if args else DEFAULT_DB
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
+    export_regional(conn)
+    if "--regional-only" in sys.argv:
+        return
 
     rows = conn.execute("SELECT series, day, value FROM series_daily ORDER BY day").fetchall()
     dates = sorted({r["day"] for r in rows})

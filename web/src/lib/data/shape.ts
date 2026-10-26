@@ -1,4 +1,4 @@
-import type { LatestPoint, SeriesFrame, SeriesRange } from "./types";
+import type { LatestPoint, RegionalData, SeriesFrame, SeriesRange } from "./types";
 
 export interface SeriesRow {
   series: string;
@@ -58,4 +58,29 @@ export function latestOf(
     }
   }
   return out;
+}
+
+export interface RegionalHistoryRow {
+  region: string;
+  day: string;
+  reservoirPct: number | null;
+  inflowPct: number | null;
+}
+
+/** Long rows (region, day, level, inflow) to one shared date axis with a pair of columns per region. */
+export function pivotRegionalHistory(rows: readonly RegionalHistoryRow[]): RegionalData["history"] {
+  const dates = [...new Set(rows.map((r) => r.day))].sort();
+  const index = new Map(dates.map((d, i) => [d, i]));
+  const regions: RegionalData["history"]["regions"] = {};
+  for (const row of rows) {
+    const columns = (regions[row.region] ??= {
+      reservoirPct: new Array<number | null>(dates.length).fill(null),
+      inflowPct: new Array<number | null>(dates.length).fill(null),
+    });
+    const i = index.get(row.day);
+    if (i === undefined) continue;
+    if (row.reservoirPct !== null) columns.reservoirPct[i] = row.reservoirPct;
+    if (row.inflowPct !== null) columns.inflowPct[i] = row.inflowPct;
+  }
+  return { dates, regions };
 }

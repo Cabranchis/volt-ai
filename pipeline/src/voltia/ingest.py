@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 import pandas as pd
@@ -12,7 +12,12 @@ from sqlalchemy import Engine
 
 from voltia import db
 from voltia.config import Settings
-from voltia.schemas import BatchValidationError, validate_daily, validate_hourly
+from voltia.schemas import (
+    BatchValidationError,
+    validate_daily,
+    validate_entities,
+    validate_hourly,
+)
 from voltia.sources.oni import OniClient
 from voltia.sources.openmeteo import OpenMeteoClient
 from voltia.sources.xm import XMClient
@@ -41,6 +46,17 @@ XM_SPILL_METRIC = "VertEner"
 XM_CONTRACT_DAILY = {"PrecPromCont": "contract_price"}
 XM_CONTRACT_HOURLY = {"PrecPromContNoRegu": "contract_price_unreg"}
 
+# Per reservoir and per river, for the map. XM names the hydrological regions; "RIOS ESTIMADOS" is
+# a bucket of estimated rivers with no place on a map, so it is left out.
+XM_RESERVOIR_METRICS = {
+    "VoluUtilDiarEner": "reservoir_kwh",
+    "CapaUtilDiarEner": "reservoir_capacity_kwh",
+}
+XM_RIVER_METRICS = {"AporEner": "inflows_kwh", "AporEnerMediHist": "inflows_hist_mean_kwh"}
+HYDRO_REGIONS = frozenset({"ANTIOQUIA", "CALDAS", "CARIBE", "CENTRO", "ORIENTE", "VALLE"})
+# A river XM reports but does not list in ListadoRios (Amoya, in Tolima).
+UNLISTED_RIVER_REGION = {"AMOYA": "CENTRO"}
+
 MIX_CATEGORIES = ["hydro", "thermal", "solar", "wind", "cogen", "other"]
 HOURS_PER_DAY = 24
 DEMAND_TOLERANCE = 0.08  # demand / generation stays within about -3 % to +5 % in every year
@@ -50,9 +66,18 @@ DEMAND_TOLERANCE = 0.08  # demand / generation stays within about -3 % to +5 % i
 class Batch:
     """What a dataset produced: a long daily frame and optionally a long hourly frame."""
 
-    daily: pd.DataFrame
+    daily: pd.DataFrame = field(default_factory=pd.DataFrame)
     hourly: pd.DataFrame | None = None
     continuous: bool = True
+    # Values per reservoir or river (metric, entity, day, value) and their regions (kind, entity,
+    # region); they go to their own tables, not to series_daily.
+    entities: pd.DataFrame | None = None
+    catalog: pd.DataFrame | None = None
+
+    @property
+    def is_empty(self) -> bool:
+        no_entities = self.entities is None or self.entities.empty
+        return self.daily.empty and no_entities
 
 
 @dataclass(frozen=True)
@@ -184,6 +209,29 @@ def fetch_xm_market(c: Clients, s: Settings, start: date, end: date, today: date
     return Batch(daily=pd.concat(parts, ignore_index=True))
 
 
+def fetch_xm_regional(c: Clients, s: Settings, start: date, end: date, today: date) -> Batch:
+    """Volume and capacity per reservoir, inflow and its historical mean per river, with regions."""
+    reservoirs = c.xm.hydro_catalog("reservoir")
+    rivers = c.xm.hydro_catalog("river")
+    unlisted = [(n, r) for n, r in UNLISTED_RIVER_REGION.items() if n not in set(rivers["entity"])]
+    rivers = pd.concat([rivers, pd.DataFrame(unlisted, columns=["entity", "region"])])
+    catalog = pd.concat(
+        [reservoirs.assign(kind="reservoir"), rivers.assign(kind="river")], ignore_index=True
+    )
+    catalog = catalog[catalog["region"].isin(HYDRO_REGIONS)][["kind", "entity", "region"]]
+    parts = []
+    for kind, entity_id, metrics in (
+        ("reservoir", "Embalse", XM_RESERVOIR_METRICS),
+        ("river", "Rio", XM_RIVER_METRICS),
+    ):
+        known = set(catalog.loc[catalog["kind"] == kind, "entity"])
+        for metric, name in metrics.items():
+            frame = c.xm.daily_entities(metric, entity_id, start, end)
+            parts.append(frame[frame["entity"].isin(known)].assign(metric=name))
+    entities = pd.concat(parts, ignore_index=True)[["metric", "entity", "day", "value"]]
+    return Batch(entities=entities, catalog=catalog)
+
+
 def fetch_xm_generation(c: Clients, s: Settings, start: date, end: date, today: date) -> Batch:
     hourly = _complete_days(c.xm.hourly_system("Gene", start, end))
     totals = hourly.groupby("day")["value"].sum().rename("value").reset_index()
@@ -230,13 +278,14 @@ Fetcher = Callable[[Clients, Settings, date, date, date], Batch]
 
 # Datasets only the price model's market features need. When one fails the run goes on: the
 # features are then missing (NaN) for the newest days, which the trees treat as unknown.
-OPTIONAL_DATASETS = frozenset({"xm_market", "xm_contracts"})
+OPTIONAL_DATASETS = frozenset({"xm_market", "xm_contracts", "xm_regional"})
 
 DATASETS: dict[str, Fetcher] = {
     "xm_daily": fetch_xm_daily,
     "xm_price": fetch_xm_price,
     "xm_market": fetch_xm_market,
     "xm_contracts": fetch_xm_contracts,
+    "xm_regional": fetch_xm_regional,
     "xm_generation": fetch_xm_generation,
     "xm_mix": fetch_xm_mix,
     "weather": fetch_weather,
@@ -263,14 +312,24 @@ def run_dataset(
     end = today - timedelta(days=1)
     try:
         batch = DATASETS[name](clients, settings, start, end, today)
-        if batch.daily.empty:
+        if batch.is_empty:
             raise BatchValidationError("the source returned no data for the requested range")
-        daily = validate_daily(batch.daily, continuous=batch.continuous)
-        rows = db.upsert_series_daily(engine, daily)
+        days = []
+        rows = 0
+        if not batch.daily.empty:
+            daily = validate_daily(batch.daily, continuous=batch.continuous)
+            rows += db.upsert_series_daily(engine, daily)
+            days.append(daily["day"].max())
+        if batch.entities is not None and not batch.entities.empty:
+            entities = validate_entities(batch.entities)
+            rows += db.upsert_entity_daily(engine, entities)
+            if batch.catalog is not None:
+                db.replace_entity_catalog(engine, batch.catalog)
+            days.append(entities["day"].max())
         if batch.hourly is not None and not batch.hourly.empty:
             rows += db.upsert_series_hourly(engine, validate_hourly(batch.hourly))
         db.prune_hourly(engine, today, settings.hourly_retention_days)
-        last_day = pd.Timestamp(daily["day"].max()).date()
+        last_day = pd.Timestamp(max(days)).date()
         db.log_ingest(engine, name, last_day, "ok", f"{rows} rows from {start} to {end}")
         log.info("ingest.ok", dataset=name, rows=rows, last_day=last_day.isoformat())
         return Result(name, True, rows, last_day, "ok")

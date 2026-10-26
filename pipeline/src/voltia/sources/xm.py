@@ -77,6 +77,30 @@ def parse_daily(payload: dict[str, Any], entity_id: str = "Sistema") -> pd.DataF
     return frame
 
 
+def parse_daily_entities(payload: dict[str, Any], entity_id: str) -> pd.DataFrame:
+    """Daily payload of a metric reported per reservoir or river: columns day, entity and value."""
+    rows: list[tuple[str, str, float]] = []
+    for item in payload.get("Items", []):
+        for entity in item.get("DailyEntities", []):
+            value = _to_float(entity.get("Value"))
+            if entity.get("Id") == entity_id and value is not None and entity.get("Name"):
+                rows.append((item["Date"], str(entity["Name"]), value))
+    frame = pd.DataFrame(rows, columns=["day", "entity", "value"])
+    frame["day"] = pd.to_datetime(frame["day"])
+    return frame
+
+
+def parse_hydro_catalog(payload: dict[str, Any]) -> pd.DataFrame:
+    """ListadoEmbalses or ListadoRios payload to one row per entity: columns entity and region."""
+    rows: list[tuple[str, str]] = []
+    for item in payload.get("Items", []):
+        for entity in item.get("ListEntities", []):
+            values = entity.get("Values", {})
+            if values.get("Name") and values.get("HydroRegion"):
+                rows.append((str(values["Name"]), str(values["HydroRegion"])))
+    return pd.DataFrame(rows, columns=["entity", "region"]).drop_duplicates()
+
+
 def parse_hourly(payload: dict[str, Any], entity_id: str = "Sistema") -> pd.DataFrame:
     """Hourly metric payload to a frame with columns day, hour (1..24) and value."""
     rows: list[tuple[str, int, float]] = []
@@ -185,6 +209,19 @@ class XMClient:
             for s, e in windows(start, end)
         ]
         return _concat(parts, ["day", "value"])
+
+    def daily_entities(self, metric: str, entity: str, start: date, end: date) -> pd.DataFrame:
+        """A daily metric reported per entity ("Embalse" or "Rio")."""
+        parts = [
+            parse_daily_entities(self.fetch("daily", metric, entity, s, e), entity)
+            for s, e in windows(start, end)
+        ]
+        return _concat(parts, ["day", "entity", "value"])
+
+    def hydro_catalog(self, kind: str) -> pd.DataFrame:
+        """Reservoirs or rivers with their hydrological region."""
+        listing = {"reservoir": "ListadoEmbalses", "river": "ListadoRios"}[kind]
+        return parse_hydro_catalog(self._post("lists", {"MetricId": listing, "Entity": "Sistema"}))
 
     def hourly_system(self, metric: str, start: date, end: date) -> pd.DataFrame:
         parts = [

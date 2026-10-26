@@ -1,7 +1,7 @@
 import "server-only";
 import postgres from "postgres";
 import { z } from "zod";
-import { latestOf, pivotRows } from "./shape";
+import { latestOf, pivotRegionalHistory, pivotRows } from "./shape";
 import {
   anomalySchema,
   briefingSchema,
@@ -10,6 +10,7 @@ import {
   forecastPointSchema,
   isoDate,
   modelRunSchema,
+  regionalSchema,
   trackRowSchema,
   type Repository,
 } from "./types";
@@ -149,6 +150,60 @@ export function createPostgresRepository(sql: Sql): Repository {
       } catch (error) {
         // The table arrives with migration 0003, applied by the daily pipeline run.
         if ((error as { code?: string }).code === "42P01") return [];
+        throw error;
+      }
+    },
+
+    async regional() {
+      try {
+        const reservoirs = await sql`
+          SELECT to_char(last.day, 'YYYY-MM-DD') AS day, c.entity AS name, c.region,
+                 v.value AS volume, k.value AS capacity, w.value AS week_ago
+          FROM (SELECT MAX(day) AS day FROM entity_daily WHERE metric = 'reservoir_kwh') last
+          JOIN entity_daily v ON v.metric = 'reservoir_kwh' AND v.day = last.day
+          JOIN entity_catalog c ON c.kind = 'reservoir' AND c.entity = v.entity
+          JOIN entity_daily k ON k.metric = 'reservoir_capacity_kwh' AND k.entity = v.entity AND k.day = v.day
+          LEFT JOIN entity_daily w ON w.metric = 'reservoir_kwh' AND w.entity = v.entity AND w.day = last.day - 7
+          ORDER BY c.entity`;
+        const first = reservoirs[0];
+        if (!first) return null;
+        const history = await sql`
+          SELECT c.region, to_char(v.day, 'YYYY-MM-DD') AS day,
+                 SUM(v.value) / NULLIF(SUM(k.value), 0) AS reservoir_pct, NULL::float8 AS inflow_pct
+          FROM entity_catalog c
+          JOIN entity_daily v ON v.metric = 'reservoir_kwh' AND v.entity = c.entity
+          JOIN entity_daily k ON k.metric = 'reservoir_capacity_kwh' AND k.entity = v.entity AND k.day = v.day
+          WHERE c.kind = 'reservoir' AND v.day > ${first.day as string}::date - 730
+          GROUP BY c.region, v.day
+          UNION ALL
+          SELECT c.region, to_char(a.day, 'YYYY-MM-DD') AS day,
+                 NULL::float8 AS reservoir_pct, SUM(a.value) / NULLIF(SUM(h.value), 0) AS inflow_pct
+          FROM entity_catalog c
+          JOIN entity_daily a ON a.metric = 'inflows_kwh' AND a.entity = c.entity
+          JOIN entity_daily h ON h.metric = 'inflows_hist_mean_kwh' AND h.entity = a.entity AND h.day = a.day
+          WHERE c.kind = 'river' AND a.day > ${first.day as string}::date - 730
+          GROUP BY c.region, a.day`;
+        return regionalSchema.parse({
+          day: first.day,
+          reservoirs: reservoirs.map((r) => ({
+            name: r.name,
+            region: r.region,
+            volumeKwh: r.volume,
+            capacityKwh: r.capacity,
+            weekAgoKwh: r.week_ago ?? null,
+          })),
+          history: pivotRegionalHistory(
+            history.map((r) => ({
+              region: String(r.region),
+              day: String(r.day),
+              reservoirPct: r.reservoir_pct === null ? null : Number(r.reservoir_pct),
+              inflowPct: r.inflow_pct === null ? null : Number(r.inflow_pct),
+            })),
+          ),
+        });
+      } catch (error) {
+        // The tables arrive with migration 0004, applied by the daily pipeline run.
+        if ((error as { code?: string }).code === "42P01") return null;
         throw error;
       }
     },

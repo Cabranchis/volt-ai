@@ -45,6 +45,8 @@ All daily values live in `series_daily (series, day, value)`; hourly values in `
 | --- | --- |
 | `model_runs` | One row per training run: dates, backtest metrics (model and baselines), parameters |
 | `forecasts` | P10/P50/P90 per target and day, with top SHAP drivers. Only the 10 most recent runs are kept |
+| `entity_daily` | Per reservoir and per river: `reservoir_kwh`, `reservoir_capacity_kwh`, `inflows_kwh`, `inflows_hist_mean_kwh` (XM metrics VoluUtilDiarEner, CapaUtilDiarEner, AporEner, AporEnerMediHist), loaded by the optional dataset `xm_regional` |
+| `entity_catalog` | Hydrological region of each reservoir and river (XM ListadoEmbalses and ListadoRios), replaced on every ingest |
 | `forecast_log` | Every forecast as first issued, keyed by target, origin and day, never pruned or revised. The web scores it against the settled series on the models page |
 | `anomalies` | Atypical days per target with severity, direction and method |
 | `briefings` | Daily executive summary per language and its origin (`gemini` or `template`) |
