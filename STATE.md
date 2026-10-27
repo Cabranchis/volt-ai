@@ -31,5 +31,5 @@ Working notes for the project: current status, environment and open items.
 - The Gemini free tier is shared across models and was exhausted by testing; the chat falls back to Flash-Lite and then to the offline analyst.
 - Review on or after 2027-02-15: the table `weather_forecast_log` has archived rain forecasts since 2026-10-26 (model `gfs_seamless`, 9 points, 16 days). With about 110 days of history, test them as price features in `pipeline/research/` (same protocol as `docs/model-experiments.md`: development origins, paired bootstrap interval against the production model) and promote them only if the interval excludes zero. Check at the same time how many forecasts the live record (`forecast_log`) has scored.
 - The wording of the site avoids the word "liquidado" (XM's settlement process has revisions); the data are described as complete public XM data.
-- Set `RATE_LIMIT_SALT` in Vercel to a random string (the code falls back to the read-only database URL, but an explicit value is cleaner). Not automated: there is no Vercel CLI here.
+- Done on 2026-10-27: `RATE_LIMIT_SALT`, `NEXT_PUBLIC_REPO_URL` and `NEXT_PUBLIC_SITE_URL` are set in Vercel (Production). `NEXT_PUBLIC_*` values are read at build time, so a change needs a redeploy.
 - Run the `Weekly backup` workflow once by hand after the push and check that the artifact `volt-ai-backup` appears.

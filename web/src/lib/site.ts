@@ -6,7 +6,13 @@ export const REPO_URL = process.env.NEXT_PUBLIC_REPO_URL || null;
 /** Where businesses write to. Shown on the page For business. */
 export const CONTACT_EMAIL = "miguelangel.14130@gmail.com";
 
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+/**
+ * The public address of the site, which link previews need as an absolute URL. It comes from
+ * NEXT_PUBLIC_SITE_URL, then from the production domain Vercel exposes, and only then falls back to localhost.
+ */
+export const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
 
 export interface NavItem {
   key: "overview" | "demand" | "price" | "hydrology" | "map" | "anomalies" | "models" | "analyst" | "calculator" | "business" | "about";
