@@ -196,3 +196,15 @@ test.describe("cost calculator", () => {
     await expect(page.getByText("Median cost")).toHaveCount(0);
   });
 });
+
+test.describe("link previews", () => {
+  test("pages declare a preview image and the image is a PNG", async ({ page, request }) => {
+    await page.goto("/en");
+    const image = await page.locator('meta[property="og:image"]').getAttribute("content");
+    expect(image).toMatch(/\/en\/opengraph-image/);
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
+    const response = await request.get("/en/opengraph-image");
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toContain("image/png");
+  });
+});
