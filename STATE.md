@@ -40,12 +40,13 @@ Goal: reach the newest complete day XM has and retrain right away, instead of wa
 
 Decisions: a light hourly workflow `poll.yml` runs `voltia check` and dispatches `pipeline.yml` only when the newest complete XM day is later than the data end of the latest model run (comparing with the model, not with `ingest_log`, so a failed training is retried). `pipeline.yml` stays unchanged. Rejected: a full pipeline every hour (9 min of training x 24 a day), a reusable workflow (shared concurrency group deadlocks), watching only the price (training needs price and demand).
 
-- [ ] Step 0: run `Daily pipeline` by hand once and check `dataEnd` = 2026-10-25 (`/api/v1/model?x=1`).
+- [x] Step 0: ran `Daily pipeline` by hand on 2026-10-28; the model run `20261028T125447Z-bcaccad` uses data to 2026-10-25 (training took about 9 minutes).
 - [x] `voltia check` command (`pipeline/src/voltia/cli.py`) and `db.latest_model_data_end`, with tests in `pipeline/tests/test_check.py` (151 tests pass, 97 % coverage; real XM answered `2026-10-25`).
 - [x] `.github/workflows/poll.yml` (hourly at minute 17, `actions: write`, brake after 3 failed pipeline runs).
 - [x] Docs: runbook, deployment, architecture, security.
-- [ ] Update the monthly health routine prompt (poll.yml active, model data end not older than 5 days).
-- [ ] After the push: run `poll.yml` by hand once while the model is behind (it dispatches the pipeline), and again only after that pipeline has finished (it must say `new_data=false`); watch it for a day.
+- [x] Monthly health routine prompt updated: it now checks that `poll.yml` is active and had a successful run in the last 6 hours, and flags 3 pipeline runs in a row that did not succeed.
+- [x] After the push: `poll.yml` by hand with the model up to date answered `new_data=false` in 29 seconds (XM 2026-10-25, model 2026-10-25) and dropped the unsettled demand of the 26th.
+- [ ] Still to see in production: the first time the watcher starts the pipeline by itself, when XM publishes 2026-10-26 (expected within hours; check the `Daily pipeline` runs with event `workflow_dispatch` and the hourly `Watch XM for a new day` log). Unit tests cover that branch; production has not exercised it yet.
 - Open option: give `voltia check` the read-only database role through a second GitHub secret (the check only reads); today it uses the write URL.
 
 Verify with: `uv run --frozen pytest`, `ruff`, `mypy`; `voltia check` against the local SQLite; on GitHub, the two manual polls.
