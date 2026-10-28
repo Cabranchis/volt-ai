@@ -1,0 +1,76 @@
+name: Watch XM for a new day
+
+# XM publishes each day at no fixed hour, and GitHub delays scheduled runs, so the two fixed runs of
+# `Daily pipeline` can pick a new day up hours late. This light job runs every hour, asks XM whether
+# a complete day exists that the latest model run has not used, and only then starts the pipeline.
+# It writes nothing: the pipeline does the ingest, the training and the forecasts.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write # only to start `Daily pipeline`
+
+concurrency:
+  group: poll
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    name: Check XM and start the pipeline if there is a new day
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: pipeline/uv.lock
+      - name: Install from the lockfile only
+        run: uv sync --frozen --no-dev
+      - name: Is there a complete XM day the model has not used?
+        id: check
+        # If XM hangs the check is cut here and the run stays green: nothing is started, and the
+        # next hour asks again.
+        timeout-minutes: 4
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: uv run voltia check
+      - name: Start the pipeline
+        if: steps.check.outputs.new_data == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # A GitHub API hiccup must not turn into a red run: warn and let the next hour retry.
+          busy=0
+          for state in in_progress queued; do
+            n=$(gh run list --workflow pipeline.yml --status "$state" --json databaseId --jq length) \
+              || { echo "::warning::could not list pipeline runs; trying again next hour"; exit 0; }
+            busy=$((busy + n))
+          done
+          if [ "$busy" -gt 0 ]; then
+            echo "A pipeline run is already in progress or queued; if it misses the new day, the next check starts another."
+            exit 0
+          fi
+          # Anything but success counts (failure, timed_out, cancelled): a pipeline that never
+          # finishes would otherwise be restarted every hour.
+          failed=$(gh run list --workflow pipeline.yml --status completed --limit 3 --json conclusion \
+            --jq '[.[] | select(.conclusion != "success")] | length') \
+            || { echo "::warning::could not list pipeline runs; trying again next hour"; exit 0; }
+          if [ "$failed" -ge 3 ]; then
+            echo "::warning::The last 3 pipeline runs did not succeed; not starting another one every hour. Fix it first (docs/runbook.md)."
+            exit 0
+          fi
+          gh workflow run pipeline.yml \
+            || { echo "::warning::could not start the pipeline (is it disabled?); trying again next hour"; exit 0; }
+          echo "Started the pipeline: a new complete XM day is available."

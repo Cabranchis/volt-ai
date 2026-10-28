@@ -19,7 +19,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    subgraph GH[GitHub Actions - daily cron]
+    subgraph GH[GitHub Actions - daily cron and an hourly watcher]
       E[extract] --> VA[validate<br/>pandera] --> T[transform<br/>features] --> M[train + backtest<br/>LightGBM, baselines] --> PR[predict + SHAP<br/>anomalies] --> B[briefing] --> L[load<br/>idempotent upsert]
     end
     L --> DB[(PostgreSQL<br/>Neon or Supabase)]

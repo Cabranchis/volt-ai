@@ -33,3 +33,19 @@ Working notes for the project: current status, environment and open items.
 - The wording of the site avoids the word "liquidado" (XM's settlement process has revisions); the data are described as complete public XM data.
 - Done on 2026-10-27: `RATE_LIMIT_SALT`, `NEXT_PUBLIC_REPO_URL` and `NEXT_PUBLIC_SITE_URL` are set in Vercel (Production). `NEXT_PUBLIC_*` values are read at build time, so a change needs a redeploy.
 - Run the `Weekly backup` workflow once by hand after the push and check that the artifact `volt-ai-backup` appears.
+
+## In progress: update and train as soon as XM publishes a new day (started 2026-10-28)
+
+Goal: reach the newest complete day XM has and retrain right away, instead of waiting for the two fixed runs. Why: on 2026-10-28 XM already had 2026-10-25 complete (24 h of price and generation) while the database and the model stopped at the 24th; XM publishes at no fixed hour and GitHub delays the cron by hours. Plan: `~/.claude/plans/cryptic-kindling-cat.md` (the decisions below are the same).
+
+Decisions: a light hourly workflow `poll.yml` runs `voltia check` and dispatches `pipeline.yml` only when the newest complete XM day is later than the data end of the latest model run (comparing with the model, not with `ingest_log`, so a failed training is retried). `pipeline.yml` stays unchanged. Rejected: a full pipeline every hour (9 min of training x 24 a day), a reusable workflow (shared concurrency group deadlocks), watching only the price (training needs price and demand).
+
+- [ ] Step 0: run `Daily pipeline` by hand once and check `dataEnd` = 2026-10-25 (`/api/v1/model?x=1`).
+- [x] `voltia check` command (`pipeline/src/voltia/cli.py`) and `db.latest_model_data_end`, with tests in `pipeline/tests/test_check.py` (151 tests pass, 97 % coverage; real XM answered `2026-10-25`).
+- [x] `.github/workflows/poll.yml` (hourly at minute 17, `actions: write`, brake after 3 failed pipeline runs).
+- [x] Docs: runbook, deployment, architecture, security.
+- [ ] Update the monthly health routine prompt (poll.yml active, model data end not older than 5 days).
+- [ ] After the push: run `poll.yml` by hand once while the model is behind (it dispatches the pipeline), and again only after that pipeline has finished (it must say `new_data=false`); watch it for a day.
+- Open option: give `voltia check` the read-only database role through a second GitHub secret (the check only reads); today it uses the write URL.
+
+Verify with: `uv run --frozen pytest`, `ruff`, `mypy`; `voltia check` against the local SQLite; on GitHub, the two manual polls.

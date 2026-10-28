@@ -261,6 +261,16 @@ def insert_model_run(
         _upsert(conn, "model_runs", [row], ["run_id"])
 
 
+def latest_model_data_end(engine: Engine) -> date | None:
+    """The last data day the newest training run used, or None before the first run."""
+    with engine.connect() as conn:
+        table = _table(conn, "model_runs")
+        row = conn.execute(
+            select(table.c.data_end).order_by(table.c.trained_at.desc()).limit(1)
+        ).first()
+    return row[0] if row else None
+
+
 def run_exists(engine: Engine, run_id: str) -> bool:
     with engine.connect() as conn:
         table = _table(conn, "model_runs")

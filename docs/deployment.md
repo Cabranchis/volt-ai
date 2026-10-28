@@ -91,7 +91,7 @@ Leave `DATABASE_URL_READONLY` out of **Preview** so pull-request previews use th
 
 ## 7. Data refresh
 
-The pipeline workflow runs every day at 06:30 Colombia time. The pages revalidate every hour, so a new forecast appears within about an hour of the run.
+The pipeline workflow runs every day at 06:30 and 17:30 Colombia time. XM publishes each day at no fixed hour, so a second workflow, `Watch XM for a new day` (`poll.yml`), runs every hour at minute 17, asks XM whether a complete day exists that the latest model run has not used (`voltia check`) and, only then, starts `Daily pipeline`. A new XM day is therefore ingested and trained on within about one to two hours (GitHub can delay a scheduled run). The pages revalidate every hour, so a new forecast appears within about an hour of the run.
 
 ## Troubleshooting
 
