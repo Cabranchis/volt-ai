@@ -41,6 +41,13 @@ What to check and do when Volt-AI misbehaves. Every command runs from `pipeline/
 - Retrain: `uv run voltia train --predict`. The run is deterministic for the same data. Forecasts of the 10 most recent runs are kept; `forecast_log` keeps every forecast as first issued, for the live track record.
 - Regime shifts (a new El Niño phase, reservoir emergencies) are the known weak spot.
 
+## The pipeline did not pick up a new day
+
+1. Open the log of the last `Watch XM for a new day` run (Actions tab, step `Is there a complete XM day the model has not used?`). It prints the newest complete day XM has and the data end of the latest *production* model run. Running `voltia check` locally compares with your local SQLite file, not with production, so it cannot answer this.
+2. If XM is ahead and no pipeline started, look at the `Start the pipeline` step: it does not start a run while another one is running or queued, and it stops after three failed pipeline runs in a row (it warns instead). Fix the failure first, then start `Daily pipeline` by hand.
+3. To pause the watcher, disable the `Watch XM for a new day` workflow in the Actions tab; the two fixed daily runs keep working.
+4. GitHub disables scheduled workflows after 60 days without repository activity; re-enable it with "Enable workflow" in the Actions tab.
+
 ## Restoring the backup
 
 The `Weekly backup` workflow (Sundays, 07:15 Bogotá; also runnable by hand) uploads the artifact `volt-ai-backup` with `forecast_log`, `weather_forecast_log` and `model_runs` as gzipped CSV and a `manifest.json` with row counts and checksums. Everything else is rebuilt with `voltia backfill`.
@@ -71,6 +78,7 @@ If a secret was ever pasted somewhere public, rotate it first and investigate af
 
 | When | What |
 | --- | --- |
-| Daily, 11:30 UTC | The `Daily pipeline` workflow ingests, trains, forecasts, detects anomalies and writes the briefing. |
+| Daily, 11:30 and 22:30 UTC | The `Daily pipeline` workflow ingests, trains, forecasts, detects anomalies and writes the briefing. |
+| Every hour, minute 17 | The `Watch XM for a new day` workflow runs `voltia check` and starts `Daily pipeline` only if XM has a complete day (price and demand) later than the data end of the latest model run. Most runs end in seconds with `new_data=false`. |
 | Weekly | Review Dependabot pull requests; merge only with green CI. Major upgrades of the web toolchain (vite, plugin-react) must go together. |
 | After a schema change | Add a numbered file in `db/migrations`; `voltia migrate` applies it. Never edit an applied migration. |

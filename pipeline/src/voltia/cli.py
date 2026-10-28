@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import date, datetime
 from pathlib import Path
@@ -22,7 +24,14 @@ from voltia.config import Settings, get_settings
 from voltia.features import TARGETS
 from voltia.forecast import TrainedTarget, forecast_target, load_models, save_models
 from voltia.forecast import train as train_models
-from voltia.ingest import DATASETS, OPTIONAL_DATASETS, Clients, Result, run_all
+from voltia.ingest import (
+    DATASETS,
+    OPTIONAL_DATASETS,
+    Clients,
+    Result,
+    newest_complete_day,
+    run_all,
+)
 from voltia.models.backtest import BacktestConfig
 from voltia.models.gbm import GBMParams
 from voltia.sources.oni import OniClient
@@ -33,6 +42,7 @@ app = typer.Typer(help="Volt-AI data pipeline", no_args_is_help=True, add_comple
 log = structlog.get_logger()
 
 BOGOTA = ZoneInfo("America/Bogota")
+CHECK_TIMEOUT_S = 20.0
 
 
 def today_bogota() -> date:
@@ -238,6 +248,39 @@ def anomalies() -> None:
                 f"  {pd.Timestamp(day).date()} {direction:<4} severity={severity:.1f} "
                 f"deviation={detail['deviation_pct']:+.1f}%"
             )
+
+
+@app.command()
+def check() -> None:
+    """Say whether XM has a complete day the latest model run has not used (writes nothing).
+
+    Prints `new_data=true` or `new_data=false`, and writes the same line to $GITHUB_OUTPUT when it
+    is set. It always exits 0: if XM or the database cannot be read it warns and answers false, so
+    an outage does not turn into a failed run every hour.
+    """
+    new_data, ready, trained = False, None, None
+    closers: list[Callable[[], None]] = []
+    try:
+        settings = get_settings()
+        # A short timeout: an XM that hangs must end this check in a minute or two, not in ten.
+        xm = XMClient(settings.xm_base_url, CHECK_TIMEOUT_S)
+        meteo, oni = OpenMeteoClient(), OniClient()
+        closers = [xm.close, meteo.close, oni.close]
+        engine = db.make_engine(settings.resolved_database_url)
+        trained = db.latest_model_data_end(engine)
+        ready = newest_complete_day(Clients(xm, meteo, oni), settings, today_bogota())
+        new_data = ready is not None and (trained is None or ready > trained)
+    except Exception as exc:  # any failure must end as a warning, not as a red run
+        typer.echo(f"::warning::check could not run: {type(exc).__name__}: {exc}"[:300])
+    finally:
+        for close in closers:
+            close()
+    typer.echo(f"xm_newest_complete_day={ready} model_data_end={trained}")
+    line = f"new_data={'true' if new_data else 'false'}"
+    typer.echo(line)
+    if output := os.environ.get("GITHUB_OUTPUT"):
+        with open(output, "a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
 
 
 # What cannot be fetched again: the live track record, the rain forecasts and the run metrics.

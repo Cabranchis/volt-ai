@@ -354,6 +354,23 @@ def run_dataset(
         return Result(name, False, 0, last, f"{type(exc).__name__}: {exc}")
 
 
+def newest_complete_day(c: Clients, s: Settings, today: date, window_days: int = 7) -> date | None:
+    """The newest day XM has published in full for both the price and the demand.
+
+    It reads the last `window_days` through the same fetchers the pipeline uses, so a partial day
+    (fewer than 24 hours) or a placeholder demand is dropped exactly as it is when training. The
+    training needs both series, hence the earlier of the two days.
+    """
+    start, end = today - timedelta(days=window_days), today - timedelta(days=1)
+    price = fetch_xm_price(c, s, start, end, today).daily
+    demand = fetch_xm_daily(c, s, start, end, today).daily
+    price_days = price.loc[price["series"] == "price_mean_cop_kwh", "day"]
+    demand_days = demand.loc[demand["series"] == "demand_kwh", "day"]
+    if price_days.empty or demand_days.empty:
+        return None
+    return pd.Timestamp(min(price_days.max(), demand_days.max())).date()
+
+
 def run_all(
     engine: Engine,
     clients: Clients,
