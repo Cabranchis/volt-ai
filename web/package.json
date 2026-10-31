@@ -15,19 +15,19 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"tests/**/*.ts\""
   },
   "dependencies": {
-    "@ai-sdk/google": "4.0.105",
-    "ai": "7.0.153",
+    "@ai-sdk/google": "4.0.107",
+    "ai": "7.0.155",
     "echarts": "6.1.0",
-    "lucide-react": "1.61.0",
+    "lucide-react": "1.62.0",
     "next": "16.4.3",
     "postgres": "3.4.9",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "server-only": "0.0.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.13.0",
+    "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.64.1",
     "@tailwindcss/turbopack": "^4",
     "@testing-library/jest-dom": "7.0.1",
