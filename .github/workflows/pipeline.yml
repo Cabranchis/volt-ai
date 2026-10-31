@@ -82,3 +82,20 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
         run: uv run voltia brief
+      - name: Refresh the site
+        # Tells the site to drop its cached reads, so the first visitor after this run sees the new
+        # data and not the old copy. A site that is down must not turn a good run red.
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 2
+        working-directory: .
+        env:
+          REVALIDATE_TOKEN: ${{ secrets.REVALIDATE_TOKEN }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://voltia-xi-five.vercel.app' }}
+        run: |
+          if [ -z "$REVALIDATE_TOKEN" ]; then
+            echo "::warning::Secret REVALIDATE_TOKEN is not set; the site will refresh by itself within a day."
+            exit 0
+          fi
+          curl -fsS --max-time 30 -X POST -H "Authorization: Bearer $REVALIDATE_TOKEN" "$SITE_URL/api/revalidate" \
+            || echo "::warning::The site did not accept the refresh request; see docs/runbook.md."

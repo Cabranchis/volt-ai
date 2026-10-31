@@ -48,6 +48,14 @@ What to check and do when Volt-AI misbehaves. Every command runs from `pipeline/
 3. To pause the watcher, disable the `Watch XM for a new day` workflow in the Actions tab; the two fixed daily runs keep working.
 4. GitHub disables scheduled workflows after 60 days without repository activity; re-enable it with "Enable workflow" in the Actions tab.
 
+## The site shows old data
+
+The pipeline asks the site to refresh at the end of every run (step `Refresh the site`). If a page still shows a day-old date:
+
+1. Open the last `Daily pipeline` run and read that step. A `::warning::` means the request failed or the secret `REVALIDATE_TOKEN` is missing.
+2. To refresh by hand: `curl -X POST -H "Authorization: Bearer <the token>" https://<site>/api/revalidate` (an HTTP 200 with `{"revalidated":true}`). Or redeploy the site in Vercel.
+3. To rotate the token, create a new random value, set it in GitHub (secret) and in Vercel (sensitive variable), and redeploy.
+
 ## Restoring the backup
 
 The `Weekly backup` workflow (Sundays, 07:15 Bogotá; also runnable by hand) uploads the artifact `volt-ai-backup` with `forecast_log`, `weather_forecast_log` and `model_runs` as gzipped CSV and a `manifest.json` with row counts and checksums. Everything else is rebuilt with `voltia backfill`.
