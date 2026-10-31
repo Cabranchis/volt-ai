@@ -165,6 +165,12 @@ test.describe("security headers", () => {
     expect(headers["x-powered-by"]).toBeUndefined();
   });
 
+  test("the refresh endpoint refuses a caller without the token", async ({ request }) => {
+    const post = await request.post("/api/revalidate");
+    expect([401, 503]).toContain(post.status()); // 503 here: no token is configured in the test build
+    expect((await request.get("/api/revalidate")).status()).toBe(405);
+  });
+
   test("the API rejects bad input with a problem document", async ({ request }) => {
     const response = await request.get("/api/v1/series?names=nope");
     expect(response.status()).toBe(400);

@@ -91,7 +91,9 @@ Leave `DATABASE_URL_READONLY` out of **Preview** so pull-request previews use th
 
 ## 7. Data refresh
 
-The pipeline workflow runs every day at 06:30 and 17:30 Colombia time. XM publishes each day at no fixed hour, so a second workflow, `Watch XM for a new day` (`poll.yml`), runs every hour at minute 17, asks XM whether a complete day exists that the latest model run has not used (`voltia check`) and, only then, starts `Daily pipeline`. A new XM day is therefore ingested and trained on within about one to two hours (GitHub can delay a scheduled run). The pages revalidate every hour, so a new forecast appears within about an hour of the run.
+The pipeline workflow runs every day at 06:30 and 17:30 Colombia time. XM publishes each day at no fixed hour, so a second workflow, `Watch XM for a new day` (`poll.yml`), runs every hour at minute 17, asks XM whether a complete day exists that the latest model run has not used (`voltia check`) and, only then, starts `Daily pipeline`. A new XM day is therefore ingested and trained on within about one to two hours (GitHub can delay a scheduled run). When the run ends, its last step asks the site to drop its cached reads (`POST /api/revalidate`), so a new forecast appears as soon as the run finishes. The pages still revalidate every hour as a fallback.
+
+The same random value, `REVALIDATE_TOKEN`, must be set in two places: as a GitHub Actions secret and as a sensitive Vercel environment variable (Production and Preview). Without the secret the step only warns. Optionally set the repository variable `SITE_URL` if the domain changes.
 
 ## Troubleshooting
 

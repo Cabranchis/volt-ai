@@ -50,3 +50,18 @@ Decisions: a light hourly workflow `poll.yml` runs `voltia check` and dispatches
 - Open option: give `voltia check` the read-only database role through a second GitHub secret (the check only reads); today it uses the write URL.
 
 Verify with: `uv run --frozen pytest`, `ruff`, `mypy`; `voltia check` against the local SQLite; on GitHub, the two manual polls.
+
+## In progress: the site shows the new data as soon as the pipeline ends (started 2026-10-31)
+
+Goal: the first visitor after a quiet period must not see old data. Measured on 2026-10-31 04:08 UTC: `/api/v1/health` returned the state of 2026-10-29 09:59 (`X-Vercel-Cache: STALE`, stale-while-revalidate) and the next call returned the real state; `/en/models` showed the track record of the 25th when the 26th was already stored. `getHealth` already uses `cacheLife("minutes")`, so shortening the profile does not fix it. Plan: `~/.claude/plans/cryptic-kindling-cat.md`.
+
+Decisions: tag every cached accessor with `cacheTag("data")`; a protected `POST /api/revalidate` (Bearer `REVALIDATE_TOKEN`, constant-time compare, rate limited) calls `revalidateTag("data", { expire: 0 })`; the last step of `pipeline.yml` calls it (never fails the run). Rejected: a Vercel deploy hook (rebuilds the whole site on every run) and only shortening `cacheLife`.
+
+- [x] Code: `web/src/lib/data/index.ts` (10 accessors tagged), `web/src/app/api/revalidate/route.ts` and its test (185 unit tests, 85 e2e pass), e2e check.
+- [x] `pipeline.yml` step "Refresh the site" (warns and continues while the secret is missing).
+- [ ] Secret `REVALIDATE_TOKEN` in GitHub (`gh secret set`) and in Vercel (sensitive, Production and Preview); never print or store the value.
+- [x] Docs: architecture, deployment, runbook, security.
+- Blocked on Miguel: the Vercel token of 2026-10-27 expired; a new temporary token is needed in `web/.env.vercel` (one line `VERCEL_TOKEN = ...`) to set the Vercel variable and redeploy.
+- [ ] After the push: run `Daily pipeline` by hand and compare the first request to `/api/v1/health` and `/en/models` before and after (before: stale; after: fresh). If the tag does not reach the CDN, fall back to a Vercel deploy hook.
+
+Verify with: `npx tsc --noEmit`, `npx eslint src`, `npx vitest run`, `npx next build`, `PW_CHANNEL=msedge npx playwright test`; then the production comparison above.
