@@ -59,9 +59,9 @@ Decisions: tag every cached accessor with `cacheTag("data")`; a protected `POST 
 
 - [x] Code: `web/src/lib/data/index.ts` (10 accessors tagged), `web/src/app/api/revalidate/route.ts` and its test (185 unit tests, 85 e2e pass), e2e check.
 - [x] `pipeline.yml` step "Refresh the site" (warns and continues while the secret is missing).
-- [ ] Secret `REVALIDATE_TOKEN` in GitHub (`gh secret set`) and in Vercel (sensitive, Production and Preview); never print or store the value.
+- [x] Secret `REVALIDATE_TOKEN` in GitHub and in Vercel (sensitive, Production and Preview), set 2026-10-31 without printing the value; site redeployed (endpoint answers 401 without the token, no longer 503).
 - [x] Docs: architecture, deployment, runbook, security.
-- Blocked on Miguel: the Vercel token of 2026-10-27 expired; a new temporary token is needed in `web/.env.vercel` (one line `VERCEL_TOKEN = ...`) to set the Vercel variable and redeploy.
-- [ ] After the push: run `Daily pipeline` by hand and compare the first request to `/api/v1/health` and `/en/models` before and after (before: stale; after: fresh). If the tag does not reach the CDN, fall back to a Vercel deploy hook.
+- [x] Verified in production 2026-10-31: manual `Daily pipeline` run 41204499613 succeeded; step "Refresh the site" returned `{"revalidated":true}` (HTTP 200); the first request afterwards to `/api/v1/health` came back `X-Vercel-Cache: REVALIDATED`, `Age: 0`, with `xm_price` to 2026-10-28 updated by that run (13:12 UTC). Not measured: the old behaviour on the same day (a fresh deploy had just reset the cache), so the improvement rests on the header and the data being fresh on the first request. Watch the first request of the next mornings.
+- Miguel still has to delete the temporary Vercel token (vercel.com/account/tokens) and `web/.env.vercel`.
 
 Verify with: `npx tsc --noEmit`, `npx eslint src`, `npx vitest run`, `npx next build`, `PW_CHANNEL=msedge npx playwright test`; then the production comparison above.
