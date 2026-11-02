@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type ConsoleMessage } from "@playwright/test";
 
-const PAGES = ["", "/demand", "/price", "/hydrology", "/map", "/anomalies", "/models", "/analyst", "/calculator", "/business", "/about"];
+const PAGES = ["", "/demand", "/price", "/hydrology", "/map", "/anomalies", "/models", "/case-study", "/analyst", "/calculator", "/business", "/about"];
 const LANGS = ["es", "en"] as const;
 
 test.describe("every page, in both languages", () => {

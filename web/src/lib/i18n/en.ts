@@ -14,6 +14,7 @@ export const en = {
     map: "Map",
     anomalies: "Anomalies",
     models: "Models",
+    case: "Case study",
     analyst: "Analyst",
     business: "For business",
     calculator: "Cost calculator",
@@ -339,6 +340,92 @@ export const en = {
     disclaimer: "Answers are generated from the data and can be wrong. Check the dates and figures.",
     youSaid: "You",
     analystSaid: "Analyst",
+  },
+  caseStudy: {
+    title: "Case study: El Niño and the price",
+    description:
+      "How the model behaved in the 2023–24 El Niño, in the 2024 supply shock and in the El Niño of 2026, with forecasts rebuilt day by day: the current model, retrained at each date with only the data available then.",
+    regimesTitle: "Error by period",
+    regimesNote:
+      "Price forecasts, 14 days ahead. MASE compares the error with the average error of repeating the value from a week earlier: lower is better, and 1 means the same size. Origins outside the named periods count only in the total.",
+    columns: {
+      period: "Period",
+      origins: "Origins",
+      model: "Volt-AI",
+      ets: "ETS",
+      naive: "Seasonal naive",
+      coverage: "Inside the band",
+      won: "Best of three",
+    },
+    regimes: {
+      "nino-2023": "El Niño 2023–24 (Nov to Apr)",
+      "crisis-2024": "Supply shock 2024 (Sep to Nov)",
+      calm: "Calm (Jan 2025 to Jun 2026)",
+      "nino-2026": "El Niño 2026, so far (Jul to Sep)",
+      all: "All {n} origins",
+    },
+    regimesReading:
+      "In calm conditions the model is clearly better than both references. In stress its error is four to eight times larger, and from September to November 2024 it lost to ETS. Each period has only 4 to 26 origins, so these averages show a pattern, not a statistical test.",
+    contextTitle: "The market in each episode",
+    contextNote: "Monthly figures from XM data. The last column is the most recent month with data.",
+    contextLabels: { oct2023: "Oct 2023", apr2024: "Apr 2024", oct2024: "Oct 2024", latest: "Latest month" },
+    contextRows: {
+      price: "Mean price (COP/kWh)",
+      reservoir: "Lowest reservoir level",
+      inflows: "Inflows against the mean",
+      thermal: "Thermal share of generation",
+      oni: "ONI (published by month end)",
+    },
+    contextReading:
+      "The last column updates with the data: compare it with the three episodes before it.",
+    casesTitle: "Four days, with the forecast rebuilt for each",
+    casesNote:
+      "The line is the real price. The dashed line and the shaded band are what the model said at the dashed vertical mark: its median and an 80 % range. The dotted line is the ETS reference.",
+    cases: [
+      {
+        origin: "2023-11-21",
+        title: "November 2023: a price that doubled",
+        reading:
+          "The price was 290 COP/kWh on the day, after about 830 a week earlier, and reached about 800 by early December. The median stayed flat around 350. The price stayed inside the wide band for ten days and then broke above it on the last four. The model still beat both references (neither saw the rise), but it did not anticipate it.",
+      },
+      {
+        origin: "2024-04-16",
+        title: "April 2024: the drought broke",
+        reading:
+          "The price was above 1,000 COP/kWh and the reservoirs reached their lowest level of the year that month, 29 %. Within two weeks the price fell almost 90 %, and inflows went from 60 % of the mean in April to 98 % in May. The model, ETS and the naive reference all kept the high price. Nothing built from recent prices can see the rain that ends a drought.",
+      },
+      {
+        origin: "2024-10-01",
+        title: "October 2024: a supply shock, not an El Niño",
+        reading:
+          "The price had spiked to about 2,500 the day before, then rose from 1,145 to 1,740 and stayed above the upper edge of the band on most days. The ONI known at the time was close to zero, so this was not El Niño: that month the reservoirs were at about 50 %, inflows at 62 % of the mean and thermal plants supplied 40 % of the energy. Both references did better than the model here (ETS 5.0, seasonal naive 6.8, Volt-AI 7.9).",
+      },
+      {
+        origin: "2026-09-15",
+        title: "September 2026: the current El Niño",
+        reading:
+          "In the current El Niño the model stayed inside its band on almost every day and beat both references. It is one of two wins in the four origins of the 2026 episode, so it shows the model working, not that it will keep working. This page keeps the record open.",
+      },
+    ],
+    scoreLine:
+      "Error (MASE): Volt-AI {model}, ETS {ets}, seasonal naive {naive}. {inside} of {total} days inside the band.",
+    limitsTitle: "What this page does not show",
+    limits: [
+      "The four days were chosen to show different behaviours. The table above scores all {n} origins.",
+      "It does not forecast what the price will do in 2026–27. It shows how the model behaved in comparable conditions.",
+      "These are reconstructed forecasts: the current model, retrained at each origin with only the data up to that day. Calibration and the ONI also use only what had been published, but the model's design was chosen after these episodes, so they are not forecasts issued at the time.",
+      "The ONI is published monthly with a delay, so the latest reading can be several months old.",
+    ],
+    method:
+      "Training run {runId}. The code that regenerates this page is in pipeline/research/case_el_nino.py and case_el_nino_pack.py.",
+    chart: {
+      actual: "Real price",
+      median: "Volt-AI median",
+      band: "80 % range (P10 to P90)",
+      ets: "ETS reference",
+      origin: "Forecast origin",
+      unit: "COP/kWh",
+    },
   },
   about: {
     title: "About Volt-AI",

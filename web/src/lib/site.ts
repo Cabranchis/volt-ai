@@ -15,7 +15,7 @@ export const SITE_URL =
   (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
 
 export interface NavItem {
-  key: "overview" | "demand" | "price" | "hydrology" | "map" | "anomalies" | "models" | "analyst" | "calculator" | "business" | "about";
+  key: "overview" | "demand" | "price" | "hydrology" | "map" | "anomalies" | "models" | "case" | "analyst" | "calculator" | "business" | "about";
   path: string;
 }
 
@@ -27,6 +27,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: "map", path: "/map" },
   { key: "anomalies", path: "/anomalies" },
   { key: "models", path: "/models" },
+  { key: "case", path: "/case-study" },
   { key: "analyst", path: "/analyst" },
   { key: "calculator", path: "/calculator" },
   { key: "business", path: "/business" },

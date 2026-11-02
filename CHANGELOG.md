@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- Case study page "El Niño and the price" (ES/EN): error by period, the market in each episode and four forecasts drawn against what happened, with the regenerating scripts in `pipeline/research/`.
 - Repository scaffolding, requirements, architecture and decision records.
 - Data layer: SQL migrations, XM / Open-Meteo / NOAA clients with retries, pandera validation, idempotent loading and the `voltia` CLI (`migrate`, `backfill`, `update`, `status`).
 - Handling of unsettled newest days reported by XM (ADR 0009).
