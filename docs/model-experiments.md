@@ -133,3 +133,20 @@ Each origin forecasts the mean daily price of three consecutive 30-day windows a
 | reported (run once) | `seasonal_ratio` | 40.1 / 75.5 / 86.6 | 60.2 / 138.3 / 152.9 | 0.88 / 0.83 / 0.73 |
 
 No candidate beats persistence with a paired interval that excludes zero on the development origins, and on the reported origins the errors grow to 30-85 % with no consistent winner. A monthly price outlook is therefore not published; the model card says why.
+
+## Calibration that adapts to stress (2026-11-02)
+
+Question: in stress the P10-P90 band covered 71 % (El Niño 2023-24) and 68 % (Sep-Nov 2024) of the days against the 80 % it promises. Does a calibration that adapts to the regime fix it? `research/run_calibration.py` re-calibrates the saved raw quantiles of `fs1_xgb` on the 37 scored development origins (nothing is retrained). V0 is the production calibration (every past origin, equal weight) and reproduces it exactly. The decision rule was written before the first run: a variant wins only if its coverage in the most volatile third of origins is at least 0.70 and closer to 0.80 than V0, its overall coverage is 0.80 +- 0.05, its mean relative width is at most 15 % above V0, and its mean pinball is not worse than V0.
+
+| Variant | What it is | Coverage, all | Coverage, volatile third | Coverage, rest | Relative width | Pinball | Paired pinball vs V0 [95 %] |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `V0` | current: every past origin, equal weight | 0.795 | 0.786 | 0.801 | 0.594 | 21.02 | |
+| `V1` | recency weights, half-life of 6 origins | 0.820 | 0.832 | 0.814 | 0.712 | 22.03 | +1.01 [-0.62, +2.55] |
+| `V2` | scores divided by the 28-day price volatility at their origin | 0.790 | 0.832 | 0.764 | 0.627 | 21.49 | +0.47 [-0.03, +0.82] |
+| `V3` | only past origins of the same regime (stress or not) | 0.784 | 0.770 | 0.792 | 0.625 | 21.73 | +0.71 [+0.15, +1.15] |
+
+Result: negative, no variant is shipped and the reported origins were not run. On the development origins the current calibration already covers 0.786 in the most volatile third, so there is nothing to fix there; V1 and V2 move that figure further from 0.80 (0.832), widen the band by 5 to 20 % and lose on pinball (V3 significantly). The reported origins were not used to look for a better variant.
+
+Why the band is short in 2023-24: the calibration is already doing most of the work (raw coverage 0.62 becomes 0.71 in El Niño 2023-24, and 0.38 becomes 0.68 in Sep-Nov 2024, production backtest, 50 origins). What is left is a regime break the centre of the forecast did not see (April 2024: price falls 90 % in two weeks; the ETS and seasonal naive references fail the same way). A wider band does not fix a wrong centre; new information does (rainfall, gas supply).
+
+Exploratory finding, after the fact (not a validated predictor): on the 50 production origins, those made when the thermal share of generation (7 days) was above 30 % (11 origins) had MASE 3.65 and coverage 0.67, against 0.87 and 0.85 for the other 39. A reservoir level below 40 % (3 origins) and the combined stress flag (41 of 50 origins) are not informative, and neither is the 28-day volatility (MASE 1.52 against 1.38). The 11 origins come from two episodes (Sep 2023 to Apr 2024 and Sep to Nov 2024), so they are not independent; the threshold was not tuned but the four flags were looked at together. It becomes a candidate warning that must be confirmed on origins from the live record before it is shown as more than a note.
