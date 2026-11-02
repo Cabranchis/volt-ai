@@ -34,6 +34,18 @@ Working notes for the project: current status, environment and open items.
 - Done on 2026-10-27: `RATE_LIMIT_SALT`, `NEXT_PUBLIC_REPO_URL` and `NEXT_PUBLIC_SITE_URL` are set in Vercel (Production). `NEXT_PUBLIC_*` values are read at build time, so a change needs a redeploy.
 - Run the `Weekly backup` workflow once by hand after the push and check that the artifact `volt-ai-backup` appears.
 
+## Done (negative result): bands that adapt to stress (2026-11-02)
+
+Plan approved by Miguel (`~/.claude/plans/cryptic-kindling-cat.md`). Result recorded in `docs/model-experiments.md` ("Calibration that adapts to stress").
+
+- [x] A1. `pipeline/research/run_calibration.py`: V0 current, V1 recency-weighted, V2 volatility-normalised, V3 by regime, on the saved development rows. V0 reproduces production exactly.
+- [x] A2. Decision rule written before running: none of V1-V3 qualified (coverage in the volatile third was already 0.786 with V0; V1/V2 moved it to 0.832, widened the band 5-20 % and lost on pinball, V3 significantly). Stop.
+- [x] A3. The reported origins were NOT run (the rule stops at A2). "Reported runs" stays at 8.
+- [x] B (calibration change) is cancelled. Nothing in production changes.
+- Finding for later, exploratory only: origins with thermal share above 30 % had MASE 3.65 and coverage 0.67 against 0.87 and 0.85 (11 of 50 production origins, two episodes). Volatility and reservoir level did not separate them. Next step if Miguel wants it: a "high thermal share" note on the Price page worded as a past pattern, and track it on live origins before calling it a warning. Other ideas still open: weekly NOAA ENSO series; rainfall forecasts archived from now on (evaluate on/after 2027-02-15); live-record alert when recent coverage drops below 65 %.
+
+Verify with: `cd pipeline/research && uv run --project . python run_calibration.py` (about 1 minute).
+
 ## In progress: case study "El Niño and the price" (started 2026-11-02)
 
 Goal: a page that shows, with the forecasts made on the day, how the price model behaved in the 2023-24 El Niño, the 2024 supply shock and the El Niño of 2026. Decided with Miguel: "with curves" (re-run the backtest to keep the P10/P50/P90 of each origin).
