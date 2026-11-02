@@ -34,6 +34,21 @@ Working notes for the project: current status, environment and open items.
 - Done on 2026-10-27: `RATE_LIMIT_SALT`, `NEXT_PUBLIC_REPO_URL` and `NEXT_PUBLIC_SITE_URL` are set in Vercel (Production). `NEXT_PUBLIC_*` values are read at build time, so a change needs a redeploy.
 - Run the `Weekly backup` workflow once by hand after the push and check that the artifact `volt-ai-backup` appears.
 
+## In progress: case study "El Niño and the price" (started 2026-11-02)
+
+Goal: a page that shows, with the forecasts made on the day, how the price model behaved in the 2023-24 El Niño, the 2024 supply shock and the El Niño of 2026. Decided with Miguel: "with curves" (re-run the backtest to keep the P10/P50/P90 of each origin).
+
+- [x] `pipeline/research/case_el_nino.py`: re-runs the production price backtest on the local SQLite copy and keeps every row (`research/results/case_el_nino_rows.json`). It reproduced the production MASE per origin exactly (max difference 0.0000).
+- [x] `pipeline/research/case_el_nino_pack.py`: writes `web/src/lib/case-study/el-nino.json` (regime scores, four cases with the 21 days before each origin, monthly market context). Regenerate it after a new training run only if the scores should move; the four cases are fixed origins.
+- [x] Page `/[lang]/case-study` (ES/EN), chart `CaseChart`, nav item, tests (`el-nino.test.ts`, e2e for both languages, axe light/dark). tsc, eslint, vitest (191) and Playwright (91) pass.
+- [x] Independent review by `deep-reviewer`: 18 findings, all applied. Main ones: the MASE definition in the copy was wrong (it is relative to a weekly seasonal naive); "forecasts made on the day" overclaimed (they are walk-forward reconstructions with today's model); the ONI row now uses the value already published at month end (it was hindsight); case texts are keyed by origin; the scripts fail if they do not reproduce production and check the `runId`; numbers in the copy come from the JSON or the live series.
+- [ ] Push, then check https://voltia-xi-five.vercel.app/es/case-study (the "latest month" column must read live data, not fixtures).
+- [ ] Link the page from LinkedIn text and `docs/comercial/primeros-contactos.md`.
+
+Findings it states (all from stored backtest, price, 14 days, MASE): El Niño 2023-24 origins 2.71 (ETS 3.35, naive 3.59); supply shock Sep-Nov 2024 5.33 (ETS 4.20: the model lost); calm Jan 2025-Jun 2026 0.69; El Niño 2026 so far 0.85 (4 origins). April 2024 (price fell ~90% in two weeks when the drought broke) and October 2024 (ONI −0.2, a supply shock) are the failures. Decision rule: never present the four cases as a sample; the table scores all 50 origins.
+
+Verify with: `cd web && npx tsc --noEmit && npx eslint src && npx vitest run`, `npx next build` then `PW_CHANNEL=msedge npx playwright test`; reproduce the data with `DATABASE_URL=sqlite:///data/voltia.sqlite uv run python research/case_el_nino.py` in `pipeline/`.
+
 ## In progress: update and train as soon as XM publishes a new day (started 2026-10-28)
 
 Goal: reach the newest complete day XM has and retrain right away, instead of waiting for the two fixed runs. Why: on 2026-10-28 XM already had 2026-10-25 complete (24 h of price and generation) while the database and the model stopped at the 24th; XM publishes at no fixed hour and GitHub delays the cron by hours. Plan: `~/.claude/plans/cryptic-kindling-cat.md` (the decisions below are the same).
@@ -46,7 +61,7 @@ Decisions: a light hourly workflow `poll.yml` runs `voltia check` and dispatches
 - [x] Docs: runbook, deployment, architecture, security.
 - [x] Monthly health routine prompt updated: it now checks that `poll.yml` is active and had a successful run in the last 6 hours, and flags 3 pipeline runs in a row that did not succeed.
 - [x] After the push: `poll.yml` by hand with the model up to date answered `new_data=false` in 29 seconds (XM 2026-10-25, model 2026-10-25) and dropped the unsettled demand of the 26th.
-- [ ] Still to see in production: the first time the watcher starts the pipeline by itself, when XM publishes 2026-10-26 (expected within hours; check the `Daily pipeline` runs with event `workflow_dispatch` and the hourly `Watch XM for a new day` log). Unit tests cover that branch; production has not exercised it yet.
+- [x] Seen in production: on 2026-11-02 18:21Z the watcher started the pipeline by itself (event `workflow_dispatch`) and it ended in success.
 - Open option: give `voltia check` the read-only database role through a second GitHub secret (the check only reads); today it uses the write URL.
 
 Verify with: `uv run --frozen pytest`, `ruff`, `mypy`; `voltia check` against the local SQLite; on GitHub, the two manual polls.

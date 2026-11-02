@@ -16,6 +16,7 @@ export const es: Dictionary = {
     map: "Mapa",
     anomalies: "Anomalías",
     models: "Modelos",
+    case: "Caso de estudio",
     analyst: "Analista",
     business: "Para empresas",
     calculator: "Calculadora de costo",
@@ -341,6 +342,92 @@ export const es: Dictionary = {
     disclaimer: "Las respuestas se generan a partir de los datos y pueden fallar. Verifica fechas y cifras.",
     youSaid: "Tú",
     analystSaid: "Analista",
+  },
+  caseStudy: {
+    title: "Caso de estudio: El Niño y el precio",
+    description:
+      "Cómo se comportó el modelo en El Niño de 2023–24, en el choque de oferta de 2024 y en El Niño de 2026, con pronósticos reconstruidos día a día: el modelo actual, reentrenado en cada fecha solo con los datos disponibles entonces.",
+    regimesTitle: "Error por periodo",
+    regimesNote:
+      "Pronósticos de precio a 14 días. El MASE compara el error con el error medio de repetir el valor de una semana antes: menor es mejor, y 1 significa del mismo tamaño. Los orígenes fuera de los periodos nombrados cuentan solo en el total.",
+    columns: {
+      period: "Periodo",
+      origins: "Orígenes",
+      model: "Volt-AI",
+      ets: "ETS",
+      naive: "Ingenuo estacional",
+      coverage: "Dentro de la banda",
+      won: "Mejor de los tres",
+    },
+    regimes: {
+      "nino-2023": "El Niño 2023–24 (nov a abr)",
+      "crisis-2024": "Choque de oferta 2024 (sep a nov)",
+      calm: "Calma (ene 2025 a jun 2026)",
+      "nino-2026": "El Niño 2026, hasta ahora (jul a sep)",
+      all: "Los {n} orígenes",
+    },
+    regimesReading:
+      "En calma el modelo es claramente mejor que las dos referencias. Bajo estrés su error es de cuatro a ocho veces mayor, y de septiembre a noviembre de 2024 perdió contra ETS. Cada periodo tiene entre 4 y 26 orígenes, así que estos promedios muestran un patrón, no una prueba estadística.",
+    contextTitle: "El mercado en cada episodio",
+    contextNote: "Cifras mensuales con datos de XM. La última columna es el mes más reciente con datos.",
+    contextLabels: { oct2023: "Oct 2023", apr2024: "Abr 2024", oct2024: "Oct 2024", latest: "Último mes" },
+    contextRows: {
+      price: "Precio medio (COP/kWh)",
+      reservoir: "Nivel mínimo de embalses",
+      inflows: "Aportes frente a la media",
+      thermal: "Peso de la térmica en la generación",
+      oni: "ONI (publicado a fin de mes)",
+    },
+    contextReading:
+      "La última columna se actualiza con los datos: compárala con los tres episodios anteriores.",
+    casesTitle: "Cuatro días, con el pronóstico reconstruido para cada uno",
+    casesNote:
+      "La línea continua es el precio real. La línea discontinua (de trazos) con la banda sombreada es lo que dijo el modelo en la marca vertical: su mediana y un rango del 80 %. La línea de puntos es la referencia ETS.",
+    cases: [
+      {
+        origin: "2023-11-21",
+        title: "Noviembre de 2023: un precio que se duplicó",
+        reading:
+          "El precio estaba en 290 COP/kWh ese día, tras unos 830 una semana antes, y llegó a unos 800 a comienzos de diciembre. La mediana se mantuvo plana en torno a 350. El precio se quedó dentro de la banda ancha diez días y la rompió por arriba en los últimos cuatro. El modelo igual superó a las dos referencias (ninguna vio la subida), pero no la anticipó.",
+      },
+      {
+        origin: "2024-04-16",
+        title: "Abril de 2024: se rompió la sequía",
+        reading:
+          "El precio superaba los 1.000 COP/kWh y los embalses tocaron ese mes su nivel más bajo del año, 29 %. En dos semanas el precio cayó casi 90 %, y los aportes pasaron de 60 % de la media en abril a 98 % en mayo. El modelo, ETS y la referencia ingenua mantuvieron el precio alto. Nada construido con precios recientes puede ver la lluvia que termina una sequía.",
+      },
+      {
+        origin: "2024-10-01",
+        title: "Octubre de 2024: un choque de oferta, no El Niño",
+        reading:
+          "El precio había tenido un pico de unos 2.500 el día anterior, luego subió de 1.145 a 1.740 y estuvo por encima del borde superior de la banda casi todos los días. El ONI conocido entonces era cercano a cero, así que no era El Niño: ese mes los embalses estaban en torno a 50 %, los aportes en 62 % de la media y las térmicas daban el 40 % de la energía. Las dos referencias lo hicieron mejor que el modelo (ETS 5,0, ingenuo estacional 6,8, Volt-AI 7,9).",
+      },
+      {
+        origin: "2026-09-15",
+        title: "Septiembre de 2026: El Niño actual",
+        reading:
+          "En El Niño actual el modelo se mantuvo dentro de su banda casi todos los días y superó a las dos referencias. Es una de las dos victorias en los cuatro orígenes del episodio de 2026, así que muestra al modelo funcionando, no que vaya a seguir haciéndolo. Esta página mantiene el registro abierto.",
+      },
+    ],
+    scoreLine:
+      "Error (MASE): Volt-AI {model}, ETS {ets}, ingenuo estacional {naive}. {inside} de {total} días dentro de la banda.",
+    limitsTitle: "Lo que esta página no muestra",
+    limits: [
+      "Los cuatro días se escogieron para mostrar comportamientos distintos. La tabla de arriba puntúa los {n} orígenes.",
+      "No pronostica qué hará el precio en 2026–27. Muestra cómo se portó el modelo en condiciones parecidas.",
+      "Son pronósticos reconstruidos: el modelo actual, reentrenado en cada origen solo con los datos hasta ese día. La calibración y el ONI también usan solo lo ya publicado, pero el diseño del modelo se eligió después de estos episodios, así que no son pronósticos emitidos en su momento.",
+      "El ONI se publica cada mes y con retraso, así que la última lectura puede tener varios meses.",
+    ],
+    method:
+      "Corrida de entrenamiento {runId}. El código que regenera esta página está en pipeline/research/case_el_nino.py y case_el_nino_pack.py.",
+    chart: {
+      actual: "Precio real",
+      median: "Mediana de Volt-AI",
+      band: "Rango del 80 % (P10 a P90)",
+      ets: "Referencia ETS",
+      origin: "Origen del pronóstico",
+      unit: "COP/kWh",
+    },
   },
   about: {
     title: "Acerca de Volt-AI",
