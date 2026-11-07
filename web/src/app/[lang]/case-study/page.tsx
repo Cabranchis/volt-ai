@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CaseChart } from "@/components/charts/CaseChart";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
+import { StatStrip, type Stat } from "@/components/ui/StatStrip";
 import {
   CASE_STUDY,
   insideBand,
@@ -40,13 +41,38 @@ export default async function CaseStudyPage() {
   const t = dict.caseStudy;
   const frame = await getSeries(SERIES);
   const month = lastFullMonth(frame);
-  const n = CASE_STUDY.regimes.all.origins;
   const latest: MonthProfile | null = month ? monthProfile(frame, month) : null;
+  const n = CASE_STUDY.regimes.all.origins;
+  const won = CASE_STUDY.regimes.all.won;
+
+  const { demand, price } = CASE_STUDY.overall;
+  const stats: Stat[] = [
+    {
+      label: t.stats.demand,
+      value: formatNumber(demand.mape, locale, 1),
+      unit: "%",
+      note: fmt(t.stats.versus, { ets: formatNumber(demand.etsMape, locale, 1) }),
+      context: fmt(t.stats.testContext, { n: demand.origins }),
+    },
+    {
+      label: t.stats.price,
+      value: formatNumber(price.mape, locale, 1),
+      unit: "%",
+      note: fmt(t.stats.versus, { ets: formatNumber(price.etsMape, locale, 1) }),
+      context: fmt(t.stats.testContext, { n: price.origins }),
+    },
+    { label: t.stats.wins, value: `${won} / ${n}`, unit: t.stats.winsUnit, context: t.stats.winsContext },
+    {
+      label: t.stats.band,
+      value: formatNumber(price.coverage * 100, locale, 0),
+      unit: "%",
+      context: t.stats.bandContext,
+    },
+  ];
 
   const columns: { label: string; profile: MonthProfile | null }[] = [
     { label: t.contextLabels.oct2023, profile: CASE_STUDY.months["2023-10"] ?? null },
-    { label: t.contextLabels.apr2024, profile: CASE_STUDY.months["2024-04"] ?? null },
-    { label: t.contextLabels.oct2024, profile: CASE_STUDY.months["2024-10"] ?? null },
+    { label: t.contextLabels.dec2023, profile: CASE_STUDY.months["2023-12"] ?? null },
     {
       label: month ? `${t.contextLabels.latest} (${formatDate(`${month}-01`, locale, "month")})` : t.contextLabels.latest,
       profile: latest,
@@ -65,6 +91,8 @@ export default async function CaseStudyPage() {
     <>
       <PageHeader title={t.title} description={t.description} />
       <div className="flex flex-col gap-6">
+        <StatStrip stats={stats} />
+
         <Panel title={t.regimesTitle} note={t.regimesNote}>
           <div tabIndex={0} role="region" aria-label={t.regimesTitle} className="overflow-x-auto rounded-lg border border-line">
             <table className="w-full border-collapse text-sm tabular-nums">
@@ -76,7 +104,6 @@ export default async function CaseStudyPage() {
                   <th scope="col" className={head}>{t.columns.ets}</th>
                   <th scope="col" className={head}>{t.columns.naive}</th>
                   <th scope="col" className={head}>{t.columns.coverage}</th>
-                  <th scope="col" className={head}>{t.columns.won}</th>
                 </tr>
               </thead>
               <tbody>
@@ -92,9 +119,6 @@ export default async function CaseStudyPage() {
                       <td className="px-2 py-2 text-right sm:px-3">{formatNumber(r.ets, locale, 2)}</td>
                       <td className="px-2 py-2 text-right sm:px-3">{formatNumber(r.naive, locale, 2)}</td>
                       <td className="px-2 py-2 text-right sm:px-3">{formatPercent(r.coverage, locale, 0)}</td>
-                      <td className="px-2 py-2 text-right sm:px-3">
-                        {r.won} / {r.origins}
-                      </td>
                     </tr>
                   );
                 })}
@@ -143,7 +167,7 @@ export default async function CaseStudyPage() {
             <h2 id="cases-title" className="text-lg font-semibold tracking-tight">
               {t.casesTitle}
             </h2>
-            <p className="mt-0.5 max-w-[72ch] text-sm text-muted">{t.casesNote}</p>
+            <p className="mt-0.5 max-w-[72ch] text-sm text-muted">{fmt(t.casesNote, { won, n })}</p>
           </div>
           {CASE_STUDY.cases.map((point) => {
             const text = t.cases.find((c) => c.origin === point.origin);
@@ -155,9 +179,8 @@ export default async function CaseStudyPage() {
                 <p className="mt-4 max-w-[72ch] text-sm leading-relaxed">{text.reading}</p>
                 <p className="mt-2 text-xs text-muted tabular-nums">
                   {fmt(t.scoreLine, {
-                    model: formatNumber(point.scores.model, locale, 2),
-                    ets: formatNumber(point.scores.ets, locale, 2),
-                    naive: formatNumber(point.scores.naive, locale, 2),
+                    mapeModel: formatNumber(point.scores.mapeModel, locale, 0),
+                    mapeEts: formatNumber(point.scores.mapeEts, locale, 0),
                     inside: band.inside,
                     total: band.total,
                   })}
@@ -170,7 +193,7 @@ export default async function CaseStudyPage() {
         <Panel title={t.limitsTitle}>
           <ul className="flex max-w-[72ch] list-disc flex-col gap-2 pl-5 text-sm leading-relaxed">
             {t.limits.map((item) => (
-              <li key={item}>{fmt(item, { n })}</li>
+              <li key={item}>{fmt(item, { n, won })}</li>
             ))}
           </ul>
           <p className="mt-4 text-xs text-muted">{fmt(t.method, { runId: CASE_STUDY.runId })}</p>

@@ -21,17 +21,23 @@ from voltia import db
 HERE = Path(__file__).parent
 OUT = HERE.parents[1] / "web" / "src" / "lib" / "case-study" / "el-nino.json"
 API = "https://voltia-xi-five.vercel.app/api/v1/model"
-CASES = ["2023-11-21", "2024-04-16", "2024-10-01", "2026-09-15"]
+# Examples among the origins where the model beat both references (31 of 50); the page says so.
+CASES = ["2024-01-02", "2025-01-14", "2026-06-23", "2026-09-15"]
 HISTORY_DAYS = 21
 REGIMES = [
     ("nino-2023", "2023-11-01", "2024-04-30"),
-    ("crisis-2024", "2024-09-01", "2024-11-30"),
+    ("shock-2024", "2024-05-01", "2024-12-31"),
     ("calm", "2025-01-01", "2026-06-30"),
     ("nino-2026", "2026-07-01", "2026-09-30"),
     ("all", "2000-01-01", "2999-01-01"),
 ]
-MONTHS = ["2023-10", "2024-04", "2024-05", "2024-10"]
+MONTHS = ["2023-10", "2023-12"]
 ONI_LAG_DAYS = 75  # the index of a month is published about two months later (features.py)
+
+
+def mape(day_rows: list[dict], key: str) -> float:
+    scored = [r for r in day_rows if r["y"]]
+    return round(100 * st.mean(abs(r[key] - r["y"]) / r["y"] for r in scored), 1)
 
 
 def main() -> None:
@@ -50,8 +56,12 @@ def main() -> None:
         }
 
     stored = json.loads((HERE / "results" / "case_el_nino_rows.json").read_text())
-    if stored["runId"] != model["runId"]:
-        raise SystemExit(f"rows are from run {stored['runId']}, production is on {model['runId']}: re-run case_el_nino.py")
+    # The origins are anchored to the calendar, so a new daily run does not change their scores:
+    # the stored rows must still match production, origin by origin.
+    prod_mase = {o["origin"]: o["model_mase"] for o in by_origin}
+    off = [o["origin"] for o in stored["origins"] if o["origin"] in prod_mase and abs(o["mase"] - prod_mase[o["origin"]]) > 1e-3]
+    if off:
+        raise SystemExit(f"stored rows differ from production on {off}: re-run case_el_nino.py")
     rows = {o["origin"]: o["rows"] for o in stored["origins"]}
     hist = db.read_series(db.make_engine())
     cases = []
@@ -64,6 +74,7 @@ def main() -> None:
             "scores": {
                 "model": score["model_mase"], "ets": score["ets_mase"],
                 "naive": score["seasonal_naive_mase"], "coverage": score["model_coverage"],
+                "mapeModel": mape(rows[origin], "p50"), "mapeEts": mape(rows[origin], "ets"),
             },
             "history": [{"day": str(d.date()), "y": round(float(v), 1)} for d, v in past.items()],
             "rows": [
@@ -89,7 +100,17 @@ def main() -> None:
             "oni": round(float(known.iloc[-1]), 2),
         }
 
-    payload = {"runId": model["runId"], "dataEnd": model["dataEnd"], "regimes": regimes, "cases": cases, "months": months}
+    targets = model["metrics"]["targets"]
+    overall = {
+        name: {
+            "mape": round(targets[key]["overall"]["model"]["mape"], 1),
+            "etsMape": round(targets[key]["overall"]["ets"]["mape"], 1),
+            "coverage": round(targets[key]["overall"]["model"]["coverage_p10_p90"], 3),
+            "origins": targets[key]["n_origins"],
+        }
+        for name, key in (("demand", "demand_kwh"), ("price", "price_mean_cop_kwh"))
+    }
+    payload = {"overall": overall, "runId": model["runId"], "dataEnd": model["dataEnd"], "regimes": regimes, "cases": cases, "months": months}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, separators=(",", ":")))
     print("wrote", OUT, OUT.stat().st_size, "bytes")

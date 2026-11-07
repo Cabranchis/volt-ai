@@ -4,7 +4,7 @@ import { buildCaseSeries, CASE_STUDY, insideBand, lastFullMonth, monthProfile, R
 describe("buildCaseSeries", () => {
   const point = {
     origin: "2024-01-03",
-    scores: { model: 1, ets: 2, naive: 3, coverage: 1 },
+    scores: { model: 1, ets: 2, naive: 3, coverage: 1, mapeModel: 5, mapeEts: 9 },
     history: [
       { day: "2024-01-02", y: 100 },
       { day: "2024-01-03", y: 110 },
