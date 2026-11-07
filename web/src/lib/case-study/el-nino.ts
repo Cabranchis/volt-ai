@@ -12,7 +12,7 @@ export interface CaseRow {
 
 export interface CasePoint {
   origin: string;
-  scores: { model: number; ets: number; naive: number; coverage: number };
+  scores: { model: number; ets: number; naive: number; coverage: number; mapeModel: number; mapeEts: number };
   history: { day: string; y: number }[];
   rows: CaseRow[];
 }
@@ -34,11 +34,19 @@ export interface MonthProfile {
   oni: number | null;
 }
 
-export const REGIME_KEYS = ["nino-2023", "crisis-2024", "calm", "nino-2026", "all"] as const;
+export const REGIME_KEYS = ["nino-2023", "shock-2024", "calm", "nino-2026", "all"] as const;
 export type RegimeKey = (typeof REGIME_KEYS)[number];
+
+export interface OverallScore {
+  mape: number;
+  etsMape: number;
+  coverage: number;
+  origins: number;
+}
 
 export const CASE_STUDY = data as unknown as {
   runId: string;
+  overall: { demand: OverallScore; price: OverallScore };
   dataEnd: string;
   regimes: Record<RegimeKey, Regime>;
   cases: CasePoint[];

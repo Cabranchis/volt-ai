@@ -65,6 +65,7 @@ def main() -> None:
             compared += 1
         out.append({
             "origin": key,
+            "mase": round(mase, 4),
             "rows": [
                 {"day": str(pd.Timestamp(r.day).date()), "h": int(r.h), "y": None if pd.isna(r.y) else float(r.y),
                  "p10": float(r.m10), "p50": float(r.m50), "p90": float(r.m90),

@@ -46,7 +46,7 @@ Plan approved by Miguel (`~/.claude/plans/cryptic-kindling-cat.md`). Result reco
 
 Verify with: `cd pipeline/research && uv run --project . python run_calibration.py` (about 1 minute).
 
-## In progress: case study "El Niño and the price" (started 2026-11-02)
+## Done: results page "Volt-AI in El Niño" (started 2026-11-02, reframed 2026-11-07)
 
 Goal: a page that shows, with the forecasts made on the day, how the price model behaved in the 2023-24 El Niño, the 2024 supply shock and the El Niño of 2026. Decided with Miguel: "with curves" (re-run the backtest to keep the P10/P50/P90 of each origin).
 
@@ -60,6 +60,9 @@ Goal: a page that shows, with the forecasts made on the day, how the price model
 Findings it states (all from stored backtest, price, 14 days, MASE): El Niño 2023-24 origins 2.71 (ETS 3.35, naive 3.59); supply shock Sep-Nov 2024 5.33 (ETS 4.20: the model lost); calm Jan 2025-Jun 2026 0.69; El Niño 2026 so far 0.85 (4 origins). April 2024 (price fell ~90% in two weeks when the drought broke) and October 2024 (ONI −0.2, a supply shock) are the failures. Decision rule: never present the four cases as a sample; the table scores all 50 origins.
 
 Verify with: `cd web && npx tsc --noEmit && npx eslint src && npx vitest run`, `npx next build` then `PW_CHANNEL=msedge npx playwright test`; reproduce the data with `DATABASE_URL=sqlite:///data/voltia.sqlite uv run python research/case_el_nino.py` in `pipeline/`.
+
+Reframed on 2026-11-07 at Miguel's request: the page now shows only what is valuable and attractive for clients (headline figures, error by period, El Niño then and now, four forecasts where Volt-AI beat both references: 2024-01-02, 2025-01-14, 2026-06-23, 2026-09-15). The failure cases (April and October 2024 charts) were removed from the page. The independent review made me keep the full partition of the 50 dates in the table: the row "Supply shock 2024 (May to Dec)" (12 dates) shows Volt-AI level with ETS (MASE 2.61 against 2.55), because hiding it made "lowest error in every period" misleading. Decisions kept for honesty: the cases are labelled as examples chosen among the 31 of 50 dates where the model beat both references; the total row still includes Sep-Nov 2024 and the text says so; forecasts are described as reconstructions; the Models page and `/api/v1/model` still publish the full backtest per origin. Do not remove those disclosures. Nav label: "Results" / "Resultados" (route `/case-study`).
+The rain-forecast archive (`weather_forecast_log`, migration 0005) already exists and fills daily; evaluate rain features on or after 2027-02-15.
 
 ## In progress: update and train as soon as XM publishes a new day (started 2026-10-28)
 
