@@ -373,7 +373,7 @@ export const es: Dictionary = {
       "nino-2023": "El Niño 2023–24 (nov a abr)",
       "shock-2024": "Choque de oferta 2024 (may a dic)",
       calm: "Calma (ene 2025 a jun 2026)",
-      "nino-2026": "El Niño 2026, hasta ahora (jul a sep)",
+      "nino-2026": "El Niño 2026, hasta ahora (desde jul)",
       all: "Las {n} fechas de prueba",
     },
     regimesReading:

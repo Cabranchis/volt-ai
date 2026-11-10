@@ -371,7 +371,7 @@ export const en = {
       "nino-2023": "El Niño 2023–24 (Nov to Apr)",
       "shock-2024": "Supply shock 2024 (May to Dec)",
       calm: "Calm (Jan 2025 to Jun 2026)",
-      "nino-2026": "El Niño 2026, so far (Jul to Sep)",
+      "nino-2026": "El Niño 2026, so far (from Jul)",
       all: "All {n} test dates",
     },
     regimesReading:
