@@ -2,6 +2,16 @@
 
 Working notes for the project: current status, environment and open items.
 
+## Done: half-published hydrology days (2026-11-12)
+
+Incident: on 2026-11-12 11:09 UTC `xm_daily` stored the 11th with the reservoir level at 7.6 % (79 % the day before). The Hydrology page showed it for a few hours. A manual `Daily pipeline` run at 14:46 UTC replaced it with XM's finished value (78.7 %) and a new model run; the price forecast barely moved (378 -> 375 COP/kWh on day 1; 462 -> 468 on day 14), so my first report overstated the forecast damage.
+
+- [x] `plausible_hydrology` in `pipeline/src/voltia/ingest.py`, applied in `fetch_xm_daily` and `fetch_xm_market` (capacity); limits from 3 220 days of history (ADR 0013).
+- [x] 8 new tests in `tests/test_ingest.py`; `pytest` (161), `ruff`, `mypy src` pass.
+- [x] ADR 0013, runbook entry, CHANGELOG.
+- [ ] After the next pipeline runs: check that Hydrology shows the real level and look for `ingest.hydrology.implausible_days_dropped` in the `Ingest what is new` log. Not verifiable here: whether XM publishes another partial day.
+- Open, separate: `/health` shows `degraded` for one failed `weather_forecast` run (`the forecast has missing values`, 2026-11-10 and 2026-11-12, both recovered the same day). The refusal is intentional (the archive must not store a short forecast); a possible improvement is to degrade only after several consecutive failures.
+
 ## Status
 
 | Phase | Description | Status |

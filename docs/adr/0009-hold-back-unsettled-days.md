@@ -26,3 +26,5 @@ A placeholder passes a "positive number" check. A partly settled day could even 
 ## Rejected alternatives
 - Range checks only: lets a partly settled day through.
 - Dropping the newest N days blindly: hides data that is already final (the hydrology series) and does not adapt if XM changes its lag.
+
+Update 2026-11-12: the hydrology series are not always complete either; see ADR 0013.
