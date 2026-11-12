@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- Hydrology days that XM publishes half finished (a reservoir level of 7.6 % after 79 %) are held back at ingest instead of stored (ADR 0013).
 - Results page "Volt-AI in El Niño" (ES/EN): headline figures, error by period, El Niño then and now and four forecasts drawn against what happened, with the regenerating scripts in `pipeline/research/`.
 - Repository scaffolding, requirements, architecture and decision records.
 - Data layer: SQL migrations, XM / Open-Meteo / NOAA clients with retries, pandera validation, idempotent loading and the `voltia` CLI (`migrate`, `backfill`, `update`, `status`).

@@ -26,7 +26,9 @@ from voltia.ingest import (
     XM_RIVER_METRICS,
     XM_SPILL_METRIC,
     Clients,
+    fetch_xm_daily,
     fetch_xm_market,
+    plausible_hydrology,
     run_all,
     settled_demand,
 )
@@ -371,3 +373,155 @@ def test_spill_is_zero_on_settled_unlisted_days_and_empty_on_the_newest(settings
     batch = fetch_xm_market(clients, settings, SINCE, TODAY, TODAY)
     spill = batch.daily[batch.daily["series"] == "spill_kwh"].set_index("day")["value"]
     assert spill.to_dict() == {pd.Timestamp("2026-10-18"): 5e6, pd.Timestamp("2026-10-19"): 0.0}
+
+
+def _hydrology(rows: dict[str, list[float]], start: str = "2026-11-08") -> pd.DataFrame:
+    """A long daily frame, one list of values per series, from `start`."""
+    days = pd.date_range(start, periods=len(next(iter(rows.values()))))
+    return pd.concat(
+        [
+            pd.DataFrame({"series": name, "day": days, "value": values})
+            for name, values in rows.items()
+        ],
+        ignore_index=True,
+    )
+
+
+INCIDENT = {  # XM, 2026-11-12 11:09 UTC: the 11th arrived half published
+    "reservoir_pct": [0.79188, 0.79212, 0.79068, 0.07639],
+    "reservoir_kwh": [13.988e9, 13.992e9, 13.967e9, 1.351e9],
+    "inflows_pct": [0.758, 0.521, 0.432, 0.054],
+    "inflows_kwh": [205.6e6, 141.4e6, 117.1e6, 14.7e6],
+    "inflows_hist_mean_kwh": [271.15e6] * 4,
+}
+
+
+def test_a_half_published_hydrology_day_is_dropped_for_every_series() -> None:
+    kept = plausible_hydrology(_hydrology(INCIDENT))
+    assert kept["day"].max() == pd.Timestamp("2026-11-10")
+    assert kept.groupby("series")["day"].count().to_dict() == dict.fromkeys(INCIDENT, 3)
+
+
+def test_real_extreme_hydrology_moves_are_kept() -> None:
+    # The largest daily moves in 3 220 days from 2018: -2.2 and +3.5 points of reservoir level,
+    # 0.9546 and 1.0518 times the stored volume, inflows at 0.452 of the previous day.
+    rows = {
+        "reservoir_pct": [0.60, 0.5777, 0.6124],
+        "reservoir_kwh": [10.0e9, 9.546e9, 10.040e9],
+        "inflows_kwh": [200e6, 90.4e6, 231e6],
+    }
+    frame = _hydrology(rows)
+    assert len(plausible_hydrology(frame)) == len(frame)
+
+
+def test_the_first_day_and_a_single_day_have_nothing_to_compare_with() -> None:
+    frame = _hydrology({"reservoir_kwh": [1.0e9], "inflows_kwh": [1.0e6]})
+    assert len(plausible_hydrology(frame)) == len(frame)
+
+
+def test_two_bad_days_in_a_row_are_both_dropped() -> None:
+    rows = {"reservoir_kwh": [13.9e9, 1.3e9, 1.2e9], "inflows_kwh": [117e6, 14e6, 13e6]}
+    kept = plausible_hydrology(_hydrology(rows))
+    assert kept["day"].tolist() == [pd.Timestamp("2026-11-08")] * 2  # one row per series
+
+
+def test_partial_inflows_alone_drop_the_day() -> None:
+    rows = {
+        "reservoir_kwh": [13.9e9, 13.9e9],
+        "inflows_kwh": [117e6, 14e6],
+        "inflows_pct": [0.43, 0.05],
+    }
+    kept = plausible_hydrology(_hydrology(rows))
+    assert kept["day"].max() == pd.Timestamp("2026-11-08")
+    assert set(kept["series"]) == set(rows)
+
+
+def test_other_series_pass_through_untouched() -> None:
+    frame = pd.concat(
+        [_hydrology(INCIDENT), _hydrology({"demand_kwh": [2.4e8, 2.5e8, 2.4e8, 2.5e8]})],
+        ignore_index=True,
+    )
+    kept = plausible_hydrology(frame)
+    assert (kept["series"] == "demand_kwh").sum() == 4
+
+
+class _HydroXM:
+    """XM answering `fetch_xm_daily` with the incident's hydrology and settled demand."""
+
+    days = pd.date_range("2026-11-08", periods=4)
+
+    def daily_system(self, metric: str, start: date, end: date) -> pd.DataFrame:
+        series = XM_DAILY_METRICS[metric]
+        values = INCIDENT.get(series, [248e6] * 4)
+        return pd.DataFrame({"day": self.days, "value": values})
+
+    def hourly_system(self, metric: str, start: date, end: date) -> pd.DataFrame:
+        return pd.DataFrame(
+            {"day": self.days.repeat(24), "hour": list(range(1, 25)) * 4, "value": 248e6 / 24}
+        )
+
+
+def test_fetch_xm_daily_stores_no_half_published_hydrology(settings: Settings) -> None:
+    clients = Clients(_HydroXM(), None, None)  # type: ignore[arg-type]
+    daily = fetch_xm_daily(clients, settings, SINCE, TODAY, TODAY).daily
+    last = daily.groupby("series")["day"].max()
+    assert last["reservoir_pct"] == pd.Timestamp("2026-11-10")
+    assert last["inflows_pct"] == pd.Timestamp("2026-11-10")
+    assert last["demand_kwh"] == pd.Timestamp("2026-11-11")  # demand has its own check
+
+
+def test_a_half_published_capacity_day_is_dropped() -> None:
+    frame = _hydrology({"reservoir_capacity_kwh": [17.7e9, 17.7e9, 1.5e9]})
+    kept = plausible_hydrology(frame, ("reservoir_capacity_kwh",))
+    assert kept["day"].max() == pd.Timestamp("2026-11-09")
+
+
+def test_the_limits_are_sharp() -> None:
+    def kept(ratio: float) -> bool:
+        frame = _hydrology({"reservoir_kwh": [10e9, 10e9 * ratio]})
+        return len(plausible_hydrology(frame)) == 2
+
+    assert kept(0.86)
+    assert kept(1.14)
+    assert not kept(0.84)
+    assert not kept(1.16)
+    assert len(plausible_hydrology(_hydrology({"inflows_kwh": [100e6, 26e6]}))) == 2
+    assert len(plausible_hydrology(_hydrology({"inflows_kwh": [100e6, 24e6]}))) == 1
+
+
+def test_a_half_published_percentage_is_caught_even_if_the_volume_is_missing() -> None:
+    # XM lists each metric on its own: the percentage can exist for a day the volume does not.
+    frame = pd.concat(
+        [
+            _hydrology({"reservoir_pct": [0.79, 0.076]}),
+            _hydrology({"reservoir_kwh": [13.97e9]}),
+        ],
+        ignore_index=True,
+    )
+    kept = plausible_hydrology(frame)
+    assert kept[kept["series"] == "reservoir_pct"]["day"].tolist() == [pd.Timestamp("2026-11-08")]
+
+
+class _CapacityXM(_MarketXM):
+    """The market fixture with a half published capacity on the newest day."""
+
+    def daily_system(self, metric: str, start: date, end: date) -> pd.DataFrame:
+        frame = super().daily_system(metric, start, end)
+        if XM_MARKET_DAILY.get(metric) == "reservoir_capacity_kwh":
+            frame["value"] = [17.7e9, 17.7e9, 1.5e9]
+        return frame
+
+
+def test_fetch_xm_market_drops_only_the_bad_capacity_day(settings: Settings) -> None:
+    clients = Clients(_CapacityXM(), None, None)  # type: ignore[arg-type]
+    daily = fetch_xm_market(clients, settings, SINCE, TODAY, TODAY).daily
+    last = daily.groupby("series")["day"].max()
+    assert last["reservoir_capacity_kwh"] == pd.Timestamp("2026-10-19")
+    assert last["turbined_m3"] == pd.Timestamp("2026-10-20")
+    assert last["scarcity_price"] == pd.Timestamp("2026-10-20")
+
+
+def test_duplicated_rows_are_left_for_the_validator() -> None:
+    frame = _hydrology({"reservoir_kwh": [10e9, 10e9]})
+    frame = pd.concat([frame, frame.iloc[[0]]], ignore_index=True)
+    assert len(plausible_hydrology(frame)) == 3

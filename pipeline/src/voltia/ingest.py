@@ -61,6 +61,27 @@ UNLISTED_RIVER_REGION = {"AMOYA": "CENTRO"}
 MIX_CATEGORIES = ["hydro", "thermal", "solar", "wind", "cogen", "other"]
 HOURS_PER_DAY = 24
 DEMAND_TOLERANCE = 0.08  # demand / generation stays within about -3 % to +5 % in every year
+# Hydrology days published before XM has finished them (2026-11-12 11:09 UTC: the reservoir level
+# of the 11th arrived as 0.076 when the day before was 0.791). Over 3 220 days from 2018 the daily
+# ratio to the previous day stayed within 0.955 to 1.052 for the stored volume (0.972 to 1.052 for
+# its percentage), 0.966 to 1.031 for the capacity and above 0.452 for the inflows. The limits leave
+# about three times the range for the volume and the capacity; the inflows limit only catches
+# drops of more than 75 %, because inflows vary a lot from day to day.
+HYDRO_SERIES = (
+    "reservoir_pct",
+    "reservoir_kwh",
+    "inflows_pct",
+    "inflows_kwh",
+    "inflows_hist_mean_kwh",
+)
+# Ratio of a day to the last accepted one: (lowest, highest), None for no limit.
+HYDRO_STEP_LIMITS: dict[str, tuple[float | None, float | None]] = {
+    "reservoir_pct": (0.85, 1.15),
+    "reservoir_kwh": (0.85, 1.15),
+    "reservoir_capacity_kwh": (0.85, 1.15),
+    "inflows_pct": (0.25, None),
+    "inflows_kwh": (0.25, None),
+}
 
 
 @dataclass(frozen=True)
@@ -146,6 +167,53 @@ def settled_demand(demand: pd.DataFrame, generation: pd.DataFrame) -> pd.DataFra
     return kept[["day", "value"]]
 
 
+def plausible_hydrology(daily: pd.DataFrame, group: tuple[str, ...] = HYDRO_SERIES) -> pd.DataFrame:
+    """Drop the days of `group` that XM published before finishing them.
+
+    A partly published day can pass range checks (a reservoir level of 0.076 is a number between
+    0 and 1), so each guarded series is compared with its last accepted day and must stay inside
+    `HYDRO_STEP_LIMITS`. The series of a group come from one publication, so one failing series
+    drops that day for all of them. The first day has nothing to compare with and is kept; a
+    dropped day is refreshed by the next update, which re-reads the last days.
+    """
+    if daily.duplicated(["series", "day"]).any():
+        return daily  # validate_daily names the duplicated rows
+    wide = (
+        daily[daily["series"].isin(group)]
+        .pivot(index="day", columns="series", values="value")
+        .sort_index()
+    )
+    last: dict[str, float] = {}
+    dropped: dict[pd.Timestamp, str] = {}
+    for day, row in wide.iterrows():
+        reason = None
+        for name, (low, high) in HYDRO_STEP_LIMITS.items():
+            value = row.get(name)
+            if name not in group or value is None or pd.isna(value):
+                continue
+            before = last.get(name)
+            if before and before > 0:
+                ratio = value / before
+                if (low is not None and ratio < low) or (high is not None and ratio > high):
+                    reason = f"{name} {ratio:.3f} times the previous day"
+                    break
+        if reason:
+            dropped[pd.Timestamp(str(day))] = reason
+            continue
+        for name in HYDRO_STEP_LIMITS:
+            value = row.get(name)
+            if name in group and value is not None and not pd.isna(value):
+                last[name] = float(value)
+    if dropped:
+        log.warning(
+            "ingest.hydrology.implausible_days_dropped",
+            days={d.date().isoformat(): why for d, why in dropped.items()},
+        )
+        is_dropped = daily["series"].isin(group) & daily["day"].isin(list(dropped))
+        return daily[~is_dropped].reset_index(drop=True)
+    return daily
+
+
 def fetch_xm_daily(c: Clients, s: Settings, start: date, end: date, today: date) -> Batch:
     generation = _complete_days(c.xm.hourly_system("Gene", start, end))
     gen_totals = generation.groupby("day")["value"].sum().rename("value").reset_index()
@@ -155,7 +223,7 @@ def fetch_xm_daily(c: Clients, s: Settings, start: date, end: date, today: date)
         if series == "demand_kwh":
             frame = settled_demand(frame, gen_totals)
         parts.append(_daily_long(frame, series))
-    return Batch(daily=pd.concat(parts, ignore_index=True))
+    return Batch(daily=plausible_hydrology(pd.concat(parts, ignore_index=True)))
 
 
 def fetch_xm_price(c: Clients, s: Settings, start: date, end: date, today: date) -> Batch:
@@ -210,7 +278,10 @@ def fetch_xm_market(c: Clients, s: Settings, start: date, end: date, today: date
     days = pd.DatetimeIndex(settled.union(pd.DatetimeIndex(spill.index.intersection(published))))
     full = spill.reindex(days).fillna(0.0).rename("value").rename_axis("day").reset_index()
     parts.append(_daily_long(full, "spill_kwh"))
-    return Batch(daily=pd.concat(parts, ignore_index=True))
+    daily_all = plausible_hydrology(
+        pd.concat(parts, ignore_index=True), ("reservoir_capacity_kwh",)
+    )
+    return Batch(daily=daily_all)
 
 
 def fetch_xm_regional(c: Clients, s: Settings, start: date, end: date, today: date) -> Batch:

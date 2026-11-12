@@ -56,6 +56,14 @@ The pipeline asks the site to refresh at the end of every run (step `Refresh the
 2. To refresh by hand: `curl -X POST -H "Authorization: Bearer <the token>" https://<site>/api/revalidate` (an HTTP 200 with `{"revalidated":true}`). Or redeploy the site in Vercel.
 3. To rotate the token, create a new random value, set it in GitHub (secret) and in Vercel (sensitive variable), and redeploy.
 
+## The site shows an impossible reservoir or inflow value
+
+XM sometimes publishes the newest hydrology day before finishing it (2026-11-11 arrived as a reservoir level of 7.6 % when the day before was 79 %; ADR 0013). The ingest now drops such days and logs `ingest.hydrology.implausible_days_dropped`. If one still shows:
+
+1. Start `Daily pipeline` by hand: the update re-reads the last 7 days, so a day XM has finished since replaces the stored value. Compare with XM before assuming it is wrong.
+2. If the page keeps the wrong value, read the `Ingest what is new` step for the warning. Dropped days are not deleted: the stored value of a dropped day stays until XM serves a plausible one, so a wrong value written before the guard existed has to be replaced by a pipeline run once XM has finished the day.
+3. If the real value is outside the limits in ADR 0013, change `HYDRO_STEP_LIMITS` in `pipeline/src/voltia/ingest.py` and record why. After a real jump the next days are held back for about a week, until the jump day falls at the start of the 7-day re-read window.
+
 ## Restoring the backup
 
 The `Weekly backup` workflow (Sundays, 07:15 Bogotá; also runnable by hand) uploads the artifact `volt-ai-backup` with `forecast_log`, `weather_forecast_log` and `model_runs` as gzipped CSV and a `manifest.json` with row counts and checksums. Everything else is rebuilt with `voltia backfill`.
