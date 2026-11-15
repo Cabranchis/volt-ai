@@ -184,3 +184,46 @@ What it says:
 - The band covers 80 to 94 % in every period. The coverage of 68 to 71 % found on the 21-day dates in stress came from only 4 to 8 dates per episode; with the denser dates it is not reproduced, so the bands are not short in stress.
 - The 8 to 14 day error is 36 % over all dates, and every method is above 35 % there.
 - A first version of this script took the price of three days before the origin as "the last price" and made the reference look much weaker (26.6 % at 1-3 days); the origin day is the right one, because the origin is already the last settled day.
+
+## Which methods can be told apart: Model Confidence Set (2026-11-15)
+
+The paired intervals above compare the model with one reference at a time. The Model Confidence Set (Hansen, Lunde and Nason 2011, range statistic, `research/mcs.py`, `research/run_mcs.py`) asks the question for all the methods at once: which of them cannot be distinguished from the best one at the 10 % level, with the multiple comparisons inside each row accounted for. It uses the MASE of each of the 151 dense dates, a circular block bootstrap of 6 dates (consecutive dates share outcomes; the block of the paired intervals) and 5 000 resamples. The decision rule was written before the first run: the production model is supported if it is in the set for the whole horizon. Verdict: supported, and not distinguishable from ETS or from repeating the last price. It only reads the saved dense backtest; the 50 candidates of the tables above keep only averages, so they cannot be put in a set without running them again.
+
+| Horizon | Model | ETS | Last price | Weekly seasonal naive | In the set |
+| --- | --- | --- | --- | --- | --- |
+| All (1-14 days) | 1.520 | 1.572 | 1.601 | 2.045 | model, ETS, last price |
+| 1-3 days | 0.707 | 0.844 | 0.849 | 1.676 | model |
+| 4-7 days | 1.292 | 1.410 | 1.459 | 1.767 | model |
+| 8-14 days | 2.000 | 1.977 | 2.004 | 2.361 | model, ETS, last price |
+
+Mean MASE per method. The MCS p-value of a method is the smallest level at which it would still be in the set (it is not a test of the model against that method). ETS and the last price have 0.008 and 0.008 at 1-3 days, and 0.083 and 0.036 at 4-7 days; over the whole horizon they have 0.52 and 0.43, and at 8-14 days 1.00 (ETS, the best there) and 0.57.
+
+What it says:
+- At 1 to 3 days the model is the only method in the set, so it is better than every reference at once. At 4 to 7 days it is alone only at the 10 % level: at 5 % ETS stays in the set (p = 0.083).
+- Over the whole horizon and at 8 to 14 days the model, ETS and repeating the last price cannot be told apart. This agrees with the paired intervals above.
+- The 4 to 7 day result is pooled over 2023-26 and does not hold in every period. The live record has the model no better than the last price at 4 to 7 days, and in El Niño 2026 the table above has the model at 16.2 % against 13.7 % for ETS and 14.1 % for the last price. It does not support a claim for that range; the claim the evidence supports is better than the references at 1 to 3 days, and not distinguishable from them beyond.
+- The weekly seasonal naive is out of the set in every row.
+- A set that contains a method does not say that the method is as good; with 151 dates it says the data cannot separate them. Each row is a separate set: the control of multiple comparisons does not extend from one row to another.
+
+## Does a correlation that fades with distance improve the cost range? (2026-11-15)
+
+The cost calculator gives every pair of days in a window the same correlation, 0.7 (chosen on the 51 production dates). The errors of two days are in fact less alike the further apart they are. `research/run_window_correlation.py` measures it on the 151 dense dates, with the error of each day read against its own calibrated band, and asks whether using the real structure gives a better range for the mean price of a window. The structure is fitted on the first 75 dates and judged on the last 76, never on the dates it was fitted on. The decision rule was written before the run: a new structure replaces 0.7 only if its coverage is closer to 0.80 on average over windows of 3, 7 and 12 days and its pinball loss is not larger at any length.
+
+Correlation of the standardised errors of two days a given distance apart (first half / second half of the dates):
+
+| Days apart | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Correlation | 0.80 / 0.81 | 0.70 / 0.70 | 0.64 / 0.63 | 0.59 / 0.56 | 0.54 / 0.50 | 0.51 / 0.48 | 0.48 / 0.44 |
+
+The fade is real and the same in both halves. Fitted on the first half: AR(1) with phi = 0.885, and a common factor plus AR(1) with 0.227 + 0.773 * 0.821^lag. Results on the second half (coverage of the P10-P90 range of the window mean, share of windows below P10, mean pinball loss):
+
+| Window | Equal 0.7 | AR(1) | Factor + AR(1) |
+| --- | --- | --- | --- |
+| 3 days | 0.895 / 0.092 / 12.57 | 0.921 / 0.079 / 12.76 | 0.921 / 0.079 / 12.73 |
+| 7 days | 0.868 / 0.092 / 17.54 | 0.868 / 0.092 / 17.62 | 0.868 / 0.092 / 17.58 |
+| 12 days | 0.855 / 0.118 / 21.75 | 0.855 / 0.118 / 21.67 | 0.842 / 0.132 / 21.66 |
+
+What it says:
+- Neither structure replaces 0.7. Their distance of the coverage from 0.80 is no smaller (0.081 and 0.077 against 0.073) and the pinball is larger at 3 and 7 days. The calculator does not change.
+- The structure matters little because the windows start at the third day of the forecast and the errors of nearby days are already strongly correlated (0.7 to 0.8): the single number 0.7 is close to the average correlation inside a window of 3 to 7 days. The fade only shows in the 12-day window, where the difference in loss is 0.1 on a loss of 21.7.
+- The range of a window covers 84 to 92 % on these dates, wider than the 80 % it promises, and the misses fall mostly below P10 (8 to 13 %) rather than above (1 to 4 %). What would improve the range is a better centre or a narrower band for each day, not a different correlation.

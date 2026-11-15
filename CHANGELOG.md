@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- A Model Confidence Set over the methods of the dense price backtest (`pipeline/research/mcs.py`): the model is the only method in the set at 1 to 3 days (at 4 to 7 days only at the 10 % level); over the whole horizon and at 8 to 14 days it cannot be told apart from ETS or from repeating the last price. A test of a correlation between days that fades with distance for the cost calculator did not beat the current 0.7, so the calculator is unchanged (`docs/model-experiments.md`).
 - A publication gate: a forecast that is not finite or ordered, is far from the recent price, is worse than the naive, has a miscalibrated range or starts from stale data is refused and nothing is stored (ADR 0014).
 - Step guards on the price, market, contract and generation series, compared with the last stored value; required series per batch; rows after the requested range are rejected; partial generation-mix days are dropped.
 - `/api/v1/health` reports `ok`, `stale` or `degraded` with reasons and ages; the forecast pages show when the forecast was issued; the `Watchdog` workflow opens an issue when the status is not `ok` or the pipeline fails.

@@ -1,0 +1,107 @@
+{
+  "alpha": 0.1,
+  "source": "dense_backtest.json",
+  "block_length": 6,
+  "slices": {
+    "all horizons": {
+      "origins": 151,
+      "methods": {
+        "model": {
+          "mase": 1.5204,
+          "p_value": 1.0,
+          "in_set": true
+        },
+        "ets": {
+          "mase": 1.5724,
+          "p_value": 0.5204,
+          "in_set": true
+        },
+        "last_price": {
+          "mase": 1.6008,
+          "p_value": 0.426,
+          "in_set": true
+        },
+        "seasonal_naive": {
+          "mase": 2.0446,
+          "p_value": 0.0,
+          "in_set": false
+        }
+      }
+    },
+    "1-3 days": {
+      "origins": 151,
+      "methods": {
+        "model": {
+          "mase": 0.707,
+          "p_value": 1.0,
+          "in_set": true
+        },
+        "ets": {
+          "mase": 0.8442,
+          "p_value": 0.008,
+          "in_set": false
+        },
+        "last_price": {
+          "mase": 0.8491,
+          "p_value": 0.008,
+          "in_set": false
+        },
+        "seasonal_naive": {
+          "mase": 1.6756,
+          "p_value": 0.0,
+          "in_set": false
+        }
+      }
+    },
+    "4-7 days": {
+      "origins": 151,
+      "methods": {
+        "model": {
+          "mase": 1.2918,
+          "p_value": 1.0,
+          "in_set": true
+        },
+        "ets": {
+          "mase": 1.4099,
+          "p_value": 0.083,
+          "in_set": false
+        },
+        "last_price": {
+          "mase": 1.4594,
+          "p_value": 0.0362,
+          "in_set": false
+        },
+        "seasonal_naive": {
+          "mase": 1.7672,
+          "p_value": 0.0,
+          "in_set": false
+        }
+      }
+    },
+    "8-14 days": {
+      "origins": 151,
+      "methods": {
+        "ets": {
+          "mase": 1.9773,
+          "p_value": 1.0,
+          "in_set": true
+        },
+        "model": {
+          "mase": 1.9996,
+          "p_value": 0.853,
+          "in_set": true
+        },
+        "last_price": {
+          "mase": 2.0038,
+          "p_value": 0.5734,
+          "in_set": true
+        },
+        "seasonal_naive": {
+          "mase": 2.3613,
+          "p_value": 0.002,
+          "in_set": false
+        }
+      }
+    }
+  }
+}
