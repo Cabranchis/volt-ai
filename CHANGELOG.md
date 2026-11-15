@@ -8,7 +8,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - A publication gate: a forecast that is not finite or ordered, is far from the recent price, is worse than the naive, has a miscalibrated range or starts from stale data is refused and nothing is stored (ADR 0014).
 - Step guards on the price, market, contract and generation series, compared with the last stored value; required series per batch; rows after the requested range are rejected; partial generation-mix days are dropped.
 - `/api/v1/health` reports `ok`, `stale` or `degraded` with reasons and ages; the forecast pages show when the forecast was issued; the `Watchdog` workflow opens an issue when the status is not `ok` or the pipeline fails.
-- "Data unavailable" error screens, an `X-Data-Source` header on every API response and a gitleaks scan in CI (report-only for now).
+- "Data unavailable" error screens, an `X-Data-Source` header on every API response and a gitleaks scan of the whole history in CI.
 - Hydrology days that XM publishes half finished (a reservoir level of 7.6 % after 79 %) are held back at ingest instead of stored (ADR 0013).
 - Results page "Volt-AI in El Niño" (ES/EN): headline figures, error by period, El Niño then and now and four forecasts drawn against what happened, with the regenerating scripts in `pipeline/research/`.
 - Repository scaffolding, requirements, architecture and decision records.
