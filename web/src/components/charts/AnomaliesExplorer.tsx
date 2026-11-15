@@ -7,12 +7,16 @@ import { RangeControl } from "@/components/ui/RangeControl";
 import { EmptyState } from "@/components/ui/States";
 import type { Anomaly, ForecastTarget } from "@/lib/data/types";
 import { formatDate, formatGWh, formatNumber } from "@/lib/format";
+import { fmt } from "@/lib/i18n/fmt";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/en";
 import { lastNonNullIndex } from "./series-utils";
 import { TimeSeriesChart, type SeriesSpec } from "./TimeSeriesChart";
 
 type Range = "1y" | "3y" | "all";
+type Order = "recent" | "severity";
+/** After this many days without a flagged day the page says so, instead of leaving it to be guessed. */
+const QUIET_DAYS = 180;
 const RANGE_DAYS: Record<Range, number | null> = { "1y": 365, "3y": 1096, all: null };
 const SERIES_KEY = { demand_kwh: "demand", price_mean_cop_kwh: "price" } as const;
 
@@ -36,6 +40,7 @@ const methodLabel = (method: string, names: Record<string, string>): string =>
 export function AnomaliesExplorer({ locale, dict, dates, values, anomalies }: Props) {
   const [target, setTarget] = useState<ForecastTarget>("demand_kwh");
   const [range, setRange] = useState<Range>("all");
+  const [order, setOrder] = useState<Order>("recent");
 
   const isDemand = target === "demand_kwh";
   const scale = isDemand ? 1e6 : 1;
@@ -59,9 +64,21 @@ export function AnomaliesExplorer({ locale, dict, dates, values, anomalies }: Pr
   }, [dates, values, target, range, anomalies]);
 
   const rows = useMemo(
-    () => anomalies.filter((a) => a.target === target).sort((a, b) => b.severity - a.severity),
-    [anomalies, target],
+    () =>
+      anomalies
+        .filter((a) => a.target === target)
+        .sort((a, b) => (order === "recent" ? b.day.localeCompare(a.day) : b.severity - a.severity)),
+    [anomalies, target, order],
   );
+
+  // The newest flagged day and how long ago it is, whatever the table order is.
+  const latest = useMemo(() => {
+    const mine = anomalies.filter((a) => a.target === target);
+    const newest = mine.reduce<Anomaly | null>((best, a) => (best === null || a.day > best.day ? a : best), null);
+    const lastDay = view.dates[view.dates.length - 1];
+    const gap = newest && lastDay ? (Date.parse(lastDay) - Date.parse(newest.day)) / 86_400_000 : null;
+    return { newest, quiet: gap !== null && gap > QUIET_DAYS };
+  }, [anomalies, target, view.dates]);
 
   const chartSeries: SeriesSpec[] = [
     { name: isDemand ? dict.kpi.demand : dict.kpi.price, values: view.values, color: SERIES_KEY[target], kind: "line" },
@@ -119,13 +136,43 @@ export function AnomaliesExplorer({ locale, dict, dates, values, anomalies }: Pr
         </ul>
       </Panel>
 
-      <Panel title={dict.anomalies.tableCaption}>
+      <Panel title={order === "recent" ? dict.anomalies.tableCaptionRecent : dict.anomalies.tableCaption}>
+        {latest.newest ? (
+          <div className="mb-4 flex flex-col gap-2">
+            <p className="text-sm">
+              {fmt(dict.anomalies.latest, {
+                date: formatDate(latest.newest.day, locale, "long"),
+                direction: latest.newest.direction === "high" ? dict.anomalies.high : dict.anomalies.low,
+                deviation:
+                  num(latest.newest.detail?.["deviation_pct"]) === null
+                    ? "–"
+                    : `${formatNumber(Math.abs(num(latest.newest.detail?.["deviation_pct"]) ?? 0), locale, 1)} %`,
+              })}
+            </p>
+            {latest.quiet ? (
+              <p className="max-w-[72ch] text-xs leading-relaxed text-muted">
+                {fmt(dict.anomalies.quiet, { date: formatDate(latest.newest.day, locale, "month") })}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="mb-3">
+          <RangeControl
+            label={dict.anomalies.sortLabel}
+            value={order}
+            onChange={setOrder}
+            options={[
+              { value: "recent", label: dict.anomalies.sortRecent },
+              { value: "severity", label: dict.anomalies.sortSeverity },
+            ]}
+          />
+        </div>
         {rows.length === 0 ? (
           <EmptyState title={dict.anomalies.empty} body={dict.common.noDataBody} />
         ) : (
           <div tabIndex={0} role="region" aria-label={dict.anomalies.tableCaption} className="max-h-[28rem] overflow-auto rounded-lg border border-line">
             <table className="w-full min-w-max border-collapse text-sm tabular-nums">
-              <caption className="sr-only">{dict.anomalies.tableCaption}</caption>
+              <caption className="sr-only">{order === "recent" ? dict.anomalies.tableCaptionRecent : dict.anomalies.tableCaption}</caption>
               <thead className="sticky top-0 bg-surface-2 text-xs text-muted">
                 <tr>
                   <th scope="col" className="px-3 py-2 text-left font-medium">{dict.common.date}</th>
