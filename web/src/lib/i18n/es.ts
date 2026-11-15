@@ -46,6 +46,10 @@ export const es: Dictionary = {
     sourceFixtures: "Instantánea de demostración",
     snapshotNote:
       "Este despliegue muestra una instantánea guardada de datos reales, no una base de datos en vivo. Conecta una base de datos para ver las actualizaciones diarias.",
+    forecastAge: {
+      issued: "Pronóstico emitido {when}",
+      old: "más viejo de lo normal",
+    },
     freshness: {
       fresh: "Al día",
       stale: "Los datos tienen {days} días",

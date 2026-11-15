@@ -4,6 +4,7 @@ import { ForecastChart } from "@/components/charts/ForecastChart";
 import { AnomalyList } from "@/components/ui/AnomalyList";
 import { DataTable } from "@/components/ui/DataTable";
 import { Freshness } from "@/components/ui/Freshness";
+import { ForecastAge } from "@/components/ui/ForecastAge";
 import { MixBar } from "@/components/ui/MixBar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
@@ -100,7 +101,8 @@ export default async function OverviewPage() {
         description={dict.overview.description}
         meta={
           demand ? (
-            <Freshness
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              <Freshness
               lastDay={demand.day}
               lastDayLabel={formatDate(demand.day, locale)}
               detail={
@@ -114,6 +116,14 @@ export default async function OverviewPage() {
                 stale: dict.common.freshness.stale,
               }}
             />
+              {priceFc ?? demandFc ? (
+              <ForecastAge
+                issuedAt={(priceFc ?? demandFc)!.trainedAt}
+                locale={locale}
+                labels={{ issued: dict.common.forecastAge.issued, old: dict.common.forecastAge.old }}
+              />
+              ) : null}
+            </div>
           ) : null
         }
       />

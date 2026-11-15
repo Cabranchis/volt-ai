@@ -29,6 +29,16 @@ const optionalJson = <T extends z.ZodType>(schema: T) => schema.nullable().catch
  * PostgreSQL repository. It connects with the read-only role (db/migrations/0002_roles.pg.sql).
  * Every row passes through Zod, so a schema drift fails loudly instead of rendering wrong numbers.
  */
+/**
+ * A table the web role cannot use yet: it does not exist (42P01) or the role has no SELECT on it
+ * (42501), which is what a new table looks like until its migration has run and granted access. The
+ * page that needs it then shows its empty state instead of failing; any other error still fails.
+ */
+export function isTableUnavailable(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code;
+  return code === "42P01" || code === "42501";
+}
+
 export function createPostgresRepository(sql: Sql): Repository {
   const seriesRows = async (names: readonly string[], from?: string, to?: string) => {
     const rows = await sql`
@@ -149,7 +159,7 @@ export function createPostgresRepository(sql: Sql): Repository {
         return z.array(trackRowSchema).parse(rows);
       } catch (error) {
         // The table arrives with migration 0003, applied by the daily pipeline run.
-        if ((error as { code?: string }).code === "42P01") return [];
+        if (isTableUnavailable(error)) return [];
         throw error;
       }
     },
@@ -203,7 +213,7 @@ export function createPostgresRepository(sql: Sql): Repository {
         });
       } catch (error) {
         // The tables arrive with migration 0004, applied by the daily pipeline run.
-        if ((error as { code?: string }).code === "42P01") return null;
+        if (isTableUnavailable(error)) return null;
         throw error;
       }
     },
@@ -215,6 +225,12 @@ export function createPostgresRepository(sql: Sql): Repository {
       const series = await sql`
         SELECT series, to_char(MAX(day), 'YYYY-MM-DD') AS last_day
         FROM series_daily GROUP BY series ORDER BY series`;
+      const runs = await sql`
+        SELECT
+          (SELECT MAX(trained_at) AT TIME ZONE 'UTC' FROM model_runs) AS trained_at,
+          (SELECT MAX(m.trained_at) AT TIME ZONE 'UTC' FROM model_runs m
+             WHERE EXISTS (SELECT 1 FROM forecasts f WHERE f.run_id = m.run_id)) AS issued_at`;
+      const run = runs[0] ?? {};
       return {
         source: "postgres" as const,
         generatedAt: new Date().toISOString(),
@@ -226,6 +242,8 @@ export function createPostgresRepository(sql: Sql): Repository {
           detail: d.detail ? String(d.detail) : null,
         })),
         series: series.map((s) => ({ series: String(s.series), lastDay: String(s.last_day) })),
+        model: { trainedAt: run["trained_at"] ? iso(run["trained_at"] as Date | string) : null },
+        forecast: { issuedAt: run["issued_at"] ? iso(run["issued_at"] as Date | string) : null },
       };
     },
   };

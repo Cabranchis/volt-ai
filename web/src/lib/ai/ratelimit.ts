@@ -83,14 +83,34 @@ export function rateLimitSalt(env: Record<string, string | undefined> = process.
   return env.RATE_LIMIT_SALT || env.DATABASE_URL_READONLY || "voltia-local-development";
 }
 
-/** The caller's key for the rate limiters: the first address Vercel reports, hashed with the salt. */
+/**
+ * The unit a limit counts. An IPv4 address is one subscriber, but an IPv6 subscriber is given a whole
+ * /64 (2^64 addresses), so counting full IPv6 addresses would let one machine rotate through as many
+ * "clients" as it likes. IPv6 is therefore reduced to its first four groups; an IPv4-mapped IPv6
+ * address counts as the IPv4 address it carries; anything that is not an address is kept as given.
+ */
+export function limitUnit(address: string): string {
+  const text = address.trim().toLowerCase().replace(/^\[|\]$/g, "").replace(/%.*$/, "");
+  if (!text.includes(":")) return text;
+  const mapped = /^(?:0{0,4}:){2,5}(?:ffff:)?(\d{1,3}(?:\.\d{1,3}){3})$/.exec(text);
+  if (mapped?.[1]) return mapped[1];
+  const [head = "", tail, ...rest] = text.split("::");
+  if (rest.length > 0 || !/^[0-9a-f:]*$/.test(text)) return text;
+  const left = head ? head.split(":") : [];
+  const right = tail ? tail.split(":") : [];
+  const groups = tail === undefined ? left : [...left, ...Array<string>(Math.max(8 - left.length - right.length, 0)).fill("0"), ...right];
+  if (groups.length !== 8 || groups.some((g) => g.length === 0 || g.length > 4)) return text;
+  return `${groups.slice(0, 4).map((g) => g.padStart(4, "0")).join(":")}::/64`;
+}
+
+/** The caller's key for the rate limiters: the first address Vercel reports (IPv6 by /64), hashed with the salt. */
 export async function clientKeyFor(
   headers: Headers,
   env: Record<string, string | undefined> = process.env,
 ): Promise<string> {
   const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const address = forwarded || headers.get("x-real-ip") || "unknown";
-  return clientKey(address, rateLimitSalt(env));
+  return clientKey(limitUnit(address), rateLimitSalt(env));
 }
 
 let shared: Promise<RateLimiter> | undefined;

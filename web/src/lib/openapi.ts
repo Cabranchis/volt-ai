@@ -98,7 +98,8 @@ export const openApiDocument = {
     "/health": {
       get: {
         summary: "Data freshness",
-        description: "Last successful load per dataset and the newest day of every series.",
+        description:
+          "Whether the platform is ok, stale (the data or the forecast is older than the pipeline leaves it) or degraded (something failed now), with the reasons, the ages in days, the last successful load per dataset and the newest day of every series. Always HTTP 200: read the status word.",
         responses: { "200": { description: "Health", content: { "application/json": { schema: { type: "object" } } } } },
       },
     },

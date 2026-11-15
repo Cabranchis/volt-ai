@@ -44,6 +44,25 @@ jobs:
           uv export --frozen --no-dev --no-hashes --no-emit-project -o "$RUNNER_TEMP/requirements.txt"
           uvx pip-audit -r "$RUNNER_TEMP/requirements.txt"
 
+  secrets:
+    name: Secret scan (gitleaks, whole history)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Report-only until it has run cleanly on main; then remove this line so a finding fails CI.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitleaks (pinned release, checked against its published SHA-256)
+        run: |
+          curl -fsSL -o gitleaks.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz
+          echo "5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba  gitleaks.tgz" | sha256sum -c -
+          tar -xzf gitleaks.tgz gitleaks
+      - name: Scan every commit
+        run: ./gitleaks git --redact --no-banner --verbose .
+
   web:
     name: Web (Next.js)
     runs-on: ubuntu-latest

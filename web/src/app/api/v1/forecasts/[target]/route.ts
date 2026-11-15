@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { csvResponse, jsonResponse, problem } from "@/lib/api";
+import { csvResponse, FIXED_ENDPOINT_LIMIT, jsonResponse, limitClient, problem } from "@/lib/api";
 import { getForecast } from "@/lib/data";
 import type { ForecastTarget } from "@/lib/data/types";
 
@@ -9,6 +9,8 @@ const TARGETS: Record<string, ForecastTarget> = {
 };
 
 export async function GET(request: NextRequest, ctx: RouteContext<"/api/v1/forecasts/[target]">) {
+  const limited = await limitClient(request, "forecasts", FIXED_ENDPOINT_LIMIT);
+  if (limited) return limited;
   const { target } = await ctx.params;
   const resolved = Object.hasOwn(TARGETS, target) ? TARGETS[target] : undefined;
   if (!resolved) return problem(404, "Unknown target", `Use one of: ${Object.keys(TARGETS).join(", ")}.`);

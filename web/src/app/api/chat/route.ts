@@ -20,6 +20,9 @@ const MAX_BODY_BYTES = 16_384;
 const PER_CLIENT_LIMIT = 12;
 const PER_CLIENT_WINDOW_SEC = 600;
 const DAILY_LIMIT = Number(process.env.CHAT_DAILY_LIMIT ?? 400);
+// A burst cannot take the whole day's quota: the language model is used for at most this many
+// questions in any hour, and the rest are answered from fixed summaries until the hour ends.
+const hourlyLimit = (): number => Number(process.env.CHAT_HOURLY_LIMIT ?? 60);
 
 const bodySchema = z
   .object({
@@ -98,13 +101,32 @@ function statusOf(error: unknown): string {
   return typeof name === "string" && /^[A-Za-z_]{1,48}$/.test(name) ? `provider error ${name}` : "provider error";
 }
 
+/** The body as text, or null as soon as it is longer than `max` bytes: it is never read whole. */
+async function readCapped(request: Request, max: number): Promise<string | null> {
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return text + decoder.decode();
+    bytes += value.byteLength;
+    if (bytes > max) {
+      await reader.cancel();
+      return null;
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+}
+
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return problem(403, "Cross-origin requests are not allowed");
 
   const declared = Number(request.headers.get("content-length") ?? 0);
   if (declared > MAX_BODY_BYTES) return problem(413, "Request too large");
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) return problem(413, "Request too large");
+  const raw = await readCapped(request, MAX_BODY_BYTES);
+  if (raw === null) return problem(413, "Request too large");
 
   let json: unknown;
   try {
@@ -119,27 +141,37 @@ export async function POST(request: Request) {
   const { lang, messages } = parsed.data;
   const locale: Locale = lang;
 
-  const key = await clientKeyFor(request.headers);
-  const limiter = await getRateLimiter();
-
-  const mine = await limiter.hit(`chat:${key}`, PER_CLIENT_LIMIT, PER_CLIENT_WINDOW_SEC);
-  if (!mine.allowed) {
-    const response = problem(429, "Too many requests", "Wait a few minutes and try again.");
-    response.headers.set("Retry-After", String(mine.retryAfterSec));
-    return response;
-  }
-  const global = await limiter.hit("chat:global", DAILY_LIMIT, 86_400);
-
-  const models = getChatModels();
   const question = messages.at(-1)?.content ?? "";
-
-  // No key, or the day's quota for the language model is spent: answer from fixed summaries.
-  if (models.length === 0 || !global.allowed) {
-    return eventStream(async (send) => {
+  const offline = () =>
+    eventStream(async (send) => {
       send({ t: "notice", code: "offline" });
       send({ t: "text", d: await answerOffline(question, locale) });
     });
+
+  let spent: boolean;
+  try {
+    const key = await clientKeyFor(request.headers);
+    const limiter = await getRateLimiter();
+    const mine = await limiter.hit(`chat:${key}`, PER_CLIENT_LIMIT, PER_CLIENT_WINDOW_SEC);
+    if (!mine.allowed) {
+      const response = problem(429, "Too many requests", "Wait a few minutes and try again.");
+      response.headers.set("Retry-After", String(mine.retryAfterSec));
+      return response;
+    }
+    // The hourly cap is counted first and the daily quota only for what passes it, so a burst that
+    // the hourly cap sends to the fixed summaries cannot also use up the rest of the day's quota.
+    const hour = await limiter.hit("chat:global-hour", hourlyLimit(), 3_600);
+    spent = !hour.allowed || !(await limiter.hit("chat:global", DAILY_LIMIT, 86_400)).allowed;
+  } catch {
+    // The limiter is down, so spending cannot be counted: answer without the language model
+    // (fixed summaries cost nothing) instead of failing, and instead of spending unmetered.
+    return offline();
   }
+
+  const models = getChatModels();
+
+  // No key, or the quota for the language model is spent: answer from fixed summaries.
+  if (models.length === 0 || spent) return offline();
 
   const modelMessages: ModelMessage[] = messages.map((m) => ({ role: m.role, content: m.content }));
   return eventStream(async (send) => {

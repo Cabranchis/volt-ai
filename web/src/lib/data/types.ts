@@ -169,6 +169,9 @@ export const healthSchema = z.object({
     }),
   ),
   series: z.array(z.object({ series: z.string(), lastDay: isoDate })),
+  // The newest training run and the newest run that has forecasts; null when none is recorded.
+  model: z.object({ trainedAt: z.string().nullable() }).default({ trainedAt: null }),
+  forecast: z.object({ issuedAt: z.string().nullable() }).default({ issuedAt: null }),
 });
 export type Health = z.infer<typeof healthSchema>;
 

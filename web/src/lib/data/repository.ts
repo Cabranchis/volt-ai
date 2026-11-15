@@ -3,6 +3,13 @@ import type { Repository } from "./types";
 
 let cached: Repository | undefined;
 
+/** "database" when reads go to PostgreSQL, "snapshot" when they come from the bundled JSON fixtures. */
+export type DataSourceKind = "database" | "snapshot";
+
+export function dataSourceKind(env: Record<string, string | undefined> = process.env): DataSourceKind {
+  return env.DATABASE_URL_READONLY && env.VOLTIA_DATA_SOURCE !== "fixtures" ? "database" : "snapshot";
+}
+
 /**
  * PostgreSQL when DATABASE_URL_READONLY is set, JSON fixtures otherwise.
  * VOLTIA_DATA_SOURCE=fixtures forces the snapshot (tests, previews). The choice is reported by
@@ -10,10 +17,9 @@ let cached: Repository | undefined;
  */
 export async function getRepository(): Promise<Repository> {
   if (cached) return cached;
-  const url = process.env.DATABASE_URL_READONLY;
-  if (url && process.env.VOLTIA_DATA_SOURCE !== "fixtures") {
+  if (dataSourceKind() === "database") {
     const { createPostgresRepository, getSql } = await import("./postgres");
-    cached = createPostgresRepository(getSql(url));
+    cached = createPostgresRepository(getSql(process.env.DATABASE_URL_READONLY as string));
   } else {
     cached = createFixtureRepository();
   }

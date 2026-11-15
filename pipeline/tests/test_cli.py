@@ -11,6 +11,7 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
+from voltia import db
 from voltia.cli import _report, app, today_bogota
 from voltia.config import Settings, get_settings
 from voltia.ingest import Result
@@ -101,3 +102,43 @@ def test_archive_refuses_a_database_that_is_not_postgresql(tmp_path: Path) -> No
     result = runner.invoke(app, ["archive", "--out", str(tmp_path / "backup")])
     assert result.exit_code == 1
     assert not (tmp_path / "backup" / "manifest.json").exists()
+
+
+def test_the_archive_loads_back_into_an_empty_database_with_the_same_rows(
+    tmp_path: Path, local_db: Path
+) -> None:
+    """The restore in docs/runbook.md, rehearsed on SQLite: export, then load each file in the
+    order the runbook gives (model_runs first) into a fresh migrated database and compare."""
+    runner.invoke(app, ["migrate"])
+    with sqlite3.connect(local_db) as conn:
+        conn.execute(
+            "INSERT INTO model_runs (run_id, trained_at, data_start, data_end, params, metrics) "
+            "VALUES ('r1', '2026-10-01 12:00:00', '2018-01-01', '2026-09-30', "
+            '\'{"a": 1}\', \'{"mase": 1.2, "note": "a, \\"quoted\\" text"}\')'
+        )
+        conn.execute(
+            "INSERT INTO forecast_log VALUES "
+            "('demand_kwh', '2026-10-01', '2026-10-02', 1, 'r1', "
+            "'2026-10-01 12:00:00', 1.5, 2.5, 3.5)"
+        )
+        conn.execute(
+            "INSERT INTO weather_forecast_log VALUES "
+            "('2026-10-01', 'Bogota', '2026-10-02', 1, 'icon', '2026-10-01 12:00:00', 0.4, 18.5)"
+        )
+    out = tmp_path / "backup"
+    assert runner.invoke(app, ["archive", "--out", str(out), "--allow-sqlite"]).exit_code == 0
+
+    restored = tmp_path / "restored.sqlite"
+    engine = db.make_engine(f"sqlite:///{restored.as_posix()}")
+    db.migrate(engine)
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    for table in ("model_runs", "forecast_log", "weather_forecast_log"):
+        path = out / f"{table}.csv.gz"
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == manifest["tables"][table]["sha256"]
+        pd.read_csv(path).to_sql(table, engine, if_exists="append", index=False)
+    with sqlite3.connect(local_db) as source, sqlite3.connect(restored) as target:
+        for table in ("model_runs", "forecast_log", "weather_forecast_log"):
+            query = f"SELECT * FROM {table} ORDER BY 1, 2"
+            assert target.execute(query).fetchall() == source.execute(query).fetchall()
+        metrics = target.execute("SELECT metrics FROM model_runs").fetchone()[0]
+    assert json.loads(metrics)["note"] == 'a, "quoted" text'

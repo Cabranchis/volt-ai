@@ -6,7 +6,7 @@ What to check and do when Volt-AI misbehaves. Every command runs from `pipeline/
 
 | Question | How to answer it |
 | --- | --- |
-| Is the site up and is the data fresh? | Open `/api/v1/health`. It reports the last day of each dataset and the age of the latest model run. The overview page also shows "Data through ...". |
+| Is the site up and is the data fresh? | Open `/api/v1/health`. `status` is `ok`, `stale` (nothing failed, but the data, the model or the forecast is older than the pipeline leaves it) or `degraded` (a dataset failed, nothing is recorded, or production serves the snapshot); `reasons` says which and `ages` gives the days. The overview page also shows "Data through ..." and when the forecast was issued. |
 | Did the daily pipeline run? | GitHub → Actions → *Daily pipeline*. A red run means one step failed; open it, the failing step is named. |
 | What is in the database? | `uv run voltia status` prints row counts and, per dataset, `last_day`, `status` and `updated`. |
 
@@ -15,8 +15,17 @@ What to check and do when Volt-AI misbehaves. Every command runs from `pipeline/
 ### The page shows old data
 
 1. Run `uv run voltia status`. If `last_day` is stale and `status=error`, the source failed (see below). If `last_day` is current, the web is serving a cached build.
-2. Pages are prerendered and the API is cached for one hour. Redeploy the latest commit in Vercel to refresh the baked pages immediately.
+2. Pages are prerendered and the API is cached for five minutes (ten more while it refreshes). Redeploy the latest commit in Vercel to refresh the baked pages immediately.
 3. XM publishes settled values with a delay and the newest days can be unsettled; the pipeline holds those back on purpose (ADR 0009). A lag of one or two days is normal.
+
+### The pipeline refused to publish a forecast ("publication gate")
+
+A red `Train, backtest and forecast` step whose log has `::error::publication gate: not published: ...` is the gate working (ADR 0014): nothing was stored, so the site keeps the previous forecast and shows its age. The watchdog opens an issue "Pipeline: the daily run failed" with the link. Read the rules it names:
+
+- **`the newest day is N days old`**: a source stopped or was refused. Look at `Ingest what is new` (a failed or held-back dataset), fix that, and the next run publishes by itself.
+- **`the model is worse than the weekly seasonal naive`, `only N test dates`, `the 80 % range covers ...`**: the backtest is off. Run `uv run voltia train --origins 5 --step 21` locally against a copy of the data and compare before trusting the model; look for a series that changed (the data guards in ADR 0014 should have stopped it earlier).
+- **`the central forecast of <day> (x) is outside a to b`**: the price is far from the last 90 days. Either a data defect (check the last days of `price_mean_cop_kwh` against XM) or a real change of regime, such as a dry season starting. Only a person can tell which.
+- A real change of regime is the one case where the refusal is wrong. After reading the numbers, start `Daily pipeline` by hand and choose `gate_mode: warn`: it logs the same problems and publishes. Say why in the commit or the issue.
 
 ### The daily pipeline failed
 
@@ -29,7 +38,7 @@ What to check and do when Volt-AI misbehaves. Every command runs from `pipeline/
 
 - The Gemini free tier has per-minute and per-day quotas shared across models, and Flash is sometimes overloaded. The app tries Flash, then Flash-Lite, then answers from fixed summaries. Nothing needs fixing; quotas reset.
 - If it never uses the model, check `GOOGLE_GENERATIVE_AI_API_KEY` in Vercel (Settings → Environment Variables) and redeploy; variables apply to new deployments only.
-- If visitors report being limited: 12 questions per client per 10 minutes and `CHAT_DAILY_LIMIT` (400) per day.
+- If visitors report being limited: 12 questions per client per 10 minutes (an IPv6 client is counted by its /64 network), `CHAT_HOURLY_LIMIT` (60) per hour and `CHAT_DAILY_LIMIT` (400) per day for the language model; past the hourly or daily limit the chat answers from fixed summaries, and it does the same if the limiter's database cannot be reached.
 
 ### The briefing is missing or looks wrong
 
@@ -47,6 +56,22 @@ What to check and do when Volt-AI misbehaves. Every command runs from `pipeline/
 2. If XM is ahead and no pipeline started, look at the `Start the pipeline` step: it does not start a run while another one is running or queued, and it stops after three failed pipeline runs in a row (it warns instead). Fix the failure first, then start `Daily pipeline` by hand.
 3. To pause the watcher, disable the `Watch XM for a new day` workflow in the Actions tab; the two fixed daily runs keep working.
 4. GitHub disables scheduled workflows after 60 days without repository activity; re-enable it with "Enable workflow" in the Actions tab.
+
+## Watchdog and external monitor
+
+The `Watchdog` workflow reads `/api/v1/health` every day at 13:45 UTC (twice, ten minutes apart) and opens the issue "Platform: the health check is not ok" when the status is not `ok`; it comments on it while the problem lasts and closes it when the status is `ok` again. It also opens "Pipeline: the daily run failed" when a `Daily pipeline` run ends in failure. GitHub emails the issues to the repository owner. It reads a public URL and writes issues; it has no secret.
+
+It does not cover GitHub itself: if scheduled workflows are disabled (no repository activity for 60 days) the watchdog stops too. Set up one outside monitor once:
+
+1. Create a free account at uptimerobot.com.
+2. Add a monitor of type **Keyword**, URL `https://<site>/api/v1/health`, keyword `{"status":"ok"` (with the opening brace: every dataset in the list has its own `"status":"ok"`, which would match even when the platform is `stale`), alert when the keyword does **not** exist, interval 5 minutes.
+3. Add your email as the alert contact.
+
+The top-level status is the first key of the answer, so that keyword is absent for `stale` and `degraded` too: the monitor also tells you when the data or the forecast is old. An optional dataset (weather, ONI, market, contracts, regional) that fails once does not change the status; only a long silence does.
+
+## The site shows old data or an old forecast
+
+The forecast pages say when the forecast was issued and turn the badge red after 2 days; `/api/v1/health` has the status `stale`. Check, in this order: the `Daily pipeline` runs (a red run, or no run at all in the last day: the scheduled workflows may be disabled, section above); the log of `Ingest what is new` (a source that failed or days that were held back); and the publication gate (section above).
 
 ## The site shows old data
 
@@ -80,7 +105,9 @@ done
 
 4. Compare `SELECT count(*)` of each table with the `rows` in the manifest.
 
-This procedure has not been rehearsed against a real database yet: try it once on an empty Neon branch before the day it is needed.
+The CSV files of the export were checked to load back with the same rows and the same JSON text by an automated test on SQLite (`test_the_archive_loads_back_into_an_empty_database_with_the_same_rows`). The `psql` step itself has not been rehearsed against a real database: try it once on an empty Neon branch before the day it is needed. Neon also keeps a history of the database (point-in-time restore, from the branch page of the console) for the days of its retention window; use it first when the loss is recent, and the weekly files when it is older.
+
+After adding a table in a migration, grant `SELECT` on it to `voltia_ro` in the same migration (the default privileges in `0002_roles.pg.sql` only cover tables created by the role that ran that migration). A page that needs a table the web role cannot read shows its empty state instead of failing.
 
 ## Rotating secrets
 

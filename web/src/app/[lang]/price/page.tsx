@@ -4,6 +4,7 @@ import { ForecastPanel } from "@/components/pages/ForecastPanel";
 import { SpikePanel } from "@/components/pages/SpikePanel";
 import { DriversChart } from "@/components/ui/DriversChart";
 import { Freshness } from "@/components/ui/Freshness";
+import { ForecastAge } from "@/components/ui/ForecastAge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { EmptyState } from "@/components/ui/States";
@@ -57,7 +58,8 @@ export default async function PricePage() {
         description={dict.price.description}
         meta={
           lastDay ? (
-            <Freshness
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              <Freshness
               lastDay={lastDay}
               lastDayLabel={formatDate(lastDay, locale)}
               labels={{
@@ -66,6 +68,14 @@ export default async function PricePage() {
                 stale: dict.common.freshness.stale,
               }}
             />
+              {forecast ? (
+              <ForecastAge
+                issuedAt={forecast.trainedAt}
+                locale={locale}
+                labels={{ issued: dict.common.forecastAge.issued, old: dict.common.forecastAge.old }}
+              />
+              ) : null}
+            </div>
           ) : null
         }
       />

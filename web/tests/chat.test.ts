@@ -2,7 +2,17 @@ import { simulateReadableStream } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const holder = vi.hoisted(() => ({ model: null as unknown }));
+const holder = vi.hoisted(() => ({ model: null as unknown, limiterBroken: false }));
+vi.mock("@/lib/ai/ratelimit", async (original) => {
+  const real = await original<typeof import("@/lib/ai/ratelimit")>();
+  return {
+    ...real,
+    getRateLimiter: async () => {
+      if (holder.limiterBroken) throw new Error("database is down");
+      return real.getRateLimiter();
+    },
+  };
+});
 vi.mock("@/lib/ai/model", () => ({
   getChatModels: () => (Array.isArray(holder.model) ? holder.model : holder.model ? [holder.model] : []),
 }));
@@ -72,6 +82,7 @@ function toolThenAnswer() {
 
 beforeEach(() => {
   holder.model = null;
+  holder.limiterBroken = false;
 });
 
 describe("input validation", () => {
@@ -117,6 +128,48 @@ describe("rate limiting", () => {
     expect(blocked.status).toBe(429);
     expect(Number(blocked.headers.get("retry-after"))).toBeGreaterThan(0);
     expect((await POST(request(ask("price?")))).status).toBe(200);
+  });
+});
+
+describe("abuse that tries to get past the limits", () => {
+  it("counts every address of one IPv6 /64 as one client", async () => {
+    const prefix = "2001:db8:abcd:1";
+    for (let i = 0; i < 12; i++) expect((await POST(request(ask("price?"), { ip: `${prefix}::${i + 1}` }))).status).toBe(200);
+    expect((await POST(request(ask("price?"), { ip: `${prefix}:ffff:ffff:ffff:ffff` }))).status).toBe(429);
+    expect((await POST(request(ask("price?"), { ip: "2001:db8:abcd:2::1" }))).status).toBe(200);
+  });
+
+  it("refuses a streamed body over the cap without reading it all, even with no Content-Length", async () => {
+    const chunk = new TextEncoder().encode("x".repeat(4_096));
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        sent += 1;
+        controller.enqueue(chunk);
+        if (sent >= 100) controller.close();
+      },
+    });
+    const res = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json", host: "localhost", "x-forwarded-for": nextIp() },
+        body,
+        duplex: "half",
+      } as RequestInit),
+    );
+    expect(res.status).toBe(413);
+    expect(sent).toBeLessThan(100); // it stopped reading
+  });
+
+  it("answers from fixed summaries, without calling the model, when the limiter is down", async () => {
+    holder.limiterBroken = true;
+    const model = toolThenAnswer();
+    holder.model = model;
+    const res = await POST(request(ask("How is the price?")));
+    expect(res.status).toBe(200);
+    const list = await events(res);
+    expect(list.some((e) => e.t === "notice" && e.code === "offline")).toBe(true);
+    expect(model.doStreamCalls).toHaveLength(0);
   });
 });
 

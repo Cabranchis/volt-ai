@@ -23,7 +23,7 @@ It passes every range check (a level of 0.076 is a number between 0 and 1). For 
 ## Consequences
 - The newest hydrology day can lag by a day when XM publishes it early, as demand already does.
 - Dropped days are not deleted from the database: up to 3 dropped days in the middle of a batch leave a gap that the continuity check accepts (`MAX_GAP_DAYS`), and the stored value of those days stays until XM serves a plausible one. More than 3 consecutive gaps fail the batch.
-- A real jump beyond the limits (never seen in eight years) would not confirm itself: later days are compared with the last accepted day, so they are held back too, until the jump day becomes the first day of a 7-day re-read window, about a week later. Hydrology would lag by that time. This follows from not letting two bad days validate each other.
+- A real jump beyond the limits (never seen in eight years) is held back for 3 days and then accepted, because a reference older than 3 days is not used (ADR 0014; before that, later days were held back for about a week). Two bad days in a row still do not validate each other.
 
 ## Rejected alternatives
 - Reconcile with the sum of the per-reservoir values (like demand with generation): the regional dataset runs on its own and may be partial at the same time.

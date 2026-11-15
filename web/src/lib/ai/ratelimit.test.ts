@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clientKey, clientKeyFor, createMemoryLimiter, createPostgresLimiter, rateLimitSalt } from "./ratelimit";
+import { clientKey, clientKeyFor, createMemoryLimiter, createPostgresLimiter, limitUnit, rateLimitSalt } from "./ratelimit";
 
 describe("memory limiter", () => {
   it("allows up to the limit and then refuses, with a retry time", async () => {
@@ -72,5 +72,40 @@ describe("rateLimitSalt and clientKeyFor", () => {
       await clientKeyFor(headers, { RATE_LIMIT_SALT: "salt" }),
     );
     expect(await clientKeyFor(new Headers(), { RATE_LIMIT_SALT: "salt" })).toBe(await clientKey("unknown", "salt"));
+  });
+});
+
+describe("limitUnit", () => {
+  it("leaves an IPv4 address, and anything that is not an address, as it is", () => {
+    expect(limitUnit("203.0.113.9")).toBe("203.0.113.9");
+    expect(limitUnit("unknown")).toBe("unknown");
+    expect(limitUnit(" 203.0.113.9 ")).toBe("203.0.113.9");
+  });
+
+  it("counts an IPv6 address by its /64, however it is written", () => {
+    const unit = "2001:0db8:0000:0042::/64";
+    expect(limitUnit("2001:db8:0:42:aaaa:bbbb:cccc:dddd")).toBe(unit);
+    expect(limitUnit("2001:db8:0:42::1")).toBe(unit);
+    expect(limitUnit("2001:DB8:0:42:0:0:0:ffff")).toBe(unit);
+    expect(limitUnit("[2001:db8:0:42::7]")).toBe(unit);
+    expect(limitUnit("2001:db8:0:42::1%eth0")).toBe(unit);
+    expect(limitUnit("2001:db8:0:43::1")).not.toBe(unit);
+    expect(limitUnit("::1")).toBe("0000:0000:0000:0000::/64");
+  });
+
+  it("counts an IPv4-mapped IPv6 address as the IPv4 address it carries", () => {
+    expect(limitUnit("::ffff:203.0.113.9")).toBe("203.0.113.9");
+  });
+
+  it("keeps a malformed address as given instead of guessing", () => {
+    expect(limitUnit("2001:db8:::1")).toBe("2001:db8:::1");
+    expect(limitUnit("1:2:3:4:5:6:7:8:9")).toBe("1:2:3:4:5:6:7:8:9");
+    expect(limitUnit("zz::1")).toBe("zz::1");
+  });
+
+  it("gives one client key to every address of a /64, and different keys to different ones", async () => {
+    const key = (address: string) => clientKeyFor(new Headers({ "x-forwarded-for": address }), { RATE_LIMIT_SALT: "s" });
+    expect(await key("2001:db8:0:42::1")).toBe(await key("2001:db8:0:42:dead:beef:0:2"));
+    expect(await key("2001:db8:0:42::1")).not.toBe(await key("2001:db8:0:43::1"));
   });
 });

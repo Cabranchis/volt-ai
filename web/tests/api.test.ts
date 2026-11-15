@@ -14,7 +14,8 @@ describe("GET /api/v1/series", () => {
   it("returns columns for the requested series and range", async () => {
     const res = await series(get("/api/v1/series?names=demand_kwh,price_mean_cop_kwh&from=2026-10-01&to=2026-10-05"));
     expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toContain("s-maxage=3600");
+    expect(res.headers.get("cache-control")).toContain("s-maxage=300");
+    expect(res.headers.get("x-data-source")).toBe("snapshot");
     const body = await res.json();
     expect(body.dates).toEqual(["2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04", "2026-10-05"]);
     expect(Object.keys(body.series)).toEqual(["demand_kwh", "price_mean_cop_kwh"]);
@@ -29,11 +30,30 @@ describe("GET /api/v1/series", () => {
     ["month 13", "/api/v1/series?names=demand_kwh&from=2026-13-01"],
     ["30 February", "/api/v1/series?names=demand_kwh&from=2026-02-30"],
     ["range over the cap", "/api/v1/series?names=demand_kwh&from=2000-01-01&to=2026-10-01"],
+    ["a parameter the route does not know", "/api/v1/series?names=demand_kwh&cachebuster=1"],
+    ["more than 8 series", `/api/v1/series?names=${SERIES_NAMES.slice(0, 9).join(",")}`],
   ])("rejects %s with a problem document", async (_name, path) => {
     const res = await series(get(path));
     expect(res.status).toBe(400);
     expect(res.headers.get("content-type")).toContain("application/problem+json");
     expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("answers the same read for the same series in any order, and for a range that reaches past the data", async () => {
+    const a = await (await series(get("/api/v1/series?names=price_mean_cop_kwh,demand_kwh&from=2026-10-01&to=2026-10-03"))).json();
+    const b = await (await series(get("/api/v1/series?names=demand_kwh,price_mean_cop_kwh,demand_kwh&from=2026-10-01&to=2026-10-03"))).json();
+    expect(b).toEqual(a);
+    const exact = await (await series(get("/api/v1/series?names=demand_kwh&from=2018-01-01&to=2020-12-31"))).json();
+    const early = await (await series(get("/api/v1/series?names=demand_kwh&from=2015-01-01&to=2020-12-31"))).json();
+    expect(early.dates[0]).toBe("2018-01-01");
+    expect(early).toEqual(exact);
+  });
+
+  it("answers a range entirely outside the history with one empty frame, not a new read", async () => {
+    for (const range of ["from=2031-05-05", "from=2031-06-06", "to=2016-01-01&from=2015-01-01"]) {
+      const body = await (await series(get(`/api/v1/series?names=demand_kwh&${range}`))).json();
+      expect(body).toEqual({ dates: [], series: { demand_kwh: [] } });
+    }
   });
 
   it("rejects SQL-looking input instead of passing it on", async () => {
@@ -46,6 +66,11 @@ describe("GET /api/v1/forecasts/{target}", () => {
   it("404s on an unknown target", async () => {
     const res = await forecasts(get("/api/v1/forecasts/gas"), { params: Promise.resolve({ target: "gas" }) } as never);
     expect(res.status).toBe(404);
+  });
+
+  it("marks where the data comes from", async () => {
+    const res = await forecasts(get("/api/v1/forecasts/price"), { params: Promise.resolve({ target: "price" }) } as never);
+    expect(res.headers.get("x-data-source")).toBe("snapshot");
   });
 
   it.each(["constructor", "toString", "__proto__"])("404s on the object property %s", async (target) => {
@@ -64,22 +89,26 @@ describe("GET /api/v1/anomalies", () => {
 
 describe("GET /api/v1/health", () => {
   it("reports freshness per series and says where the data comes from", async () => {
-    const body = await (await health()).json();
+    const body = await (await health(get("/api/v1/health"))).json();
     expect(body.source).toBe("fixtures");
-    expect(["ok", "degraded"]).toContain(body.status);
+    expect(["ok", "stale", "degraded"]).toContain(body.status);
+    expect(Array.isArray(body.reasons)).toBe(true);
+    expect(body.ages).toHaveProperty("dataDays");
+    // Failure texts are never published, only a reason code.
+    expect(JSON.stringify(body)).not.toContain("detail");
     expect(body.series.find((s: { series: string }) => s.series === "demand_kwh")?.lastDay).toMatch(/^2026-/);
   });
 });
 
 describe("GET /api/v1/model", () => {
   it("answers 404 until a training run exists, 200 afterwards", async () => {
-    expect([200, 404]).toContain((await model()).status);
+    expect([200, 404]).toContain((await model(get("/api/v1/model"))).status);
   });
 });
 
 describe("OpenAPI document", () => {
   it("describes every route that exists and every series name", async () => {
-    const doc = await (await openapi()).json();
+    const doc = await (await openapi(get("/api/v1/openapi.json"))).json();
     expect(doc.openapi).toBe("3.1.0");
     expect(Object.keys(doc.paths).sort()).toEqual(["/anomalies", "/forecasts/{target}", "/health", "/model", "/series"]);
     for (const name of SERIES_NAMES) {
@@ -126,5 +155,15 @@ describe("GET /api/v1/forecasts/{target}?format=csv", () => {
   it("rejects an unknown format", async () => {
     const res = await forecasts(get("/api/v1/forecasts/demand?format=xml"), { params: Promise.resolve({ target: "demand" }) } as never);
     expect([400, 404]).toContain(res.status);
+  });
+});
+
+describe("per-client limit on the endpoints with fixed answers", () => {
+  it("allows 120 requests a minute from one address and then answers 429", async () => {
+    const call = () =>
+      openapi(new NextRequest("http://localhost/api/v1/openapi.json", { headers: { "x-forwarded-for": "203.0.113.77" } }));
+    let last = 200;
+    for (let i = 0; i < 121; i++) last = (await call()).status;
+    expect(last).toBe(429);
   });
 });

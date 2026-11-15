@@ -44,6 +44,10 @@ export const en = {
     sourceFixtures: "Demo snapshot",
     snapshotNote:
       "This deployment is showing a saved snapshot of real data, not a live database. Connect a database to see daily updates.",
+    forecastAge: {
+      issued: "Forecast issued {when}",
+      old: "older than usual",
+    },
     freshness: {
       fresh: "Up to date",
       stale: "Data is {days} days old",
