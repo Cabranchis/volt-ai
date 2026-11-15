@@ -34,7 +34,6 @@ from voltia.models.backtest import (
 from voltia.models.gbm import GBMParams
 
 NAME = "price_mean_cop_kwh"
-SETTLE_LAG = 3  # days between a price day and the day XM publishes its settled price
 OUT = Path(__file__).parent / "results" / "dense_backtest.json"
 STEP = 7
 WARMUP = 24  # 24 x 7 days = the same 168 days of warm-up as the production backtest
@@ -61,13 +60,19 @@ def run() -> pd.DataFrame:
     prepared = prepare(hist, spec, config)
     rows = backtest_target(hist, prepared, origins, WARMUP, config, cfg)
     rows = rows[~rows["warmup"] & rows["y"].notna()].copy()
-    price = hist[NAME]
-    last_known = {
-        o: float(price.loc[: o - pd.Timedelta(days=SETTLE_LAG)].dropna().iloc[-1])
-        for o in rows["origin"].unique()
-    }
-    rows["persist"] = rows["origin"].map(last_known)
-    return rows
+    return add_persistence(rows, hist[NAME])
+
+
+def add_persistence(rows: pd.DataFrame, price: pd.Series) -> pd.DataFrame:
+    """The reference "repeat the last price": the settled price of the origin day.
+
+    The origin is the last day with a settled price (the forecast is really issued SETTLE_LAG days
+    later), so the value on the origin day is what a reader of XM data would have on hand.
+    """
+    last = {o: float(price.loc[:o].dropna().iloc[-1]) for o in rows["origin"].unique()}
+    out = rows.copy()
+    out["persist"] = out["origin"].map(last)
+    return out
 
 
 def per_origin(rows: pd.DataFrame) -> pd.DataFrame:
@@ -135,6 +140,8 @@ def main() -> None:
         rows = pd.DataFrame(json.loads(OUT.read_text()))
         rows["origin"] = pd.to_datetime(rows["origin"])
         rows["day"] = pd.to_datetime(rows["day"])
+        hist = complete_daily(db.read_series(db.make_engine()))
+        rows = add_persistence(rows, hist[NAME])
     else:
         rows = run()
         keep = ["origin", "day", "h", "bucket", "y", "scale", "m10", "m50", "m90", "ets50", "sn50", "persist"]

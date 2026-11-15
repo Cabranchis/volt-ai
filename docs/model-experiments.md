@@ -155,28 +155,30 @@ Exploratory finding, after the fact (not a validated predictor): on the 50 produ
 
 ## Price backtest with test dates every 7 days and the "repeat the last price" reference (2026-11-14)
 
-The production backtest has 51 dates 21 days apart (4 to 12 per episode) and compares with ETS and a weekly seasonal naive. The live record compares with the last settled price instead. `research/run_dense_backtest.py` runs the same production model and calibration (nothing retrained differently) on 151 dates 7 days apart, from 2023-11-21 to 2026-10-06, and adds that reference. The dates overlap more, so the intervals use blocks of 6 dates. MAPE %, by days ahead (model / ETS / seasonal naive / repeat last price):
+The production backtest has 51 dates 21 days apart (4 to 12 per episode) and compares with ETS and a weekly seasonal naive. The live record compares with the last settled price instead. `research/run_dense_backtest.py` runs the same production model and calibration on 151 dates 7 days apart, from 2023-11-21 to 2026-10-06, and adds that reference: the settled price of the origin day, which is what a reader of XM data has on hand. The dates overlap more, so the intervals use blocks of 6 dates. MAPE %, by days ahead (model / ETS / seasonal naive / repeat last price):
 
 | Period | Dates | 1-3 days | 4-7 days | 8-14 days |
 | --- | --- | --- | --- | --- |
-| El Niño 2023-24 (Nov-Apr) | 24 | 13.4 / 14.1 / 38.4 / 35.4 | 32.8 / 31.2 / 44.9 / 59.5 | 53.7 / 56.8 / 66.7 / 70.2 |
-| Supply shock 2024 (May-Dec) | 35 | 12.5 / 15.3 / 26.4 / 23.8 | 27.4 / 30.1 / 36.9 / 43.2 | 39.1 / 38.2 / 48.1 / 49.8 |
-| Calm 2025-26 | 78 | 12.2 / 16.4 / 29.5 / 27.0 | 19.9 / 24.4 / 27.1 / 29.9 | 30.8 / 32.5 / 37.2 / 34.8 |
-| El Niño 2026 (Jul-Oct) | 14 | 7.6 / 9.0 / 15.9 / 17.0 | 16.2 / 13.7 / 18.1 / 21.0 | 26.1 / 20.2 / 23.3 / 24.3 |
-| All | 151 | 12.0 / 15.1 / 29.0 / 26.6 | 23.3 / 25.8 / 31.3 / 36.9 | 35.9 / 36.6 / 43.1 / 42.9 |
+| El Niño 2023-24 (Nov-Apr) | 24 | 13.4 / 14.1 / 38.4 / 14.6 | 32.8 / 31.2 / 44.9 / 33.7 | 53.7 / 56.8 / 66.7 / 58.6 |
+| Supply shock 2024 (May-Dec) | 35 | 12.5 / 15.3 / 26.4 / 15.5 | 27.4 / 30.1 / 36.9 / 32.0 | 39.1 / 38.2 / 48.1 / 40.2 |
+| Calm 2025-26 | 78 | 12.2 / 16.4 / 29.5 / 16.4 | 19.9 / 24.4 / 27.1 / 28.6 | 30.8 / 32.5 / 37.2 / 34.7 |
+| El Niño 2026 (Jul-Oct) | 14 | 7.6 / 9.0 / 15.9 / 8.5 | 16.2 / 13.7 / 18.1 / 14.1 | 26.1 / 20.2 / 23.3 / 21.0 |
+| All | 151 | 12.0 / 15.1 / 29.0 / 15.2 | 23.3 / 25.8 / 31.3 / 28.8 | 35.9 / 36.6 / 43.1 / 38.5 |
 
 Paired MASE difference of the model against each reference (negative is better), with its 95 % interval:
 
 | Period | vs ETS | vs seasonal naive | vs repeat last price | Inside the P10-P90 band |
 | --- | --- | --- | --- | --- |
-| El Niño 2023-24 | -0.12 [-0.48, +0.23] | -1.05 [-1.52, -0.40] | -1.32 [-1.94, -0.51] | 87 % |
-| Supply shock 2024 | +0.02 [-0.27, +0.57] | -0.80 [-1.36, -0.27] | -0.93 [-1.49, -0.38] | 80 % |
-| Calm 2025-26 | -0.14 [-0.21, -0.04] | -0.44 [-0.60, -0.21] | -0.46 [-0.67, -0.20] | 84 % |
-| El Niño 2026 | +0.11 [-0.23, +0.48] | -0.24 [-0.54, -0.18] | -0.39 [-0.86, -0.12] | 93 % |
-| All | -0.08 [-0.21, +0.07] | -0.60 [-0.81, -0.40] | -0.70 [-0.96, -0.46] | 85 % |
+| El Niño 2023-24 | -0.12 [-0.48, +0.23] | -1.05 [-1.52, -0.40] | -0.16 [-0.57, +0.20] | 87 % |
+| Supply shock 2024 | +0.02 [-0.27, +0.57] | -0.80 [-1.36, -0.27] | -0.02 [-0.30, +0.53] | 80 % |
+| Calm 2025-26 | -0.14 [-0.21, -0.04] | -0.44 [-0.60, -0.21] | -0.17 [-0.24, -0.09] | 84 % |
+| El Niño 2026 | +0.11 [-0.23, +0.48] | -0.24 [-0.54, -0.18] | +0.15 [-0.08, +0.34] | 93 % |
+| All | -0.08 [-0.21, +0.07] | -0.60 [-0.81, -0.40] | -0.10 [-0.24, +0.04] | 85 % |
 
 What it says:
-- Against repeating the last price the model is better in every period, with an interval that excludes zero in all of them, and in 74 % of the dates (82 % against the seasonal naive).
-- Against ETS the difference is only clear in calm periods (-0.14 [-0.21, -0.04]) and at 1 to 3 days; over all dates it is -0.08 [-0.21, +0.07], so it cannot be called a win. In stress periods and in El Niño 2026 the model and ETS are level, and ETS is ahead at 4 to 14 days in 2026 (26.1 % against 20.2 % at 8-14 days). That matches the live record.
+- Against the weekly seasonal naive the model is clearly better everywhere (82 % of the dates). Against ETS and against repeating the last price the advantage is modest: over all dates the interval includes zero (-0.08 and -0.10), and it excludes zero only in calm periods (-0.14 and -0.17).
+- In stress periods and in El Niño 2026 the model, ETS and repeating the last price are level; in 2026 both references are slightly ahead at 4 to 14 days (8-14 days: 26.1 % against 20.2 % for ETS and 21.0 % for the last price). This matches the live record, where the model is no better than the last price at 4 to 7 days.
+- The model's clear edge is at 1 to 3 days (12.0 % against 15.2 % for the last price) and in calm periods.
 - The band covers 80 to 93 % in every period. The coverage of 68 to 71 % found on the 21-day dates in stress came from only 4 to 8 dates per episode; with the denser dates it is not reproduced, so the bands are not short in stress.
-- The 8 to 14 day error is 36 % over all dates; every method is above 35 % there.
+- The 8 to 14 day error is 36 % over all dates, and every method is above 35 % there.
+- A first version of this script took the price of three days before the origin as "the last price" and made the reference look much weaker (26.6 % at 1-3 days); the origin day is the right one, because the origin is already the last settled day.
