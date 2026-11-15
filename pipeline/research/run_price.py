@@ -96,6 +96,7 @@ EXPERIMENTS.update(
         "fb_restrictions": GBMExperiment(blocks=(*FS1, "restrictions")),
         "fb_availability": GBMExperiment(blocks=(*FS1, "availability")),
         "fb_all": GBMExperiment(blocks=(*FS1, *features_ext.PHASE_B_BLOCKS)),
+        "fb_hydro_ode": GBMExperiment(blocks=(*FS1, "hydro_ode")),
     }
 )
 

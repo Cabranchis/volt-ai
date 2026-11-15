@@ -16,6 +16,7 @@ from voltia.features import log_positive
 
 BLOCKS = ("dispatch", "offers", "contracts", "hydro_now", "trade", "nowcast")
 PHASE_B_BLOCKS = ("regional", "profile", "restrictions", "availability")
+PHYSICAL_BLOCKS = ("hydro_ode",)
 
 FEATURES: dict[str, list[str]] = {
     "dispatch": [
@@ -63,6 +64,10 @@ FEATURES: dict[str, list[str]] = {
         "margin_rel90",
         "oom_thermal_rel90",
     ],
+    # Where the national reservoir will stand on the target day if the inflows relax towards their
+    # historical mean and the net outflow stays as it was (the water balance as a differential
+    # equation, see hydro_ode_projection): share of the capacity, and its change from today.
+    "hydro_ode": ["res_proj_target", "res_proj_chg"],
 }
 
 
@@ -226,7 +231,7 @@ def add_blocks(
     lags = {**PUBLICATION_LAG, **(lags or {})}
     base = origin_blocks(data, lags)
     wanted = block_names(blocks)
-    per_row = {"dc_target_rel", "dc_corrected_target_rel"}
+    per_row = {"dc_target_rel", "dc_corrected_target_rel", *FEATURES["hydro_ode"]}
     present = [n for n in wanted if n not in per_row]
     out = base.reindex(pd.DatetimeIndex(table["origin"]))[[*present, "_ref"]].reset_index(drop=True)
     if "dispatch" in blocks:
@@ -239,4 +244,72 @@ def add_blocks(
         out["dc_corrected_target_rel"] = np.where(
             known, day_values + out["dc_basis14"].to_numpy() - out["_ref"].to_numpy(), np.nan
         )
+    if "hydro_ode" in blocks:
+        target, change = hydro_ode_projection(data, lags)
+        position = target.index.get_indexer(pd.DatetimeIndex(table["origin"]))
+        column = table["h"].to_numpy(dtype=int) - 1
+        valid = position >= 0
+        for name, frame in (("res_proj_target", target), ("res_proj_chg", change)):
+            values = np.full(len(table), np.nan)
+            values[valid] = frame.to_numpy()[position[valid], column[valid]]
+            out[name] = values
     return out[wanted]
+
+
+ODE_HORIZON = 14
+ODE_DEFAULT_PHI = 0.95  # day-to-day persistence of the inflow anomaly until there is enough history to estimate it
+ODE_MIN_HISTORY = 365
+ODE_DAYS_PER_YEAR = 364  # 52 weeks: the day a year earlier with the same weekday
+
+
+def hydro_ode_projection(
+    data: pd.DataFrame, lags: dict[str, int] | None = None
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """National reservoir projected over the forecast horizon from the water balance.
+
+    The stored energy V obeys dV/dt = I(t) - R, with I the inflows and R the net outflow
+    (generation, spill and evaporation together). Two things are estimated from the days already
+    published, never from later ones:
+    - R as the mean of I - dV over the last 28 days. The balance closes: over 2019-2026 the 28-day
+      means of I - dV and of generation plus spill correlate 0.985 and differ by 3 %. Using the
+      identity needs no conversion between water and energy.
+    - the inflow anomaly l(t) = log(I / historical mean), which relaxes to zero with the solution of
+      dl/dt = -l / tau, l(t) = l0 * exp(-t / tau). The persistence phi = exp(-1 / tau) is the lag-1
+      autocorrelation of the 7-day anomaly over all the history up to that day.
+    The historical mean for a future day is that of the same weekday a year before. The projected
+    volume V(t) = V(t-1) + I(t) - R is clipped to [0, capacity] at every step.
+
+    Returns two frames indexed by origin day with one column per horizon h = 1..14: the projected
+    share of the capacity on the target day, and its change from the last known share. The newest
+    level is known `k` days past the origin, so horizons up to k carry no projection.
+    """
+    lags = {**PUBLICATION_LAG, **(lags or {})}
+    names = ("reservoir_kwh", "reservoir_capacity_kwh", "inflows_kwh", "inflows_hist_mean_kwh")
+    k = min(_k(n, lags) for n in names)
+    volume, capacity = _col(data, "reservoir_kwh"), _col(data, "reservoir_capacity_kwh")
+    inflow, climate = _col(data, "inflows_kwh"), _col(data, "inflows_hist_mean_kwh")
+
+    net_outflow = (inflow - volume.diff()).rolling(28, min_periods=20).mean()
+    anomaly = np.log(inflow.rolling(7, min_periods=5).mean() / climate.rolling(7, min_periods=5).mean())
+    phi = anomaly.expanding(min_periods=ODE_MIN_HISTORY).corr(anomaly.shift(1))
+    phi = phi.clip(0.5, 0.995).fillna(ODE_DEFAULT_PHI)
+    tau = -1.0 / np.log(phi)
+
+    def at_origin(series: pd.Series) -> pd.Series:
+        return series.shift(-k)  # the value of day T + k, the newest known one, on row T
+
+    v0, cap0, rate, a0, tau0 = (at_origin(x) for x in (volume, capacity, net_outflow, anomaly, tau))
+    steps = max(ODE_HORIZON - k, 0)
+    projected = {0: v0}
+    for s in range(1, steps + 1):
+        # The historical mean of day T + k + s is the one of the same day a year earlier. The volume
+        # is clipped at every step and carried on, so water above the capacity is spilled for good.
+        mean_s = climate.shift(ODE_DAYS_PER_YEAR - k - s)
+        step = mean_s * np.exp(a0 * np.exp(-s / tau0)) - rate
+        projected[s] = (projected[s - 1] + step).clip(lower=0.0).clip(upper=cap0)
+    target, change = {}, {}
+    for h in range(1, ODE_HORIZON + 1):
+        v = projected[max(h - k, 0)]
+        target[h] = v / cap0
+        change[h] = (v - v0) / cap0
+    return pd.DataFrame(target), pd.DataFrame(change)

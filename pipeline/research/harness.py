@@ -61,6 +61,7 @@ PUBLICATION_LAG: dict[str, int] = {
     "reservoir_kwh": 1,
     "inflows_pct": 1,
     "inflows_kwh": 1,
+    "inflows_hist_mean_kwh": 1,
     "spill_kwh": 1,
     "turbined_m3": 1,
     "reservoir_capacity_kwh": 1,

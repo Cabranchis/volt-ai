@@ -31,6 +31,7 @@ BLOCK_TEXT = {
     "contracts": "contract and scarcity prices",
     "hydro_now": "newest hydrology",
     "trade": "exports and imports",
+    "hydro_ode": "projected reservoir from the water balance",
     "nowcast": "bias-corrected nowcast",
     "regional": "hydrology by XM region",
     "profile": "hourly price profile",
