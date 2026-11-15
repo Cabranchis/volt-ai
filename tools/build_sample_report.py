@@ -4,7 +4,9 @@ Run from the repository root:
 
     uv run --no-project --with reportlab --with matplotlib python tools/build_sample_report.py
 
-Reads web/src/lib/data/fixtures/ (export them first with tools/export_fixtures.py) and writes
+With --live it reads the production API (the data the site shows today); without it, the JSON
+fixtures in web/src/lib/data/fixtures/ (export them first with tools/export_fixtures.py). It also
+draws one recent test case from web/src/lib/case-study/el-nino.json. It writes
 web/public/informe-ejemplo-volt-ai.pdf. Every figure comes from the fixtures; the text only frames
 them. The probability of a price spike reads the forecast's own P10, P50 and P90 as a log-normal,
 the same rule as web/src/lib/spikes.ts.
@@ -15,6 +17,9 @@ from __future__ import annotations
 import io
 import json
 import math
+import os
+import sys
+import urllib.request
 from datetime import date, datetime
 from pathlib import Path
 
@@ -27,13 +32,16 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.lib.utils import ImageReader
-from reportlab.platypus import Image, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "web" / "src" / "lib" / "data" / "fixtures"
 OUT = ROOT / "web" / "public" / "informe-ejemplo-volt-ai.pdf"
+CASES = ROOT / "web" / "src" / "lib" / "case-study" / "el-nino.json"
+API = "https://voltia-xi-five.vercel.app/api/v1"
+CASE_ORIGIN = "2026-09-15"  # the most recent of the four cases on the Results page
 SITE = "https://voltia-xi-five.vercel.app/es"
-CONTACT = "miguelangel.14130@gmail.com"
+CONTACT = os.environ.get("VOLTAI_CONTACT_EMAIL", "")  # set it when building the report that gets published
 
 INK = colors.HexColor("#1b1b1a")
 MUTED = colors.HexColor("#5b5a56")
@@ -48,7 +56,29 @@ MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sept", "oct",
 Z80 = 1.2815515655446004  # the 90th percentile of a standard normal
 
 
+def fetch(path: str):
+    request = urllib.request.Request(f"{API}/{path}", headers={"User-Agent": "volt-ai-report"})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def load_live() -> dict:
+    """The same shapes the fixtures have, from the public API. The API has no regional table."""
+    series = fetch("series?names=price_mean_cop_kwh,demand_kwh,reservoir_pct&from=2018-01-01")
+    return {
+        "series.json": series,
+        "forecasts.json": {"demand_kwh": fetch("forecasts/demand"), "price_mean_cop_kwh": fetch("forecasts/price")},
+        "model-run.json": fetch("model"),
+        "regional.json": None,
+    }
+
+
+SOURCE: dict = {}
+
+
 def load(name: str):
+    if SOURCE:
+        return SOURCE[name]
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
 
@@ -141,7 +171,72 @@ def region_table(regional) -> list[list[str]]:
     return rows
 
 
+def case_chart(case) -> io.BytesIO:
+    hist = case["history"]
+    rows = case["rows"]
+    start = date.fromisoformat(hist[0]["day"])
+    hx = [(date.fromisoformat(h["day"]) - start).days for h in hist]
+    fx = [(date.fromisoformat(r["day"]) - start).days for r in rows]
+    fig, ax = plt.subplots(figsize=(7.2, 2.7), dpi=200)
+    ax.plot(hx, [h["y"] for h in hist], color=PRICE, linewidth=1.4, label="Liquidado antes de la emisión")
+    ax.fill_between(fx, [r["p10"] for r in rows], [r["p90"] for r in rows], color=PRICE, alpha=0.18, linewidth=0, label="Rango P10 a P90")
+    ax.plot(fx, [r["p50"] for r in rows], color=PRICE, linewidth=1.6, linestyle=(0, (4, 2)), label="Pronóstico Volt-AI (P50)")
+    ax.plot(fx, [r["ets"] for r in rows], color="#5b5a56", linewidth=1.1, linestyle=":", label="Referencia ETS")
+    ax.plot(fx, [r["y"] for r in rows], color="#1b1b1a", linewidth=1.6, marker="o", markersize=2.5, label="Lo que pasó")
+    ticks = list(range(0, max(fx) + 1, 7))
+    ax.set_xticks(ticks, [day_label((start.fromordinal(start.toordinal() + i)).isoformat(), year=False) for i in ticks], fontsize=7)
+    ax.tick_params(axis="y", labelsize=7)
+    ax.set_ylabel("COP/kWh", fontsize=7)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color("#dedcd5")
+    ax.grid(axis="y", color="#e8e6e0", linewidth=0.6)
+    ax.legend(fontsize=7, frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3)
+    fig.tight_layout()
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format="png", bbox_inches="tight")
+    plt.close(fig)
+    buffer.seek(0)
+    return buffer
+
+
+def recent_result(h2, base, small, table) -> list:
+    """One recent test date where Volt-AI beat both references, with the typical result next to it."""
+    study = json.loads(CASES.read_text(encoding="utf-8"))
+    case = next((c for c in study["cases"] if c["origin"] == CASE_ORIGIN), None)
+    if case is None:
+        return []
+    sc, rows = case["scores"], case["rows"]
+    inside = sum(1 for r in rows if r["p10"] <= r["y"] <= r["p90"])
+    price = study["overall"]["price"]
+    won, total = study["regimes"]["all"]["won"], study["regimes"]["all"]["origins"]
+    return [
+        KeepTogether(
+            [
+                Paragraph("Un resultado reciente", h2),
+                Paragraph(
+                    f"Pronóstico de precio del {day_label(case['origin'])}, a 14 días, comparado con lo que XM publicó después. "
+                    f"El error porcentual medio fue de {num(sc['mapeModel'], 1)} % para Volt-AI y de {num(sc['mapeEts'], 1)} % para ETS, "
+                    f"y {inside} de {len(rows)} días quedaron dentro del rango P10 a P90.",
+                    base,
+                ),
+                Image(case_chart(case), width=17 * cm, height=6.2 * cm),
+                Paragraph(
+                    f"Es un ejemplo elegido entre las {won} de {total} fechas de prueba en que Volt-AI superó a las dos referencias, no el resultado típico. "
+                    f"Sobre las {price['origins']} fechas de prueba, el error de precio a 1 a 3 días fue de {num(price['shortMape'], 1)} % para Volt-AI y de {num(price['shortEtsMape'], 1)} % para ETS, "
+                    f"y el modelo superó al ingenuo estacional semanal en el {num(price['winsNaivePct'])} % de las fechas. "
+                    "Todas las fechas, con su resultado, están en la página de Resultados.",
+                    small,
+                ),
+            ]
+        )
+    ]
+
+
 def main() -> None:
+    if "--live" in sys.argv:
+        SOURCE.update(load_live())
     series = load("series.json")
     dates = series["dates"]
     data = series["series"]
@@ -175,9 +270,16 @@ def main() -> None:
     price_cov = [o["model_coverage"] for o in run["metrics"]["targets"]["price_mean_cop_kwh"].get("by_origin", [])]
     low_cov = f"{min(price_cov) * 100:.0f} %" if price_cov else None
     over_days = [p["day"] for p in price_fc if p["day"] < issued]
-    over_text = " y ".join(day_label(d, False) for d in over_days)
-    levels = region_table(regional)
-    country = levels[-1]
+    over_labels = [day_label(d, False) for d in over_days]
+    over_text = over_labels[0] if len(over_labels) == 1 else ", ".join(over_labels[:-1]) + " y " + over_labels[-1] if over_labels else ""
+    if regional is not None:
+        levels = region_table(regional)
+        country = levels[-1]
+    else:
+        res = data["reservoir_pct"]
+        r_last = last_valid(res)
+        country = ["Todo el país", pct(res[r_last], 1), f"{num((res[r_last] - res[r_last - 7]) * 100, 1)} pt"]
+        levels = None
 
     styles = getSampleStyleSheet()
     base = ParagraphStyle("base", parent=styles["BodyText"], fontName="Helvetica", fontSize=9, leading=12.5, textColor=INK)
@@ -284,9 +386,17 @@ def main() -> None:
                 ),
             ]
         ),
-        Paragraph("Hidrología por región", h2),
-        table(levels, [4.2 * cm, 3 * cm, 4.4 * cm, 4.4 * cm]),
-        Paragraph("Las regiones son las de XM y siguen las cuencas de los ríos, no los límites de los departamentos.", small),
+        *(
+            [
+                Paragraph("Hidrología por región", h2),
+                table(levels, [4.2 * cm, 3 * cm, 4.4 * cm, 4.4 * cm]),
+                Paragraph("Las regiones son las de XM y siguen las cuencas de los ríos, no los límites de los departamentos.", small),
+            ]
+            if levels
+            else []
+        ),
+        *recent_result(h2, base, small, table),
+        PageBreak(),
         KeepTogether(
             [
                 Paragraph("Qué tan bien ha pronosticado", h2),
@@ -306,7 +416,7 @@ def main() -> None:
         Paragraph("Apoya decisiones. No es una recomendación para comprar, vender ni cubrir energía.", bullet, bulletText="•"),
         Spacer(1, 8),
         Paragraph(
-            f"Fuentes: XM (demanda, precio, embalses y aportes), Open-Meteo y NOAA. Sitio y método: {SITE}/models · Contacto: {CONTACT}",
+            f"Fuentes: XM (demanda, precio, embalses y aportes), Open-Meteo y NOAA. Sitio y método: {SITE}/models" + (f" · Contacto: {CONTACT}" if CONTACT else ""),
             small,
         ),
     ]

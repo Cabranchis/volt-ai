@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { getDictionary } from "@/lib/i18n/dictionaries";
-import { REPO_URL } from "@/lib/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const dict = await getDictionary();
@@ -94,16 +93,6 @@ export default async function AboutPage() {
 
         <Panel title={dict.about.authorTitle}>
           <p className="text-sm text-muted">{dict.about.authorBody}</p>
-          {REPO_URL ? (
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-block text-sm font-medium text-accent-ink underline underline-offset-4"
-            >
-              {dict.common.github}
-            </a>
-          ) : null}
         </Panel>
       </div>
     </>

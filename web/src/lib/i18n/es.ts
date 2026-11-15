@@ -40,7 +40,6 @@ export const es: Dictionary = {
     downloadCsv: "Descargar CSV",
     date: "Fecha",
     source: "Fuente",
-    github: "Código fuente",
     dataThrough: "Datos de mercado hasta el {date}",
     hydroThrough: "Hidrología hasta el {date}",
     sourcePostgres: "Base de datos en vivo",
@@ -304,7 +303,6 @@ export const es: Dictionary = {
     limitsTitle: "Qué tener en cuenta",
     limits:
       "Los precios reaccionan a hechos que ningún modelo anticipa, como fallas de plantas, regulación o lluvias repentinas, por eso cada pronóstico trae su rango. El pronóstico es una estimación estadística que apoya decisiones, y los backtests describen el pasado.",
-    cardLink: "Leer la ficha completa del modelo",
     empty: "Todavía no se ha registrado ninguna corrida de entrenamiento.",
   },
   analyst: {
@@ -431,7 +429,7 @@ export const es: Dictionary = {
       "No pronostica qué hará el precio a continuación. Muestra cómo se portó el modelo en condiciones parecidas.",
     ],
     method:
-      "Corrida de entrenamiento {runId}. El código que regenera esta página está en pipeline/research/run_dense_backtest.py, case_el_nino.py y case_el_nino_pack.py.",
+      "Corrida de entrenamiento {runId}.",
     chart: {
       actual: "Precio real",
       median: "Mediana de Volt-AI",
@@ -449,7 +447,7 @@ export const es: Dictionary = {
     what: "Volt-AI lee cada día los datos públicos del mercado eléctrico nacional, entrena modelos de pronóstico, los compara con honestidad contra el pasado y publica los resultados aquí. Un analista de IA responde preguntas usando solo consultas validadas.",
     howTitle: "Cómo funciona",
     pipeline: "Pipeline diario",
-    pipelineBody: "Python en GitHub Actions: descarga, valida, entrena, pronostica y resume.",
+    pipelineBody: "Tareas programadas en Python: descarga, valida, entrena, pronostica y resume.",
     database: "Base de datos",
     databaseBody: "PostgreSQL guarda series, pronósticos, anomalías e informes.",
     web: "Este sitio",

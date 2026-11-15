@@ -1,8 +1,5 @@
 import type { Locale } from "./i18n/config";
 
-/** The public repository link stays hidden until NEXT_PUBLIC_REPO_URL is set. */
-export const REPO_URL = process.env.NEXT_PUBLIC_REPO_URL || null;
-
 /** Where businesses write to. Shown on the page For business. */
 export const CONTACT_EMAIL = "miguelangel.14130@gmail.com";
 

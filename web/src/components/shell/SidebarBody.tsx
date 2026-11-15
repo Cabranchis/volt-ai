@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/en";
-import { REPO_URL } from "@/lib/site";
 import { DataSourceBadge } from "./DataSourceBadge";
 import { LocaleSwitch } from "./LocaleSwitch";
 import { NavLinks } from "./NavLinks";
@@ -18,16 +17,6 @@ export function SidebarBody({ locale, dict }: { locale: Locale; dict: Dictionary
         </Suspense>
         <LocaleSwitch current={locale} label={dict.common.language} />
         <ThemeSwitch labels={dict.common} />
-        {REPO_URL ? (
-          <a
-            href={REPO_URL}
-            rel="noopener noreferrer"
-            target="_blank"
-            className="text-xs text-muted underline underline-offset-4 hover:text-ink"
-          >
-            {dict.common.github}
-          </a>
-        ) : null}
       </div>
     </div>
   );

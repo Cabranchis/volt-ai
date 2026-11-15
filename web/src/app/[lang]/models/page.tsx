@@ -13,7 +13,6 @@ import { fmt } from "@/lib/i18n/fmt";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/en";
 import { horizonSeries, parseTargetMetrics, verdict, type TargetMetrics } from "@/lib/model-metrics";
-import { REPO_URL } from "@/lib/site";
 import { scoreTrackRecord } from "@/lib/track-record";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -198,16 +197,6 @@ export default async function ModelsPage() {
           </Panel>
           <Panel title={m.limitsTitle}>
             <p className="max-w-[72ch] text-sm leading-relaxed">{m.limits}</p>
-            {REPO_URL ? (
-              <a
-                href={`${REPO_URL}/blob/main/docs/model-card.md`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-block text-sm font-medium text-accent-ink underline underline-offset-4"
-              >
-                {m.cardLink}
-              </a>
-            ) : null}
           </Panel>
         </div>
       </div>

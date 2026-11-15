@@ -38,7 +38,6 @@ export const en = {
     downloadCsv: "Download CSV",
     date: "Date",
     source: "Source",
-    github: "Source code",
     dataThrough: "Market data through {date}",
     hydroThrough: "Hydrology through {date}",
     sourcePostgres: "Live database",
@@ -302,7 +301,6 @@ export const en = {
     limitsTitle: "What to keep in mind",
     limits:
       "Prices react to events no model sees coming, such as plant outages, regulation or sudden rain, which is why every forecast comes with a range. The forecast is a statistical estimate that supports decisions, and backtests describe the past.",
-    cardLink: "Read the full model card",
     empty: "No training run has been recorded yet.",
   },
   analyst: {
@@ -428,7 +426,7 @@ export const en = {
       "It does not forecast what the price will do next. It shows how the model behaved in comparable conditions.",
     ],
     method:
-      "Training run {runId}. The code that regenerates this page is in pipeline/research/run_dense_backtest.py, case_el_nino.py and case_el_nino_pack.py.",
+      "Training run {runId}.",
     chart: {
       actual: "Real price",
       median: "Volt-AI median",
@@ -446,7 +444,7 @@ export const en = {
     what: "Volt-AI reads the public data of the national power market every day, trains forecasting models, checks them honestly against the past and publishes the results here. An AI analyst answers questions using only validated lookups.",
     howTitle: "How it works",
     pipeline: "Daily pipeline",
-    pipelineBody: "Python on GitHub Actions: fetch, validate, train, forecast, brief.",
+    pipelineBody: "Scheduled Python jobs: fetch, validate, train, forecast, brief.",
     database: "Database",
     databaseBody: "PostgreSQL stores series, forecasts, anomalies and briefings.",
     web: "This site",
