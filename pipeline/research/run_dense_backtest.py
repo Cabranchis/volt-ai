@@ -119,10 +119,18 @@ def report(rows: pd.DataFrame) -> dict[str, object]:
             entry[bucket] = {m: round(float(v), 1) for m, v in zip(("model", "ets", "naive", "persist"), vals, strict=True)}
         print("  " + "  ".join(line))
         summary[label] = entry
-    print("\nMASE overall, share of dates the model is better, paired difference vs each reference [95 % CI]")
-    full = po.groupby("origin")[[c for c in po.columns if c.startswith("mase_")] + ["inside"]].mean().reset_index()
+    print("\nMASE (mean over the 14 horizons of each date), share of dates the model is better, paired difference [95 % CI]")
+    errors = rows.assign(
+        **{
+            f"mase_{name}": (rows[col] - rows["y"]).abs() / rows["scale"]
+            for name, col in (("model", "m50"), ("ets", "ets50"), ("naive", "sn50"), ("persist", "persist"))
+        },
+        inside=(rows["y"] >= rows["m10"]) & (rows["y"] <= rows["m90"]),
+    )
+    full = errors.groupby("origin")[[c for c in errors.columns if c.startswith("mase_")]].mean()
     for label, (lo, hi) in PERIODS.items():
-        part = full[(full["origin"] >= lo) & (full["origin"] <= hi)].sort_values("origin")
+        part = full[(full.index >= lo) & (full.index <= hi)].sort_index()
+        covered = errors[(errors["origin"] >= lo) & (errors["origin"] <= hi)]["inside"].mean()
         if part.empty:
             continue
         text = [f"{label} ({len(part)})", f"MASE model {part['mase_model'].mean():.2f}"]
@@ -130,7 +138,7 @@ def report(rows: pd.DataFrame) -> dict[str, object]:
             diff = (part["mase_model"] - part[f"mase_{ref}"]).to_numpy()
             ci = block_ci(diff)
             text.append(f"{ref} {part[f'mase_{ref}'].mean():.2f} (wins {np.mean(diff < 0):.0%}, diff {diff.mean():+.2f} [{ci[0]:+.2f},{ci[1]:+.2f}])")
-        text.append(f"inside band {part['inside'].mean():.0%}")
+        text.append(f"inside band {covered:.0%}")
         print("  " + "; ".join(text))
     return summary
 
@@ -142,6 +150,10 @@ def main() -> None:
         rows["day"] = pd.to_datetime(rows["day"])
         hist = complete_daily(db.read_series(db.make_engine()))
         rows = add_persistence(rows, hist[NAME])
+        stored = rows.copy()
+        stored["origin"] = stored["origin"].dt.strftime("%Y-%m-%d")
+        stored["day"] = stored["day"].dt.strftime("%Y-%m-%d")
+        OUT.write_text(json.dumps(stored.round(4).to_dict("records"), separators=(",", ":")))
     else:
         rows = run()
         keep = ["origin", "day", "h", "bucket", "y", "scale", "m10", "m50", "m90", "ets50", "sn50", "persist"]

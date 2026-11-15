@@ -56,12 +56,17 @@ export default async function CaseStudyPage() {
     },
     {
       label: t.stats.price,
-      value: formatNumber(price.mape, locale, 1),
+      value: formatNumber(price.shortMape, locale, 1),
       unit: "%",
-      note: fmt(t.stats.versus, { ets: formatNumber(price.etsMape, locale, 1) }),
+      note: fmt(t.stats.versus, { ets: formatNumber(price.shortEtsMape, locale, 1) }),
       context: fmt(t.stats.testContext, { n: price.origins }),
     },
-    { label: t.stats.wins, value: `${won} / ${n}`, unit: t.stats.winsUnit, context: t.stats.winsContext },
+    {
+      label: t.stats.naive,
+      value: formatNumber(price.winsNaivePct, locale, 0),
+      unit: t.stats.naiveUnit,
+      context: t.stats.naiveContext,
+    },
     {
       label: t.stats.band,
       value: formatNumber(price.coverage * 100, locale, 0),
@@ -103,6 +108,7 @@ export default async function CaseStudyPage() {
                   <th scope="col" className={head}>{t.columns.model}</th>
                   <th scope="col" className={head}>{t.columns.ets}</th>
                   <th scope="col" className={head}>{t.columns.naive}</th>
+                  <th scope="col" className={head}>{t.columns.short}</th>
                   <th scope="col" className={head}>{t.columns.coverage}</th>
                 </tr>
               </thead>
@@ -115,9 +121,17 @@ export default async function CaseStudyPage() {
                         {fmt(t.regimes[key], { n })}
                       </th>
                       <td className="px-2 py-2 text-right sm:px-3">{r.origins}</td>
-                      <td className="px-2 py-2 text-right font-semibold sm:px-3">{formatNumber(r.model, locale, 2)}</td>
-                      <td className="px-2 py-2 text-right sm:px-3">{formatNumber(r.ets, locale, 2)}</td>
-                      <td className="px-2 py-2 text-right sm:px-3">{formatNumber(r.naive, locale, 2)}</td>
+                      {([r.model, r.ets, r.naive] as const).map((value, i) => (
+                        <td
+                          key={i}
+                          className={`px-2 py-2 text-right sm:px-3 ${value === Math.min(r.model, r.ets, r.naive) ? "font-semibold" : ""}`}
+                        >
+                          {formatNumber(value, locale, 2)}
+                        </td>
+                      ))}
+                      <td className="px-2 py-2 text-right sm:px-3">
+                        {formatNumber(r.short.model, locale, 1)} / {formatNumber(r.short.ets, locale, 1)}
+                      </td>
                       <td className="px-2 py-2 text-right sm:px-3">{formatPercent(r.coverage, locale, 0)}</td>
                     </tr>
                   );

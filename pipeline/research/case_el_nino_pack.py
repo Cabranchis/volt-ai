@@ -21,7 +21,7 @@ from voltia import db
 HERE = Path(__file__).parent
 OUT = HERE.parents[1] / "web" / "src" / "lib" / "case-study" / "el-nino.json"
 API = "https://voltia-xi-five.vercel.app/api/v1/model"
-# Examples among the origins where the model beat both references (31 of 50); the page says so.
+# Examples among the origins where the model beat both references (79 of 151 on the dense set); the page says so.
 CASES = ["2024-01-02", "2025-01-14", "2026-06-23", "2026-09-15"]
 HISTORY_DAYS = 21
 REGIMES = [
@@ -43,16 +43,26 @@ def mape(day_rows: list[dict], key: str) -> float:
 def main() -> None:
     model = json.load(urllib.request.urlopen(API))
     by_origin = model["metrics"]["targets"]["price_mean_cop_kwh"]["by_origin"]
+    dense = pd.DataFrame(json.loads((HERE / "results" / "dense_backtest.json").read_text()))
+    dense["origin"] = pd.to_datetime(dense["origin"])
+    for name, col in (("m", "m50"), ("e", "ets50"), ("n", "sn50")):
+        dense[f"mase_{name}"] = (dense[col] - dense["y"]).abs() / dense["scale"]
+        dense[f"ape_{name}"] = (dense[col] - dense["y"]).abs() / dense["y"] * 100
+    dense["inside"] = (dense["y"] >= dense["m10"]) & (dense["y"] <= dense["m90"])
+    per_date = dense.groupby("origin")[["mase_m", "mase_e", "mase_n"]].mean()
     regimes = {}
     for key, lo, hi in REGIMES:
-        part = [o for o in by_origin if lo <= o["origin"] <= hi]
+        dates = per_date[(per_date.index >= lo) & (per_date.index <= hi)]
+        rows_in = dense[(dense["origin"] >= lo) & (dense["origin"] <= hi)]
+        short = rows_in[rows_in["h"] <= 3]
         regimes[key] = {
-            "origins": len(part),
-            "model": round(st.mean(o["model_mase"] for o in part), 2),
-            "ets": round(st.mean(o["ets_mase"] for o in part), 2),
-            "naive": round(st.mean(o["seasonal_naive_mase"] for o in part), 2),
-            "coverage": round(st.mean(o["model_coverage"] for o in part), 2),
-            "won": sum(o["model_mase"] < min(o["ets_mase"], o["seasonal_naive_mase"]) for o in part),
+            "origins": len(dates),
+            "model": round(float(dates["mase_m"].mean()), 2),
+            "ets": round(float(dates["mase_e"].mean()), 2),
+            "naive": round(float(dates["mase_n"].mean()), 2),
+            "coverage": round(float(rows_in["inside"].mean()), 2),
+            "won": int(((dates["mase_m"] < dates["mase_e"]) & (dates["mase_m"] < dates["mase_n"])).sum()),
+            "short": {"model": round(float(short["ape_m"].mean()), 1), "ets": round(float(short["ape_e"].mean()), 1)},
         }
 
     stored = json.loads((HERE / "results" / "case_el_nino_rows.json").read_text())
@@ -101,14 +111,25 @@ def main() -> None:
         }
 
     targets = model["metrics"]["targets"]
+    demand_t = targets["demand_kwh"]
+    short_all = dense[dense["h"] <= 3]
     overall = {
-        name: {
-            "mape": round(targets[key]["overall"]["model"]["mape"], 1),
-            "etsMape": round(targets[key]["overall"]["ets"]["mape"], 1),
-            "coverage": round(targets[key]["overall"]["model"]["coverage_p10_p90"], 3),
-            "origins": targets[key]["n_origins"],
-        }
-        for name, key in (("demand", "demand_kwh"), ("price", "price_mean_cop_kwh"))
+        "demand": {
+            "mape": round(demand_t["overall"]["model"]["mape"], 1),
+            "etsMape": round(demand_t["overall"]["ets"]["mape"], 1),
+            "coverage": round(demand_t["overall"]["model"]["coverage_p10_p90"], 3),
+            "origins": demand_t["n_origins"],
+        },
+        # The price figures come from the 151 dates 7 days apart (research/run_dense_backtest.py).
+        "price": {
+            "mape": round(float(dense["ape_m"].mean()), 1),
+            "etsMape": round(float(dense["ape_e"].mean()), 1),
+            "shortMape": round(float(short_all["ape_m"].mean()), 1),
+            "shortEtsMape": round(float(short_all["ape_e"].mean()), 1),
+            "coverage": round(float(dense["inside"].mean()), 3),
+            "origins": len(per_date),
+            "winsNaivePct": round(float((per_date["mase_m"] < per_date["mase_n"]).mean() * 100)),
+        },
     }
     payload = {"overall": overall, "runId": model["runId"], "dataEnd": model["dataEnd"], "regimes": regimes, "cases": cases, "months": months}
     OUT.parent.mkdir(parents=True, exist_ok=True)

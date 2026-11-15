@@ -24,6 +24,8 @@ export interface Regime {
   naive: number;
   coverage: number;
   won: number;
+  /** Mean error (%) at 1 to 3 days ahead. */
+  short: { model: number; ets: number };
 }
 
 export interface MonthProfile {
@@ -44,9 +46,16 @@ export interface OverallScore {
   origins: number;
 }
 
+export interface PriceScore extends OverallScore {
+  shortMape: number;
+  shortEtsMape: number;
+  /** Share (%) of the test dates where Volt-AI beat the weekly seasonal naive. */
+  winsNaivePct: number;
+}
+
 export const CASE_STUDY = data as unknown as {
   runId: string;
-  overall: { demand: OverallScore; price: OverallScore };
+  overall: { demand: OverallScore; price: PriceScore };
   dataEnd: string;
   regimes: Record<RegimeKey, Regime>;
   cases: CasePoint[];
