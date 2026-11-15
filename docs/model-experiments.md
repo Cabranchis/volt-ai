@@ -147,6 +147,36 @@ Question: in stress the P10-P90 band covered 71 % (El Niño 2023-24) and 68 % (S
 
 Result: negative, no variant is shipped and the reported origins were not run. On the development origins the current calibration already covers 0.786 in the most volatile third, so there is nothing to fix there; V1 and V2 move that figure further from 0.80 (0.832), widen the band by 5 to 20 % and lose on pinball (V3 significantly). The reported origins were not used to look for a better variant.
 
+Correction 2026-11-14: the "short band in stress" below (68 to 71 %) was measured on 4 to 8 dates per episode. On 151 dates 7 days apart the band covers 80 to 93 % in every period (see the section "Price backtest with test dates every 7 days"), so the premise of this experiment was weaker than stated; the negative result stands.
+
 Why the band is short in 2023-24: the calibration is already doing most of the work (raw coverage 0.62 becomes 0.71 in El Niño 2023-24, and 0.38 becomes 0.68 in Sep-Nov 2024, production backtest, 50 origins). What is left is a regime break the centre of the forecast did not see (April 2024: price falls 90 % in two weeks; the ETS and seasonal naive references fail the same way). A wider band does not fix a wrong centre; new information does (rainfall, gas supply).
 
 Exploratory finding, after the fact (not a validated predictor): on the 50 production origins, those made when the thermal share of generation (7 days) was above 30 % (11 origins) had MASE 3.65 and coverage 0.67, against 0.87 and 0.85 for the other 39. A reservoir level below 40 % (3 origins) and the combined stress flag (41 of 50 origins) are not informative, and neither is the 28-day volatility (MASE 1.52 against 1.38). The 11 origins come from two episodes (Sep 2023 to Apr 2024 and Sep to Nov 2024), so they are not independent; the threshold was not tuned but the four flags were looked at together. It becomes a candidate warning that must be confirmed on origins from the live record before it is shown as more than a note.
+
+## Price backtest with test dates every 7 days and the "repeat the last price" reference (2026-11-14)
+
+The production backtest has 51 dates 21 days apart (4 to 12 per episode) and compares with ETS and a weekly seasonal naive. The live record compares with the last settled price instead. `research/run_dense_backtest.py` runs the same production model and calibration (nothing retrained differently) on 151 dates 7 days apart, from 2023-11-21 to 2026-10-06, and adds that reference. The dates overlap more, so the intervals use blocks of 6 dates. MAPE %, by days ahead (model / ETS / seasonal naive / repeat last price):
+
+| Period | Dates | 1-3 days | 4-7 days | 8-14 days |
+| --- | --- | --- | --- | --- |
+| El Niño 2023-24 (Nov-Apr) | 24 | 13.4 / 14.1 / 38.4 / 35.4 | 32.8 / 31.2 / 44.9 / 59.5 | 53.7 / 56.8 / 66.7 / 70.2 |
+| Supply shock 2024 (May-Dec) | 35 | 12.5 / 15.3 / 26.4 / 23.8 | 27.4 / 30.1 / 36.9 / 43.2 | 39.1 / 38.2 / 48.1 / 49.8 |
+| Calm 2025-26 | 78 | 12.2 / 16.4 / 29.5 / 27.0 | 19.9 / 24.4 / 27.1 / 29.9 | 30.8 / 32.5 / 37.2 / 34.8 |
+| El Niño 2026 (Jul-Oct) | 14 | 7.6 / 9.0 / 15.9 / 17.0 | 16.2 / 13.7 / 18.1 / 21.0 | 26.1 / 20.2 / 23.3 / 24.3 |
+| All | 151 | 12.0 / 15.1 / 29.0 / 26.6 | 23.3 / 25.8 / 31.3 / 36.9 | 35.9 / 36.6 / 43.1 / 42.9 |
+
+Paired MASE difference of the model against each reference (negative is better), with its 95 % interval:
+
+| Period | vs ETS | vs seasonal naive | vs repeat last price | Inside the P10-P90 band |
+| --- | --- | --- | --- | --- |
+| El Niño 2023-24 | -0.12 [-0.48, +0.23] | -1.05 [-1.52, -0.40] | -1.32 [-1.94, -0.51] | 87 % |
+| Supply shock 2024 | +0.02 [-0.27, +0.57] | -0.80 [-1.36, -0.27] | -0.93 [-1.49, -0.38] | 80 % |
+| Calm 2025-26 | -0.14 [-0.21, -0.04] | -0.44 [-0.60, -0.21] | -0.46 [-0.67, -0.20] | 84 % |
+| El Niño 2026 | +0.11 [-0.23, +0.48] | -0.24 [-0.54, -0.18] | -0.39 [-0.86, -0.12] | 93 % |
+| All | -0.08 [-0.21, +0.07] | -0.60 [-0.81, -0.40] | -0.70 [-0.96, -0.46] | 85 % |
+
+What it says:
+- Against repeating the last price the model is better in every period, with an interval that excludes zero in all of them, and in 74 % of the dates (82 % against the seasonal naive).
+- Against ETS the difference is only clear in calm periods (-0.14 [-0.21, -0.04]) and at 1 to 3 days; over all dates it is -0.08 [-0.21, +0.07], so it cannot be called a win. In stress periods and in El Niño 2026 the model and ETS are level, and ETS is ahead at 4 to 14 days in 2026 (26.1 % against 20.2 % at 8-14 days). That matches the live record.
+- The band covers 80 to 93 % in every period. The coverage of 68 to 71 % found on the 21-day dates in stress came from only 4 to 8 dates per episode; with the denser dates it is not reproduced, so the bands are not short in stress.
+- The 8 to 14 day error is 36 % over all dates; every method is above 35 % there.

@@ -2,6 +2,16 @@
 
 Working notes for the project: current status, environment and open items.
 
+## In progress: sharper evaluation of the price model (started 2026-11-14)
+
+Why: with 51 test dates (4-12 per episode) claims about stress periods rest on very few dates, and the live record uses "repeat the last price" as its reference while the backtest does not.
+
+- [x] `pipeline/research/run_dense_backtest.py`: same production model on 151 dates 7 days apart plus the new reference. Result in `docs/model-experiments.md` ("Price backtest with test dates every 7 days"): the model beats repeating the last price in every period (74 % of dates, interval excludes zero); against ETS the difference is only clear in calm periods; the band covers 80-93 % in every period, so my earlier statement that the bands are short in stress was a small-sample artefact.
+- [ ] Add the "repeat the last price" reference to the production backtest metrics (price only), the Models page and the Results page; keep step 21 (a step of 7 would roughly triple the backtest time of every daily run).
+- [ ] Margin supply-demand (merit order) features: test on the dense development dates with the protocol of `docs/model-experiments.md`.
+
+Verify with: `cd pipeline && DATABASE_URL=sqlite:///data/voltia.sqlite uv run python research/run_dense_backtest.py report` (seconds, from `research/results/dense_backtest.json`).
+
 ## Done: half-published hydrology days (2026-11-12)
 
 Incident: on 2026-11-12 11:09 UTC `xm_daily` stored the 11th with the reservoir level at 7.6 % (79 % the day before). The Hydrology page showed it for a few hours. A manual `Daily pipeline` run at 14:46 UTC replaced it with XM's finished value (78.7 %) and a new model run; the price forecast barely moved (378 -> 375 COP/kWh on day 1; 462 -> 468 on day 14), so my first report overstated the forecast damage.
