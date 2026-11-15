@@ -211,6 +211,30 @@ def get_last_day(engine: Engine, dataset: str, conn: Connection | None = None) -
         return run(c)
 
 
+def last_values(
+    engine: Engine, series: Iterable[str], before: date, max_age_days: int
+) -> dict[str, tuple[pd.Timestamp, float]]:
+    """The last stored (day, value) of each series from the `max_age_days` before `before`.
+
+    It is the reference a new batch is compared with, so a batch whose first day is bad cannot
+    overwrite good stored days. A series with nothing that recent is left out.
+    """
+    names = list(series)
+    if not names:
+        return {}
+    with engine.connect() as conn:
+        table = _table(conn, "series_daily")
+        rows = conn.execute(
+            select(table.c.series, table.c.day, table.c.value)
+            .where(table.c.series.in_(names))
+            .where(table.c.day < before)
+            .where(table.c.day >= before - timedelta(days=max_age_days))
+            .order_by(table.c.day)
+        ).all()
+    # Ordered by day: the newest value wins.
+    return {str(s): (pd.Timestamp(d), float(v)) for s, d, v in rows}
+
+
 def read_series(engine: Engine, series: Iterable[str] | None = None) -> pd.DataFrame:
     """Return daily series as a wide frame indexed by day (DatetimeIndex), one column per series."""
     with engine.connect() as conn:

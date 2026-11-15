@@ -19,6 +19,8 @@ def tiny_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("VOLTIA_LOCAL_DB", str(path))
     monkeypatch.setenv("VOLTIA_MODELS_DIR", str(tmp_path / "models"))
     monkeypatch.setenv("DATABASE_URL", "")  # an empty env var beats pipeline/.env
+    # The synthetic history is years old and the backtest tiny: the gate is tested in test_gates.py.
+    monkeypatch.setenv("VOLTIA_GATE_MODE", "off")
     get_settings.cache_clear()
     engine = db.make_engine(f"sqlite:///{path.as_posix()}")
     db.migrate(engine)

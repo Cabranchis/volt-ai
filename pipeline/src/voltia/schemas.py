@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import numpy as np
 import pandas as pd
 import pandera.pandas as pa
@@ -10,8 +12,10 @@ from pandera.errors import SchemaErrors
 # Plausible (min, max) per daily series. A value outside is a data error, not an outlier to model.
 DAILY_BOUNDS: dict[str, tuple[float, float]] = {
     "demand_kwh": (50e6, 400e6),
-    "price_mean_cop_kwh": (0.0, 20_000.0),
-    "price_max_cop_kwh": (0.0, 20_000.0),
+    # The floors sit about three times below the lowest value in 2018-2026 (64.7 for the price), so
+    # a zero or a price published in the wrong unit (thousands of times smaller) is rejected.
+    "price_mean_cop_kwh": (20.0, 20_000.0),
+    "price_max_cop_kwh": (20.0, 20_000.0),
     "reservoir_pct": (0.0, 1.0),
     "reservoir_kwh": (0.0, 30e9),
     "inflows_kwh": (0.0, 1.5e9),
@@ -27,10 +31,10 @@ DAILY_BOUNDS: dict[str, tuple[float, float]] = {
     "weather_temp_c": (-5.0, 40.0),
     "weather_precip_mm": (0.0, 500.0),
     "oni": (-4.0, 4.0),
-    "dispatch_cost": (0.0, 20_000.0),
-    "contract_price": (0.0, 5_000.0),
-    "contract_price_unreg": (0.0, 5_000.0),
-    "scarcity_price": (0.0, 5_000.0),
+    "dispatch_cost": (10.0, 20_000.0),
+    "contract_price": (50.0, 5_000.0),
+    "contract_price_unreg": (50.0, 5_000.0),
+    "scarcity_price": (100.0, 5_000.0),
     "spill_kwh": (0.0, 2e9),
     "turbined_m3": (0.0, 2e10),
     "reservoir_capacity_kwh": (0.0, 40e9),
@@ -134,9 +138,22 @@ def _run(schema: pa.DataFrameSchema, frame: pd.DataFrame, keys: list[str]) -> pd
     return checked
 
 
-def validate_daily(frame: pd.DataFrame, continuous: bool = True) -> pd.DataFrame:
-    """Validate a long daily frame (series, day, value). Raises BatchValidationError."""
+def validate_daily(
+    frame: pd.DataFrame, continuous: bool = True, latest: date | None = None
+) -> pd.DataFrame:
+    """Validate a long daily frame (series, day, value). Raises BatchValidationError.
+
+    `latest` is the last day the batch asked for: a later day is a shifted or future date, and
+    the forecast origin would move to it.
+    """
     checked = _run(_DAILY, frame, ["series", "day"])
+    if latest is not None:
+        late = checked[checked["day"] > pd.Timestamp(latest)]
+        if not late.empty:
+            raise BatchValidationError(
+                f"{len(late)} rows dated after {latest} (the last requested day), "
+                f"for example {late['series'].iloc[0]} on {late['day'].iloc[0].date()}"
+            )
     if continuous:
         for name, group in checked.groupby("series"):
             gap = longest_gap(group["day"])

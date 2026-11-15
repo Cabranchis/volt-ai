@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -31,6 +32,10 @@ class Settings(BaseSettings):
     revision_window_days: int = 7
     ml_threads: int = Field(default=2, description="LightGBM threads; fixed for reproducibility")
     keep_forecast_runs: int = 10
+    voltia_gate_mode: Literal["enforce", "warn", "off"] = Field(
+        default="enforce",
+        description="Publication gate: enforce stops a bad run, warn logs it and publishes",
+    )
 
     @property
     def resolved_database_url(self) -> str:

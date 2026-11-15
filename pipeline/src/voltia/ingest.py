@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 
 import pandas as pd
@@ -82,6 +82,72 @@ HYDRO_STEP_LIMITS: dict[str, tuple[float | None, float | None]] = {
     "inflows_pct": (0.25, None),
     "inflows_kwh": (0.25, None),
 }
+
+StepLimits = dict[str, tuple[float | None, float | None]]
+
+
+@dataclass(frozen=True)
+class StepGuard:
+    """Series published together and the limits on their change from the last accepted day."""
+
+    series: tuple[str, ...]
+    limits: StepLimits
+    hourly: tuple[str, ...] = ()  # hourly series dropped for the same days
+
+
+# Measured on 3 218 days (2018-2026) as the ratio of a day to the previous observation: the mean
+# price 0.37 to 2.74, the maximum price 0.13 to 7.67, the dispatch cost 0.32 to 3.27, the
+# generation 0.86 to 1.21, the contract prices 0.87 to 1.17, the scarcity price 0.69 to 1.22 and
+# the turbined volume 0.52 to 1.94. The limits leave at least a quarter more than the extremes,
+# and still reject a zero or a value in the wrong unit (a thousandth of the real one).
+STEP_GUARDS: dict[str, tuple[StepGuard, ...]] = {
+    "xm_price": (
+        StepGuard(
+            ("price_mean_cop_kwh", "price_max_cop_kwh"),
+            {"price_mean_cop_kwh": (0.1, 8.0), "price_max_cop_kwh": (0.05, 20.0)},
+            hourly=("price_cop_kwh",),
+        ),
+    ),
+    "xm_market": (
+        StepGuard(
+            ("dispatch_cost", "scarcity_price", "turbined_m3"),
+            {
+                "dispatch_cost": (0.1, 10.0),
+                "scarcity_price": (0.5, 2.0),
+                "turbined_m3": (0.25, 4.0),
+            },
+        ),
+    ),
+    "xm_contracts": (
+        StepGuard(("contract_price",), {"contract_price": (0.7, 1.4)}),
+        StepGuard(("contract_price_unreg",), {"contract_price_unreg": (0.7, 1.4)}),
+    ),
+    "xm_generation": (
+        StepGuard(("gen_total_kwh",), {"gen_total_kwh": (0.6, 1.6)}, hourly=("generation_kwh",)),
+    ),
+}
+# The value before a batch is only a reference when it is recent: after a long outage a real change
+# can exceed the limits, and a reference that never matches would reject every later day.
+ANCHOR_MAX_AGE_DAYS = 31
+# A day is compared with the last accepted day only while that day is this close. A new level that
+# lasts (a real regime change, a unit XM changed for good) is rejected for this many days and then
+# accepted, so the guard can never freeze a series for good: without this the newest stored day
+# would stay at the last day before the change, the next batch would start there again, and every
+# run would reject the same days.
+REFERENCE_MAX_GAP_DAYS = 3
+
+# What each dataset must bring in every batch. A renamed or empty field upstream yields no rows for
+# one series while the others load, and the dataset would still look current.
+REQUIRED_SERIES: dict[str, tuple[str, ...]] = {
+    "xm_daily": tuple(XM_DAILY_METRICS.values()),
+    "xm_price": ("price_mean_cop_kwh", "price_max_cop_kwh"),
+    "xm_generation": ("gen_total_kwh",),
+    "xm_market": ("dispatch_cost", "scarcity_price", "turbined_m3", "reservoir_capacity_kwh"),
+    "xm_mix": tuple(f"gen_{c}_kwh" for c in MIX_CATEGORIES),
+    "weather": ("weather_temp_c", "weather_precip_mm"),
+    "oni": ("oni",),
+}
+MIX_TOLERANCE = 0.005  # the mix sums to the system generation exactly over 2018-2026
 
 
 @dataclass(frozen=True)
@@ -167,51 +233,102 @@ def settled_demand(demand: pd.DataFrame, generation: pd.DataFrame) -> pd.DataFra
     return kept[["day", "value"]]
 
 
-def plausible_hydrology(daily: pd.DataFrame, group: tuple[str, ...] = HYDRO_SERIES) -> pd.DataFrame:
-    """Drop the days of `group` that XM published before finishing them.
+def drop_implausible_days(
+    daily: pd.DataFrame,
+    group: tuple[str, ...],
+    limits: StepLimits,
+    anchors: dict[str, tuple[pd.Timestamp, float]] | None = None,
+) -> tuple[pd.DataFrame, dict[pd.Timestamp, str]]:
+    """Drop the days of `group` whose change from the last accepted day is outside `limits`.
 
     A partly published day can pass range checks (a reservoir level of 0.076 is a number between
-    0 and 1), so each guarded series is compared with its last accepted day and must stay inside
-    `HYDRO_STEP_LIMITS`. The series of a group come from one publication, so one failing series
-    drops that day for all of them. The first day has nothing to compare with and is kept; a
-    dropped day is refreshed by the next update, which re-reads the last days.
+    0 and 1), so each guarded series is compared with its last accepted day. The series of a group
+    come from one publication, so one failing series drops that day for all of them. `anchors`
+    holds the last stored (day, value) of each series from before the batch: without it the first
+    day has nothing to compare with and is kept. A reference more than `REFERENCE_MAX_GAP_DAYS`
+    old is not used. A dropped day is refreshed by the next update, which
+    re-reads the last days. Returns the kept rows and the dropped days with the reason.
     """
     if daily.duplicated(["series", "day"]).any():
-        return daily  # validate_daily names the duplicated rows
+        return daily, {}  # validate_daily names the duplicated rows
     wide = (
         daily[daily["series"].isin(group)]
         .pivot(index="day", columns="series", values="value")
         .sort_index()
     )
-    last: dict[str, float] = {}
+    last: dict[str, tuple[pd.Timestamp, float]] = dict(anchors or {})
     dropped: dict[pd.Timestamp, str] = {}
     for day, row in wide.iterrows():
         reason = None
-        for name, (low, high) in HYDRO_STEP_LIMITS.items():
+        for name, (low, high) in limits.items():
             value = row.get(name)
             if name not in group or value is None or pd.isna(value):
                 continue
-            before = last.get(name)
-            if before and before > 0:
-                ratio = value / before
+            reference = last.get(name)
+            if (
+                reference
+                and reference[1] > 0
+                and (pd.Timestamp(str(day)) - reference[0]).days <= REFERENCE_MAX_GAP_DAYS
+            ):
+                ratio = value / reference[1]
                 if (low is not None and ratio < low) or (high is not None and ratio > high):
                     reason = f"{name} {ratio:.3f} times the previous day"
                     break
         if reason:
             dropped[pd.Timestamp(str(day))] = reason
             continue
-        for name in HYDRO_STEP_LIMITS:
+        for name in limits:
             value = row.get(name)
             if name in group and value is not None and not pd.isna(value):
-                last[name] = float(value)
+                last[name] = (pd.Timestamp(str(day)), float(value))
+    if not dropped:
+        return daily, {}
+    is_dropped = daily["series"].isin(group) & daily["day"].isin(list(dropped))
+    return daily[~is_dropped].reset_index(drop=True), dropped
+
+
+def plausible_hydrology(daily: pd.DataFrame, group: tuple[str, ...] = HYDRO_SERIES) -> pd.DataFrame:
+    """Drop the days of `group` that XM published before finishing them (see drop_implausible_days).
+
+    The limits are `HYDRO_STEP_LIMITS`, measured over 3 220 days: ratios 0.955 to 1.052 for the
+    stored volume, 0.966 to 1.031 for the capacity and above 0.452 for the inflows.
+    """
+    kept, dropped = drop_implausible_days(daily, group, HYDRO_STEP_LIMITS)
     if dropped:
         log.warning(
             "ingest.hydrology.implausible_days_dropped",
             days={d.date().isoformat(): why for d, why in dropped.items()},
         )
-        is_dropped = daily["series"].isin(group) & daily["day"].isin(list(dropped))
-        return daily[~is_dropped].reset_index(drop=True)
-    return daily
+    return kept
+
+
+def guard_steps(
+    batch: Batch,
+    guards: tuple[StepGuard, ...],
+    anchors: dict[str, tuple[pd.Timestamp, float]],
+) -> Batch:
+    """Apply the step guards of a dataset to its batch, daily and hourly rows alike."""
+    daily, hourly = batch.daily, batch.hourly
+    for guard in guards:
+        daily, dropped = drop_implausible_days(daily, guard.series, guard.limits, anchors)
+        if not dropped:
+            continue
+        log.warning(
+            "ingest.steps.implausible_days_dropped",
+            series=list(guard.series),
+            days={d.date().isoformat(): why for d, why in dropped.items()},
+        )
+        if hourly is not None and guard.hourly:
+            bad = hourly["series"].isin(guard.hourly) & hourly["day"].isin(list(dropped))
+            hourly = hourly[~bad].reset_index(drop=True)
+    return replace(batch, daily=daily, hourly=hourly)
+
+
+def newest_day_of(daily: pd.DataFrame, required: tuple[str, ...]) -> pd.Timestamp:
+    """The newest day every required series has; the newest day overall when none is required."""
+    if not required:
+        return pd.Timestamp(daily["day"].max())
+    return pd.Timestamp(daily[daily["series"].isin(required)].groupby("series")["day"].max().min())
 
 
 def fetch_xm_daily(c: Clients, s: Settings, start: date, end: date, today: date) -> Batch:
@@ -323,6 +440,14 @@ def fetch_xm_mix(c: Clients, s: Settings, start: date, end: date, today: date) -
         return Batch(daily=pd.DataFrame(columns=["series", "day", "value"]))
     wide = mix.pivot(index="day", columns="category", values="kwh").reindex(columns=MIX_CATEGORIES)
     wide = wide.fillna(0.0)
+    # The mix adds up the hours each resource reported, so a day XM has only partly published has a
+    # smaller mix with nothing to show it. It must match the day's system generation (24 hours).
+    generation = _complete_days(c.xm.hourly_system("Gene", start, end))
+    totals = generation.groupby("day")["value"].sum().reindex(wide.index)
+    settled = ((wide.sum(axis=1) / totals) - 1).abs() <= MIX_TOLERANCE
+    if not settled.all():
+        log.warning("ingest.mix.partial_days_dropped", dropped=int((~settled).sum()))
+    wide = wide[settled]
     long = wide.reset_index().melt(id_vars="day", var_name="category", value_name="value")
     long["series"] = "gen_" + long["category"] + "_kwh"
     return Batch(daily=long[["series", "day", "value"]])
@@ -357,9 +482,13 @@ def fetch_oni(c: Clients, s: Settings, start: date, end: date, today: date) -> B
 
 Fetcher = Callable[[Clients, Settings, date, date, date], Batch]
 
-# Datasets only the price model's market features need. When one fails the run goes on: the
-# features are then missing (NaN) for the newest days, which the trees treat as unknown.
-OPTIONAL_DATASETS = frozenset({"xm_market", "xm_contracts", "xm_regional", "weather_forecast"})
+# Datasets the model can do without for a while. When one fails the run goes on: the features are
+# then missing (NaN) for the newest days, which the trees treat as unknown. Weather and the ONI are
+# here so that an outage of NOAA or Open-Meteo does not stop every forecast; the publication gate
+# (gates.py) stops it only when their stored data is too old.
+OPTIONAL_DATASETS = frozenset(
+    {"xm_market", "xm_contracts", "xm_regional", "weather_forecast", "weather", "oni"}
+)
 
 DATASETS: dict[str, Fetcher] = {
     "xm_daily": fetch_xm_daily,
@@ -396,12 +525,23 @@ def run_dataset(
         batch = DATASETS[name](clients, settings, start, end, today)
         if batch.is_empty:
             raise BatchValidationError("the source returned no data for the requested range")
+        guards = STEP_GUARDS.get(name, ())
+        if guards and not batch.daily.empty:
+            names = [n for g in guards for n in g.series]
+            anchors = db.last_values(engine, names, start, ANCHOR_MAX_AGE_DAYS)
+            batch = guard_steps(batch, guards, anchors)
+        required = REQUIRED_SERIES.get(name, ())
+        if required:
+            present = set(batch.daily["series"]) if not batch.daily.empty else set()
+            missing = [n for n in required if n not in present]
+            if missing:
+                raise BatchValidationError(f"series missing from the batch: {', '.join(missing)}")
         days = []
         rows = 0
         if not batch.daily.empty:
-            daily = validate_daily(batch.daily, continuous=batch.continuous)
+            daily = validate_daily(batch.daily, continuous=batch.continuous, latest=end)
             rows += db.upsert_series_daily(engine, daily)
-            days.append(daily["day"].max())
+            days.append(newest_day_of(daily, required))
         if batch.entities is not None and not batch.entities.empty:
             entities = validate_entities(batch.entities)
             rows += db.upsert_entity_daily(engine, entities)

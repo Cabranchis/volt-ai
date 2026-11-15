@@ -104,11 +104,11 @@ def parse_weather(payload: dict[str, Any] | list[dict[str, Any]]) -> pd.DataFram
     if not frames:
         return pd.DataFrame(columns=["day", "temp_c", "precip_mm"])
     stacked = pd.concat(frames, ignore_index=True)
-    return (
-        stacked.groupby("day", as_index=False)[["temp_c", "precip_mm"]]
-        .mean()
-        .dropna(subset=["temp_c", "precip_mm"])
-    )
+    grouped = stacked.groupby("day")[["temp_c", "precip_mm"]]
+    # A day counts only when every city reported both values: a mean over the cities that happen
+    # to be present would shift the national average without any sign of it.
+    complete = grouped.count().eq(len(locations)).all(axis=1)
+    return grouped.mean()[complete].reset_index()
 
 
 class OpenMeteoClient:

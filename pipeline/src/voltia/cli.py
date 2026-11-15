@@ -24,6 +24,7 @@ from voltia.config import Settings, get_settings
 from voltia.features import TARGETS
 from voltia.forecast import TrainedTarget, forecast_target, load_models, save_models
 from voltia.forecast import train as train_models
+from voltia.gates import GateError, check_forecasts, check_freshness, check_metrics, enforce
 from voltia.ingest import (
     DATASETS,
     OPTIONAL_DATASETS,
@@ -136,14 +137,39 @@ def _history(engine: Engine) -> pd.DataFrame:
     return history
 
 
+def _forecast_frame(history: pd.DataFrame, models: dict[str, TrainedTarget]) -> pd.DataFrame:
+    return pd.concat([forecast_target(history, m) for m in models.values()], ignore_index=True)
+
+
+def _gate(
+    settings: Settings,
+    history: pd.DataFrame,
+    metrics: dict[str, Any] | None,
+    frame: pd.DataFrame | None,
+) -> None:
+    """The publication gate (gates.py): a run that fails it is not stored, so the site keeps the
+    previous forecast. Exits with code 1, which fails the workflow and notifies the owner."""
+    mode = settings.voltia_gate_mode
+    if mode == "off":
+        return
+    problems = check_freshness(history, today_bogota())
+    if metrics is not None:
+        problems += check_metrics(metrics)
+    if frame is not None:
+        problems += check_forecasts(frame, history)
+    try:
+        enforce(problems, mode)
+    except GateError as exc:
+        typer.echo(f"::error::publication gate: {exc}")
+        raise typer.Exit(code=1) from exc
+
+
 def _write_forecasts(
     engine: Engine,
     settings: Settings,
-    history: pd.DataFrame,
     run_id: str,
-    models: dict[str, TrainedTarget],
+    frame: pd.DataFrame,
 ) -> None:
-    frame = pd.concat([forecast_target(history, m) for m in models.values()], ignore_index=True)
     db.upsert_forecasts(engine, run_id, frame, keep_runs=settings.keep_forecast_runs)
     for target, part in frame.groupby("target", sort=False):
         first, last = part.iloc[0], part.iloc[-1]
@@ -194,6 +220,8 @@ def train(
     if rounds:
         params = replace(params, num_boost_round=rounds)
     result = train_models(history, params, cfg)
+    frame = _forecast_frame(history, result.models) if predict else None
+    _gate(settings, history, result.metrics, frame)
     db.insert_model_run(
         engine,
         result.run_id,
@@ -209,8 +237,8 @@ def train(
         f"run {result.run_id} data {result.data_start}..{result.data_end} "
         f"trained in {result.seconds:.0f} s"
     )
-    if predict:
-        _write_forecasts(engine, settings, history, result.run_id, result.models)
+    if frame is not None:
+        _write_forecasts(engine, settings, result.run_id, frame)
 
 
 @app.command()
@@ -226,7 +254,10 @@ def predict() -> None:
     if not db.run_exists(engine, run_id):
         typer.echo(f"run {run_id} is not in model_runs; run `voltia train` on this database")
         raise typer.Exit(code=1)
-    _write_forecasts(engine, settings, _history(engine), run_id, models)
+    history = _history(engine)
+    frame = _forecast_frame(history, models)
+    _gate(settings, history, None, frame)
+    _write_forecasts(engine, settings, run_id, frame)
 
 
 @app.command()

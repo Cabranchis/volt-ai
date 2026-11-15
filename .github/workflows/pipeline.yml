@@ -12,6 +12,11 @@ on:
         description: "Reload the full history first (slow; use after creating the database)"
         type: boolean
         default: false
+      gate_mode:
+        description: "Publication gate: enforce refuses a bad run (default); warn publishes it anyway after a person has read the problems in the log"
+        type: choice
+        options: [enforce, warn]
+        default: enforce
 
 permissions:
   contents: read
@@ -61,14 +66,20 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: uv run voltia backfill
       - name: Ingest what is new
+        id: ingest
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: uv run voltia update
       - name: Train, backtest and forecast
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # A typed choice, so it cannot carry anything but one of its two options.
+          VOLTIA_GATE_MODE: ${{ inputs.gate_mode || 'enforce' }}
         run: uv run voltia train --predict
       - name: Detect anomalies
+        # Also when the publication gate stopped the forecast: the ingested data is good and the
+        # site should show it, next to the age of the forecast it still has.
+        if: ${{ !cancelled() && steps.ingest.outcome == 'success' }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: uv run voltia anomalies
@@ -78,6 +89,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: uv run voltia status
       - name: Daily briefing (template if there is no Gemini key)
+        if: ${{ !cancelled() && steps.ingest.outcome == 'success' }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
@@ -85,7 +97,7 @@ jobs:
       - name: Refresh the site
         # Tells the site to drop its cached reads, so the first visitor after this run sees the new
         # data and not the old copy. A site that is down must not turn a good run red.
-        if: success()
+        if: ${{ !cancelled() && steps.ingest.outcome == 'success' }}
         continue-on-error: true
         timeout-minutes: 2
         working-directory: .

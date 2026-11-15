@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Iterator
+from dataclasses import replace
 from datetime import date, timedelta
 from typing import Any
 
@@ -17,6 +18,7 @@ from voltia import db
 from voltia.config import Settings
 from voltia.ingest import (
     MIX_CATEGORIES,
+    STEP_GUARDS,
     XM_CONTRACT_DAILY,
     XM_CONTRACT_HOURLY,
     XM_DAILY_METRICS,
@@ -25,9 +27,13 @@ from voltia.ingest import (
     XM_RESERVOIR_METRICS,
     XM_RIVER_METRICS,
     XM_SPILL_METRIC,
+    Batch,
     Clients,
     fetch_xm_daily,
     fetch_xm_market,
+    fetch_xm_mix,
+    guard_steps,
+    newest_day_of,
     plausible_hydrology,
     run_all,
     settled_demand,
@@ -126,6 +132,33 @@ def _weather_payload(request: httpx.Request) -> httpx.Response:
     return httpx.Response(200, json=[place] * places)
 
 
+def _hours(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    return [e["Values"] for item in payload["Items"] for e in item["HourlyEntities"]]
+
+
+def _resources_adding_up(load_json: Callable[[str], Any]) -> dict[str, Any]:
+    """The recorded resources, scaled so that they add up to the recorded system generation.
+
+    The recording keeps a few resources only; in XM the resources of a day add up to the system
+    total exactly, which is what the mix of a day is checked against.
+    """
+    system, resources = (
+        load_json("xm/hourly_gene_system.json"),
+        load_json("xm/hourly_gene_resources.json"),
+    )
+    keys = [f"Hour{h:02d}" for h in range(1, 25)]
+
+    def total(payload: dict[str, Any]) -> float:
+        return sum(float(v[k]) for v in _hours(payload) for k in keys if v.get(k) not in (None, ""))
+
+    factor = total(system) / total(resources)
+    for values in _hours(resources):
+        for k in keys:
+            if values.get(k) not in (None, ""):
+                values[k] = str(float(values[k]) * factor)
+    return resources
+
+
 @pytest.fixture
 def mocked_apis(
     load_json: Callable[[str], Any], read_text: Callable[[str], str]
@@ -138,7 +171,7 @@ def mocked_apis(
             if body["MetricId"] == "PrecBolsNaci" or body["MetricId"] in HOURLY_METRICS:
                 return httpx.Response(200, json=load_json("xm/hourly_price.json"))
             if body["Entity"] == "Recurso":
-                return httpx.Response(200, json=load_json("xm/hourly_gene_resources.json"))
+                return httpx.Response(200, json=_resources_adding_up(load_json))
             return httpx.Response(200, json=load_json("xm/hourly_gene_system.json"))
 
         router.post(f"{BASE}/hourly").mock(side_effect=hourly)
@@ -525,3 +558,186 @@ def test_duplicated_rows_are_left_for_the_validator() -> None:
     frame = _hydrology({"reservoir_kwh": [10e9, 10e9]})
     frame = pd.concat([frame, frame.iloc[[0]]], ignore_index=True)
     assert len(plausible_hydrology(frame)) == 3
+
+
+# --- Guards on the other series (price, market, contracts, generation) and on the batch itself ---
+
+PRICE = ("price_mean_cop_kwh", "price_max_cop_kwh")
+
+
+def _daily(rows: dict[str, list[float]], start: str = "2026-11-01") -> pd.DataFrame:
+    days = pd.date_range(start, periods=len(next(iter(rows.values()))))
+    return pd.concat(
+        [pd.DataFrame({"series": n, "day": days, "value": v}) for n, v in rows.items()],
+        ignore_index=True,
+    )
+
+
+def _price_batch(mean: list[float], high: list[float]) -> Batch:
+    return Batch(daily=_daily({PRICE[0]: mean, PRICE[1]: high}))
+
+
+def test_a_price_in_the_wrong_unit_is_dropped_with_its_group() -> None:
+    batch = _price_batch(
+        [500.0, 510.0, 0.52], [900.0, 950.0, 1.1]
+    )  # the last day is in thousandths
+    kept = guard_steps(batch, STEP_GUARDS["xm_price"], {}).daily
+    assert kept["day"].max() == pd.Timestamp("2026-11-02")
+    assert len(kept) == 4
+
+
+def test_the_first_day_is_compared_with_the_stored_value() -> None:
+    batch = _price_batch([500.0, 510.0], [900.0, 950.0])
+    assert len(guard_steps(batch, STEP_GUARDS["xm_price"], {}).daily) == 4  # nothing to compare
+    batch = _price_batch([0.52, 510.0], [1.1, 950.0])
+    day = pd.Timestamp("2026-10-31")
+    anchors = {PRICE[0]: (day, 500.0), PRICE[1]: (day, 900.0)}
+    kept = guard_steps(batch, STEP_GUARDS["xm_price"], anchors).daily
+    assert kept["day"].tolist() == [pd.Timestamp("2026-11-02")] * 2
+
+
+def test_the_largest_real_moves_of_2018_2026_are_kept() -> None:
+    # Mean price x2.739 and x0.369, maximum price x7.667 and x0.131 in a day (measured extremes).
+    batch = _price_batch([100.0, 273.9, 101.0], [100.0, 766.7, 100.5])
+    assert len(guard_steps(batch, STEP_GUARDS["xm_price"], {}).daily) == 6
+    batch = _price_batch([1000.0, 369.0], [1000.0, 131.0])
+    assert len(guard_steps(batch, STEP_GUARDS["xm_price"], {}).daily) == 4
+
+
+def test_hourly_rows_of_a_dropped_day_go_with_it() -> None:
+    hourly = pd.DataFrame(
+        {
+            "series": "price_cop_kwh",
+            "day": pd.to_datetime(["2026-11-02"] * 2 + ["2026-11-03"] * 2),
+            "hour": [1, 2, 1, 2],
+            "value": [500.0, 510.0, 0.5, 0.5],
+        }
+    )
+    batch = replace(_price_batch([500.0, 510.0, 0.52], [900.0, 950.0, 1.1]), hourly=hourly)
+    kept = guard_steps(batch, STEP_GUARDS["xm_price"], {})
+    assert kept.hourly is not None
+    assert kept.hourly["day"].max() == pd.Timestamp("2026-11-02")
+
+
+def test_last_values_gives_the_newest_recent_value_before_the_batch(engine: Engine) -> None:
+    rows = pd.concat([_daily({PRICE[0]: [400.0, 410.0, 420.0]}, "2026-10-01")], ignore_index=True)
+    db.upsert_series_daily(engine, rows)
+    got = db.last_values(engine, [PRICE[0], PRICE[1]], date(2026, 10, 3), 31)
+    # the 3rd is not before the 3rd; the second price has no rows
+    assert got == {PRICE[0]: (pd.Timestamp("2026-10-02"), 410.0)}
+    assert (
+        db.last_values(engine, [PRICE[0]], date(2026, 12, 1), 31) == {}
+    )  # too old to be a reference
+    assert db.last_values(engine, [], date(2026, 10, 3), 31) == {}
+
+
+class _PriceXM:
+    """XM answering the hourly price with a good day and a newest day in the wrong unit."""
+
+    def hourly_system(self, metric: str, start: date, end: date) -> pd.DataFrame:
+        days = pd.to_datetime(["2026-10-19", "2026-10-20", "2026-10-21"]).repeat(24)
+        values = [500.0] * 48 + [0.5] * 24
+        return pd.DataFrame({"day": days, "hour": list(range(1, 25)) * 3, "value": values})
+
+
+def test_a_bad_newest_price_day_is_not_stored_and_the_good_ones_stay(
+    engine: Engine, settings: Settings
+) -> None:
+    clients = Clients(_PriceXM(), None, None)  # type: ignore[arg-type]
+    result = run_all(engine, clients, settings, SINCE, TODAY, full=True, only=["xm_price"])[0]
+    assert result.ok
+    assert result.last_day == date(2026, 10, 20)
+    stored = db.read_series(engine)[PRICE[0]].dropna()
+    assert stored.index.max() == pd.Timestamp("2026-10-20")
+    assert (stored == 500.0).all()
+
+
+class _OverwriteXM:
+    """A re-read whose days arrive in the wrong unit (20.5 still passes the price floor of 20)."""
+
+    def hourly_system(self, metric: str, start: date, end: date) -> pd.DataFrame:
+        days = pd.to_datetime(["2026-10-12", "2026-10-13"]).repeat(24)
+        return pd.DataFrame({"day": days, "hour": list(range(1, 25)) * 2, "value": [20.5] * 48})
+
+
+def test_a_re_read_cannot_overwrite_good_stored_days_with_a_bad_batch(
+    engine: Engine, settings: Settings
+) -> None:
+    # Stored up to 10-11; the log says 10-19, so the re-read starts 7 days earlier, on 10-12,
+    # and its reference is the value stored on 10-11 (it is before the batch, not in it).
+    good = _daily({PRICE[0]: [500.0] * 4, PRICE[1]: [900.0] * 4}, "2026-10-08")
+    db.upsert_series_daily(engine, good)
+    db.log_ingest(engine, "xm_price", date(2026, 10, 19), "ok", "seed")
+    clients = Clients(_OverwriteXM(), None, None)  # type: ignore[arg-type]
+    since = date(2026, 10, 1)
+    result = run_all(engine, clients, settings, since, TODAY, full=False, only=["xm_price"])[0]
+    assert not result.ok  # every day was a placeholder, so nothing is left to store
+    assert "series missing from the batch" in result.detail
+    stored = db.read_series(engine)[PRICE[0]].dropna()
+    assert stored.index.max() == pd.Timestamp("2026-10-11")
+    assert (stored == 500.0).all()
+    assert len(stored) == 4
+    assert db.get_last_day(engine, "xm_price") == date(2026, 10, 19)  # unchanged
+
+
+def test_a_new_level_that_lasts_is_accepted_after_three_days_and_never_freezes_the_series() -> None:
+    # The price settles at ten times its level for good (or XM changes a unit): the first days are
+    # held back, then the reference is too old to count and the new level is stored.
+    level = [500.0, 510.0] + [5000.0] * 6
+    batch = _price_batch(level, [2 * v for v in level])
+    kept = guard_steps(batch, STEP_GUARDS["xm_price"], {}).daily
+    days = sorted(kept[kept["series"] == PRICE[0]]["day"].dt.strftime("%m-%d").unique())
+    assert days == ["11-01", "11-02", "11-06", "11-07", "11-08"]  # 11-03 to 11-05 held back
+
+
+class _NoDemandXM(_HydroXM):
+    """The demand metric comes back empty while the hydrology is fine (a renamed field upstream)."""
+
+    def daily_system(self, metric: str, start: date, end: date) -> pd.DataFrame:
+        if XM_DAILY_METRICS[metric] == "demand_kwh":
+            return pd.DataFrame({"day": pd.to_datetime([]), "value": []})
+        return super().daily_system(metric, start, end)
+
+
+def test_a_missing_series_fails_the_batch_and_keeps_last_day(
+    engine: Engine, settings: Settings
+) -> None:
+    db.log_ingest(engine, "xm_daily", date(2026, 10, 1), "ok", "seed")
+    clients = Clients(_NoDemandXM(), None, None)  # type: ignore[arg-type]
+    result = run_all(engine, clients, settings, SINCE, TODAY, full=True, only=["xm_daily"])[0]
+    assert not result.ok
+    assert "demand_kwh" in result.detail
+    assert db.get_last_day(engine, "xm_daily") == date(2026, 10, 1)
+    assert db.read_series(engine).empty
+
+
+def test_last_day_is_the_newest_day_every_required_series_has() -> None:
+    daily = pd.concat(
+        [_daily({"demand_kwh": [2.4e8] * 3}), _daily({"reservoir_pct": [0.7] * 4})],
+        ignore_index=True,
+    )
+    assert newest_day_of(daily, ("demand_kwh", "reservoir_pct")) == pd.Timestamp("2026-11-03")
+    assert newest_day_of(daily, ()) == pd.Timestamp("2026-11-04")
+
+
+class _PartialMixXM:
+    """A mix of two days, the second only half published."""
+
+    days = pd.to_datetime(["2026-10-19", "2026-10-20"])
+
+    def resource_catalog(self) -> dict[str, str]:
+        return {}
+
+    def generation_mix(self, start: date, end: date, catalog: dict[str, str]) -> pd.DataFrame:
+        return pd.DataFrame({"day": self.days, "category": "hydro", "kwh": [240e6, 120e6]})
+
+    def hourly_system(self, metric: str, start: date, end: date) -> pd.DataFrame:
+        days = self.days.repeat(24)
+        return pd.DataFrame({"day": days, "hour": list(range(1, 25)) * 2, "value": 240e6 / 24})
+
+
+def test_a_partly_published_mix_day_is_dropped(settings: Settings) -> None:
+    clients = Clients(_PartialMixXM(), None, None)  # type: ignore[arg-type]
+    daily = fetch_xm_mix(clients, settings, SINCE, TODAY, TODAY).daily
+    assert daily["day"].unique().tolist() == [pd.Timestamp("2026-10-19")]
+    assert len(daily) == len(MIX_CATEGORIES)
