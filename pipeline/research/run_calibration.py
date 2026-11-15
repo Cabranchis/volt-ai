@@ -10,7 +10,7 @@ the saved development rows (raw quantiles of `fs1_xgb`; nothing is retrained):
   V2  scores divided by the recent price volatility at their origin, rescaled by today's
   V3  only past origins in the same regime (stress or not), V0 when fewer than MIN_ORIGINS
 
-Decision rule, written before the first run (docs/model-experiments.md and STATE.md): a variant wins
+Decision rule, written before the first run (docs/model-experiments.md): a variant wins
 if (a) coverage in the most volatile third of origins is at least 0.70 and closer to 0.80 than V0,
 (b) overall coverage is 0.80 +- 0.05, (c) mean relative width is at most 15 % above V0, and (d) its
 mean pinball is not worse than V0 (paired bootstrap over origins in blocks of 3).

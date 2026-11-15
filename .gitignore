@@ -54,3 +54,7 @@ pipeline/research/.venv/
 
 # Output folders of the research tools
 catboost_info/
+
+# Private working notes (kept locally, not published)
+STATE.md
+docs/comercial/
