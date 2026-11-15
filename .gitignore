@@ -58,3 +58,6 @@ catboost_info/
 # Private working notes (kept locally, not published)
 STATE.md
 docs/comercial/
+
+# Written by `next dev`; local only
+web/AGENTS.md
