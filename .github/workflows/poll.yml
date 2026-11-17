@@ -43,7 +43,9 @@ jobs:
         timeout-minutes: 4
         continue-on-error: true
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # A role that can only read (it checks the newest model run), so this job never holds the
+          # write URL.
+          DATABASE_URL: ${{ secrets.DATABASE_URL_READONLY }}
         run: uv run voltia check
       - name: Start the pipeline
         if: steps.check.outputs.new_data == 'true'

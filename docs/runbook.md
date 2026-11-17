@@ -113,6 +113,7 @@ After adding a table in a migration, grant `SELECT` on it to `voltia_ro` in the 
 
 - **Neon owner URL**: reset the role password in the Neon console, update `pipeline/.env` and the GitHub secret `DATABASE_URL`.
 - **Neon read-only role (`voltia_ro`)**: reset its password the same way, then update `DATABASE_URL_READONLY` in Vercel and redeploy.
+- **Neon read-only role of the watcher (`voltia_ci`)**: in the Neon SQL editor run `ALTER ROLE voltia_ci WITH PASSWORD '<new>'`, then update the GitHub secret `DATABASE_URL_READONLY` (same URL as `DATABASE_URL`, with the user `voltia_ci` and the new password). It is independent from the web's `voltia_ro`. The role was created with `CREATE ROLE voltia_ci LOGIN PASSWORD '...'`, `GRANT USAGE ON SCHEMA public`, `GRANT SELECT ON ALL TABLES IN SCHEMA public` and `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES`; it is not in a migration because it has a password.
 - **Gemini key**: create a new key in Google AI Studio, update `GOOGLE_GENERATIVE_AI_API_KEY` in Vercel and in the GitHub secret, redeploy, then delete the old key.
 
 If a secret was ever pasted somewhere public, rotate it first and investigate afterwards.
