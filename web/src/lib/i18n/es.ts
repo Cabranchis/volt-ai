@@ -294,10 +294,17 @@ export const es: Dictionary = {
     coverage: "Cobertura P10–P90",
     baselineNaive: "Estacional ingenuo",
     baselineEts: "ETS",
+    baselineLastPrice: "Repetir el último precio",
+    // The same names inside a sentence (lower case, after "Comparado con").
+    baselineNaiveInline: "el estacional ingenuo",
+    baselineLastPriceInline: "repetir el último precio",
     metricsLegend:
       "MAPE es el error porcentual absoluto medio. MASE es el error absoluto medio escalado por el error estacional ingenuo dentro de la muestra. Menor es mejor en ambos.",
-    verdictBeats: "Frente a {baseline}, el modelo reduce el error en {pct} % (mejor en {won} de {total} fechas).",
-    verdictLoses: "Frente a {baseline}, el modelo no mejora: su error es {pct} % mayor (mejor en {won} de {total} fechas).",
+    verdictBeats: "Comparado con {baseline}, el modelo reduce el error en {pct} % (mejor en {won} de {total} fechas).",
+    verdictLoses: "Comparado con {baseline}, el modelo no mejora: su error es {pct} % mayor (mejor en {won} de {total} fechas).",
+    verdictTies: "Comparado con {baseline}, la diferencia no es concluyente: el error medio del modelo es {pct} % {direction} (mejor en {won} de {total} fechas), pero el intervalo del 95 % de la diferencia media incluye el cero.",
+    verdictLower: "menor",
+    verdictHigher: "mayor",
     horizonTitle: "Error según los días de anticipación",
     horizonNote: "MASE en cada horizonte. Menor es mejor.",
     dayAhead: "Días adelante",
@@ -514,12 +521,12 @@ export const es: Dictionary = {
     ],
     numbersTitle: "Precisión medida",
     numbersNote:
-      "Error porcentual medio (MAPE) en {n} fechas pasadas que el modelo no había visto, frente a dos referencias. Menor es mejor. Los días se cuentan desde el último día con precio completo en los datos públicos de XM, unos tres días antes de que se publique el pronóstico, así que los primeros días son los más cercanos.",
+      "Error porcentual medio (MAPE) en {n} fechas pasadas que el modelo no había visto, frente a las referencias de la tabla. Menor es mejor. Los días se cuentan desde el último día con precio completo en los datos públicos de XM, unos tres días antes de que se publique el pronóstico, así que los primeros días son los más cercanos.",
     horizon: "Pronóstico",
     demandRow: "Demanda, 1 a 30 días",
     priceRow: "Precio de bolsa, {range} días",
     numbersFoot:
-      "En los primeros días el modelo de precio supera a las dos referencias; pasada una semana queda a la par con ETS, un método estadístico sólido. El método y la comparación detallada están en la página de Modelos.",
+      "En los primeros días el modelo de precio tiene menos error que las referencias; pasada una semana, la diferencia con ETS (un método estadístico sólido) y con repetir el último precio no es concluyente. El método y la comparación detallada están en la página de Modelos.",
     trackTitle: "Compruébalo tú",
     trackBody:
       "Cada día Volt-AI guarda su pronóstico antes de que se publique el resultado. Cuando XM publica el día, la página de Modelos los compara con lo que pasó, con aciertos y errores a la vista.",

@@ -204,6 +204,7 @@ What it says:
 - Over the whole horizon and at 8 to 14 days the model, ETS and repeating the last price cannot be told apart. This agrees with the paired intervals above.
 - The 4 to 7 day result is pooled over 2023-26 and does not hold in every period. The live record has the model no better than the last price at 4 to 7 days, and in El Niño 2026 the table above has the model at 16.2 % against 13.7 % for ETS and 14.1 % for the last price. It does not support a claim for that range; the claim the evidence supports is better than the references at 1 to 3 days, and not distinguishable from them beyond.
 - The weekly seasonal naive is out of the set in every row.
+- The reference "repeat the last price" is now also computed by the production backtest (51 origins 21 days apart, one interval for the whole horizon): MASE 1.737 against 1.488 for the model, paired difference -0.249 with interval [-0.523, +0.042]. It has fewer and more spaced dates than the 151 used here and no interval per bucket, so it cannot test the buckets the way the set above does; its reading is the same where they overlap.
 - A set that contains a method does not say that the method is as good; with 151 dates it says the data cannot separate them. Each row is a separate set: the control of multiple comparisons does not extend from one row to another.
 
 ## Does a correlation that fades with distance improve the cost range? (2026-11-15)

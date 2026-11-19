@@ -24,6 +24,8 @@ interface ErrorRow {
   model: number;
   naive: number;
   ets: number;
+  /** Repeating the last settled price; null for the demand, which has no such reference. */
+  lastPrice: number | null;
 }
 
 export default async function BusinessPage() {
@@ -37,7 +39,7 @@ export default async function BusinessPage() {
   const rows: ErrorRow[] = [];
   if (demand) {
     const o = demand.overall;
-    rows.push({ label: b.demandRow, model: o.model.mape, naive: o.seasonal_naive.mape, ets: o.ets.mape });
+    rows.push({ label: b.demandRow, model: o.model.mape, naive: o.seasonal_naive.mape, ets: o.ets.mape, lastPrice: null });
   }
   if (price) {
     for (const bucket of bucketErrors(price)) {
@@ -46,9 +48,12 @@ export default async function BusinessPage() {
         model: bucket.model,
         naive: bucket.seasonalNaive,
         ets: bucket.ets,
+        lastPrice: bucket.lastPrice,
       });
     }
   }
+  // The column appears only when the run has the reference (the price rows); the demand shows a dash.
+  const hasLastPrice = rows.some((row) => row.lastPrice !== null);
   const origins = Math.min(demand?.n_origins ?? Infinity, price?.n_origins ?? Infinity);
   const hasPriceRows = rows.length > (demand ? 1 : 0);
 
@@ -154,6 +159,9 @@ export default async function BusinessPage() {
                     <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">{dict.models.rowModel}</th>
                     <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">{dict.models.baselineNaive}</th>
                     <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">{dict.models.baselineEts}</th>
+                    {hasLastPrice ? (
+                      <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">{dict.models.baselineLastPrice}</th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -163,6 +171,11 @@ export default async function BusinessPage() {
                       <td className="whitespace-nowrap px-2 py-2 text-right font-semibold sm:px-3">{formatNumber(row.model, locale, 1)} %</td>
                       <td className="whitespace-nowrap px-2 py-2 text-right sm:px-3">{formatNumber(row.naive, locale, 1)} %</td>
                       <td className="whitespace-nowrap px-2 py-2 text-right sm:px-3">{formatNumber(row.ets, locale, 1)} %</td>
+                      {hasLastPrice ? (
+                        <td className="whitespace-nowrap px-2 py-2 text-right sm:px-3">
+                          {row.lastPrice === null ? "–" : `${formatNumber(row.lastPrice, locale, 1)} %`}
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>

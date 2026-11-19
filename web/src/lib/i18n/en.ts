@@ -292,10 +292,17 @@ export const en = {
     coverage: "P10–P90 coverage",
     baselineNaive: "Seasonal naive",
     baselineEts: "ETS",
+    baselineLastPrice: "Repeat the last price",
+    // The same names inside a sentence (after "Against").
+    baselineNaiveInline: "the seasonal naive",
+    baselineLastPriceInline: "repeating the last price",
     metricsLegend:
       "MAPE is the mean absolute percentage error. MASE is the mean absolute error scaled by the in-sample seasonal-naive error. Lower is better for both.",
     verdictBeats: "Against {baseline}, the model lowers the error by {pct} % (better on {won} of {total} dates).",
     verdictLoses: "Against {baseline}, the model does not do better: its error is {pct} % higher (better on {won} of {total} dates).",
+    verdictTies: "Against {baseline}, the difference is not conclusive: the model's mean error is {pct} % {direction} (better on {won} of {total} dates), but the 95 % interval of the mean difference includes zero.",
+    verdictLower: "lower",
+    verdictHigher: "higher",
     horizonTitle: "Error by days ahead",
     horizonNote: "MASE at each horizon. Lower is better.",
     dayAhead: "Days ahead",
@@ -511,12 +518,12 @@ export const en = {
     ],
     numbersTitle: "Measured accuracy",
     numbersNote:
-      "Mean percentage error (MAPE) over {n} past dates the model had not seen, against two references. Lower is better. Days ahead are counted from the last day with a complete price in XM's public data, which is about three days before a forecast is published, so the first days are the nearest ones.",
+      "Mean percentage error (MAPE) over {n} past dates the model had not seen, against the references in the table. Lower is better. Days ahead are counted from the last day with a complete price in XM's public data, which is about three days before a forecast is published, so the first days are the nearest ones.",
     horizon: "Forecast",
     demandRow: "Demand, 1 to 30 days",
     priceRow: "Spot price, {range} days",
     numbersFoot:
-      "In the first days the price model beats both references; beyond a week it stays level with ETS, a strong statistical method. The method and the detailed comparison are on the Models page.",
+      "In the first days the price model has a lower error than the references; beyond a week the difference with ETS (a strong statistical method) and with repeating the last price is not conclusive. The method and the detailed comparison are on the Models page.",
     trackTitle: "Check it yourself",
     trackBody:
       "Each day Volt-AI stores its forecast before the outcome is published. Once XM publishes the day, the Models page compares them with what happened, hits and misses included.",

@@ -118,6 +118,15 @@ test.describe("data honesty", () => {
     await page.goto("/en/hydrology");
     await expect(page.getByText(/Reservoir level: from/)).toBeVisible();
   });
+
+  test("the price is compared with repeating the last price, and a gap the data cannot separate is not called a win", async ({ page }) => {
+    await page.goto("/en/models");
+    await expect(page.getByRole("row", { name: /Repeat the last price/ })).toBeVisible();
+    await expect(page.getByText(/Against repeating the last price, the difference is not conclusive/)).toBeVisible();
+    await page.goto("/es/models");
+    await expect(page.getByRole("row", { name: /Repetir el último precio/ })).toBeVisible();
+    await expect(page.getByText(/Comparado con repetir el último precio, la diferencia no es concluyente/)).toBeVisible();
+  });
 });
 
 test.describe("analyst", () => {

@@ -1,4 +1,4 @@
-import { CircleCheck, CircleX } from "lucide-react";
+import { CircleCheck, CircleMinus, CircleX } from "lucide-react";
 import type { Metadata } from "next";
 import { HorizonChart } from "@/components/charts/HorizonChart";
 import { TrackRecordPanel } from "@/components/pages/TrackRecordPanel";
@@ -26,10 +26,13 @@ const TARGETS: { key: ForecastTarget; color: "demand" | "price" }[] = [
 ];
 
 function MetricsTable({ metrics, locale, dict }: { metrics: TargetMetrics; locale: Locale; dict: Dictionary["models"] }) {
-  const rows = [
-    { label: dict.rowModel, data: metrics.overall.model, strong: true },
-    { label: dict.baselineNaive, data: metrics.overall.seasonal_naive, strong: false },
-    { label: dict.baselineEts, data: metrics.overall.ets, strong: false },
+  const lastPrice = metrics.overall.last_price;
+  const rows: { label: string; data: { mape: number; mase: number }; coverage: number | null; strong: boolean }[] = [
+    { label: dict.rowModel, data: metrics.overall.model, coverage: metrics.overall.model.coverage_p10_p90, strong: true },
+    { label: dict.baselineNaive, data: metrics.overall.seasonal_naive, coverage: metrics.overall.seasonal_naive.coverage_p10_p90, strong: false },
+    { label: dict.baselineEts, data: metrics.overall.ets, coverage: metrics.overall.ets.coverage_p10_p90, strong: false },
+    // A single value has no band, so it has no coverage. Only the price run has it.
+    ...(lastPrice ? [{ label: dict.baselineLastPrice, data: lastPrice, coverage: null, strong: false }] : []),
   ];
   return (
     <div tabIndex={0} role="region" aria-label={dict.metricsTitle} className="overflow-x-auto rounded-lg border border-line">
@@ -43,12 +46,12 @@ function MetricsTable({ metrics, locale, dict }: { metrics: TargetMetrics; local
           </tr>
         </thead>
         <tbody>
-          {rows.map(({ label, data, strong }) => (
+          {rows.map(({ label, data, coverage, strong }) => (
             <tr key={label} className="border-t border-line">
               <th scope="row" className={`px-2 py-2 text-left sm:px-3 ${strong ? "font-semibold" : "font-normal"}`}>{label}</th>
               <td className="px-2 py-2 text-right sm:px-3">{formatNumber(data.mape, locale, 1)} %</td>
               <td className="px-2 py-2 text-right sm:px-3">{formatNumber(data.mase, locale, 2)}</td>
-              <td className="px-2 py-2 text-right sm:px-3">{formatPercent(data.coverage_p10_p90, locale, 0)}</td>
+              <td className="px-2 py-2 text-right sm:px-3">{coverage === null ? "–" : formatPercent(coverage, locale, 0)}</td>
             </tr>
           ))}
         </tbody>
@@ -59,22 +62,26 @@ function MetricsTable({ metrics, locale, dict }: { metrics: TargetMetrics; local
 
 function Verdicts({ metrics, locale, dict }: { metrics: TargetMetrics; locale: Locale; dict: Dictionary["models"] }) {
   const items = [
-    { baseline: dict.baselineNaive, v: verdict(metrics.paired.seasonal_naive) },
+    { baseline: dict.baselineNaiveInline, v: verdict(metrics.paired.seasonal_naive) },
     { baseline: dict.baselineEts, v: verdict(metrics.paired.ets) },
+    ...(metrics.paired.last_price ? [{ baseline: dict.baselineLastPriceInline, v: verdict(metrics.paired.last_price) }] : []),
   ];
   return (
     <ul className="flex flex-col gap-2 text-sm">
       {items.map(({ baseline, v }) => (
         <li key={baseline} className="flex items-start gap-2">
-          {v.beats ? (
+          {v.kind === "beats" ? (
             <CircleCheck aria-hidden="true" size={18} strokeWidth={1.75} className="mt-0.5 shrink-0 text-good" />
+          ) : v.kind === "ties" ? (
+            <CircleMinus aria-hidden="true" size={18} strokeWidth={1.75} className="mt-0.5 shrink-0 text-muted" />
           ) : (
             <CircleX aria-hidden="true" size={18} strokeWidth={1.75} className="mt-0.5 shrink-0 text-serious" />
           )}
           <span>
-            {fmt(v.beats ? dict.verdictBeats : dict.verdictLoses, {
+            {fmt(v.kind === "beats" ? dict.verdictBeats : v.kind === "ties" ? dict.verdictTies : dict.verdictLoses, {
               baseline,
               pct: formatNumber(v.pct, locale, 0),
+              direction: v.lower ? dict.verdictLower : dict.verdictHigher,
               won: v.won,
               total: v.total,
             })}
