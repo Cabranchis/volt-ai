@@ -254,3 +254,23 @@ What it says:
 - The rule fails: the interval of the MASE difference includes zero, so the block is one more candidate (51 on the price) and the production model does not change. The reported origins were not run.
 - The sign is favourable (-0.040 MASE, -0.45 pinball) and the second-round blocks were all on the other side (+0.01 to +0.04, intervals that include zero), but 37 origins cannot tell a gain of this size from noise. The 1 to 3 day difference (-0.031) cannot come from the projection, which starts at horizon 3: it shows how much the result moves just from adding two columns to a model that samples features and rows at random.
 - The balance holds as an accounting identity, but its solution does not predict the level better than persistence, because the net outflow and the inflows are not constant over two weeks. A feature that forecasts the level worse than the level itself cannot be expected to help the price, which agrees with the result.
+
+## Why the live demand range covers less than 80 % (2026-11-19)
+
+The Models page shows the live record: of the demand forecasts of 4 to 30 days, 62 to 70 % fell inside the P10-P90 range, against the 80 % it promises and 78 to 84 % in the backtest. `research/run_live_demand.py` reads the live record (forecast_log as first issued, from the weekly backup of 2026-11-15) and the real demand, and groups the forecasts by the week of the day they forecast. It is a diagnosis; no decision rule and no change to the model.
+
+Share of forecasts inside the range, by week of the target day (345 forecasts from 23 origins, 26 target days):
+
+| Target days | Forecasts | Inside P10-P90 | Above P90 | Mean error of the P50 |
+| --- | --- | --- | --- | --- |
+| 22-28 Oct | 28 | 100 % | 0 % | +0.3 % |
+| 29 Oct-4 Nov | 77 | 99 % | 0 % | +0.2 % |
+| 5-11 Nov | 126 | 69 % | 25 % | -0.5 % |
+| 12-16 Nov | 114 | 45 % | 55 % | -3.2 % |
+
+What it says:
+- The misses are concentrated in the last two weeks and all fall above P90: demand came in 3 to 5 % above the P50 on most days from 10 November (Tuesday to Friday of that week at 259 to 264 GWh against a P50 near 251). In the first two weeks the range covered 99 to 100 %, wider than needed. One event moved every horizon at once, so the 345 forecasts carry the evidence of one episode, not of 345.
+- The horizon pattern of the Models page is partly an artefact of when the record starts. It began on 21 October, so the 15 to 30 day forecasts that can be scored are all for days after 5 November, inside the unusual weeks (all 78 of them; in the first two weeks only horizons up to 14 days exist). Within the same week the coverage does not fall steadily with the horizon (week of 5 Nov: 71 %, 54 %, 74 %, 75 % for 1-3, 4-7, 8-14, 15-30 days).
+- The days coincide with a dry and slightly warmer spell (national rain 0.0 to 2.8 mm a day from 9 November against 1.5 to 12.4 mm before, mean temperature 22.7 to 22.9 °C against 21.1 to 22.5 °C). The coincidence is not shown to be the cause.
+- The backtest does not point the same way: on 51 dates the misses at 1 to 7 days fall mostly below P10 (15 % against 7 % above), the opposite of the live direction. There is no consistent bias to correct.
+- Conclusion: the evidence does not justify recalibrating the demand range. The honest reading of the Models page is "one atypical week moved the live figures"; it should be read again with more weeks. A demand surprise of this kind is what a weather forecast as an input could anticipate: the rain and temperature forecasts are archived (`weather_forecast_log`) and their evaluation is scheduled for 15 February 2027.

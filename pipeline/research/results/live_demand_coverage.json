@@ -1,0 +1,109 @@
+{
+  "source": "forecast_log (as first issued) and the public series API",
+  "target_days": "2026-10-22 to 2026-11-16",
+  "forecasts": 345,
+  "origins": 23,
+  "all": {
+    "forecasts": 345,
+    "inside": 0.701,
+    "below_p10": 0.026,
+    "above_p90": 0.272,
+    "mean_error_pct": -1.18,
+    "mean_abs_error_pct": 2.26
+  },
+  "by_horizon": {
+    "1-3": {
+      "forecasts": 69,
+      "inside": 0.884,
+      "below_p10": 0.0,
+      "above_p90": 0.116,
+      "mean_error_pct": -0.47,
+      "mean_abs_error_pct": 1.59
+    },
+    "4-7": {
+      "forecasts": 86,
+      "inside": 0.698,
+      "below_p10": 0.07,
+      "above_p90": 0.233,
+      "mean_error_pct": -0.9,
+      "mean_abs_error_pct": 2.07
+    },
+    "8-14": {
+      "forecasts": 112,
+      "inside": 0.652,
+      "below_p10": 0.027,
+      "above_p90": 0.321,
+      "mean_error_pct": -0.98,
+      "mean_abs_error_pct": 2.34
+    },
+    "15-30": {
+      "forecasts": 78,
+      "inside": 0.615,
+      "below_p10": 0.0,
+      "above_p90": 0.385,
+      "mean_error_pct": -2.39,
+      "mean_abs_error_pct": 2.94
+    }
+  },
+  "by_week_of_the_target_day": {
+    "2026-10-22": {
+      "forecasts": 28,
+      "inside": 1.0,
+      "below_p10": 0.0,
+      "above_p90": 0.0,
+      "mean_error_pct": 0.28,
+      "mean_abs_error_pct": 0.87,
+      "target_days": 7
+    },
+    "2026-10-29": {
+      "forecasts": 77,
+      "inside": 0.987,
+      "below_p10": 0.013,
+      "above_p90": 0.0,
+      "mean_error_pct": 0.17,
+      "mean_abs_error_pct": 1.04,
+      "target_days": 7
+    },
+    "2026-11-05": {
+      "forecasts": 126,
+      "inside": 0.69,
+      "below_p10": 0.063,
+      "above_p90": 0.246,
+      "mean_error_pct": -0.48,
+      "mean_abs_error_pct": 2.45,
+      "target_days": 7
+    },
+    "2026-11-12": {
+      "forecasts": 114,
+      "inside": 0.447,
+      "below_p10": 0.0,
+      "above_p90": 0.553,
+      "mean_error_pct": -3.22,
+      "mean_abs_error_pct": 3.22,
+      "target_days": 5
+    }
+  },
+  "inside_by_week_and_horizon": {
+    "2026-10-22": {
+      "1-3": 1.0,
+      "4-7": 1.0
+    },
+    "2026-10-29": {
+      "1-3": 1.0,
+      "4-7": 0.964,
+      "8-14": 1.0
+    },
+    "2026-11-05": {
+      "1-3": 0.714,
+      "4-7": 0.536,
+      "8-14": 0.735,
+      "15-30": 0.75
+    },
+    "2026-11-12": {
+      "1-3": 0.778,
+      "4-7": 0.4,
+      "8-14": 0.257,
+      "15-30": 0.54
+    }
+  }
+}
