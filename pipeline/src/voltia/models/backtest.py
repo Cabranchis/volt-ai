@@ -30,6 +30,10 @@ METHODS = ("model", "model_raw", "seasonal_naive", "ets")
 # Shortest run of consecutive origins resampled together: neighbours share a price regime.
 BOOTSTRAP_MIN_BLOCK = 3
 _COLS = {"model": "m", "model_raw": "r", "seasonal_naive": "sn", "ets": "ets"}
+# The reference "repeat the last price": the settled price of the origin day, a point with no band,
+# so it only gets point metrics (error, no pinball or coverage).
+LAST_PRICE = "last_price"
+_LAST_PRICE_COL = "lp50"
 
 
 @dataclass(frozen=True)
@@ -53,6 +57,7 @@ class BacktestConfig:
     ets_window_days: int = 1092
     sn_error_window_days: int = 728
     log_targets: tuple[str, ...] = ("price_mean_cop_kwh",)
+    last_price_targets: tuple[str, ...] = ("price_mean_cop_kwh",)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -182,6 +187,11 @@ def backtest_target(
         pred["bucket"] = [spec.bucket(int(h)) for h in pred["h"]]
         pred["y"] = series.reindex(pd.DatetimeIndex(pred["day"])).to_numpy()
         pred["scale"] = metrics.mase_scale(series.loc[:origin])
+        if spec.name in cfg.last_price_targets:
+            # The origin is the last day with a settled price, so this is what a reader of XM data
+            # has on hand when the forecast is issued (the same definition as the live record).
+            settled = series.loc[:origin].dropna()
+            pred[_LAST_PRICE_COL] = float(settled.iloc[-1]) if len(settled) else np.nan
         for j, name in enumerate(("10", "50", "90")):
             pred[f"r{name}"] = np.exp(pred[f"q{name}_log"])
             pred[f"sn{name}"] = sn[:, j]
@@ -253,6 +263,21 @@ def _all_methods(part: pd.DataFrame) -> dict[str, dict[str, float]]:
     return {m: _method_metrics(part, _COLS[m]) for m in METHODS}
 
 
+def _point_metrics(part: pd.DataFrame, column: str) -> dict[str, float]:
+    """Error of a forecast that is a single value (no band) on the rows that have it."""
+    part = part.dropna(subset=[column])
+    y, point = part["y"].to_numpy(), part[column].to_numpy()
+    return {
+        "mape": metrics.mape(y, point),
+        "smape": metrics.smape(y, point),
+        "mase": metrics.mase(y, point, part["scale"].to_numpy()),
+    }
+
+
+def _has_last_price(rows: pd.DataFrame) -> bool:
+    return _LAST_PRICE_COL in rows.columns and bool(rows[_LAST_PRICE_COL].notna().any())
+
+
 def block_bootstrap_ci(
     diff: np.ndarray, block: int, draws: int = 2000, seed: int = 0
 ) -> tuple[float, float]:
@@ -298,16 +323,26 @@ def _paired(per_origin: pd.DataFrame, baseline: str, block: int = 1) -> dict[str
 def summarise(rows: pd.DataFrame, spec: TargetSpec) -> dict[str, Any]:
     """Metrics for reported (non warm-up) rows: overall, per bucket, per horizon, per origin."""
     rep = rows[~rows["warmup"]].dropna(subset=["y"])
+    with_last = _has_last_price(rep)
     per_origin_records = []
     mase_rows = []
     for origin, part in rep.groupby("origin", sort=True):
         origin_day = pd.Timestamp(str(origin)).date()
         scores = {m: _method_metrics(part, _COLS[m]) for m in METHODS}
-        mase_rows.append({m: scores[m]["mase"] for m in METHODS})
+        mase_row = {m: scores[m]["mase"] for m in METHODS}
+        last_mase = (
+            _point_metrics(part, _LAST_PRICE_COL)["mase"]
+            if with_last and part[_LAST_PRICE_COL].notna().any()
+            else float("nan")
+        )
+        if with_last:
+            mase_row[LAST_PRICE] = last_mase
+        mase_rows.append(mase_row)
         per_origin_records.append(
             {
                 "origin": str(origin_day),
                 **{f"{m}_mase": round(scores[m]["mase"], 4) for m in METHODS if m != "model_raw"},
+                **({f"{LAST_PRICE}_mase": round(last_mase, 4)} if with_last else {}),
                 "model_coverage": round(scores["model"]["coverage_p10_p90"], 4),
                 "model_raw_coverage": round(scores["model_raw"]["coverage_p10_p90"], 4),
             }
@@ -325,6 +360,23 @@ def summarise(rows: pd.DataFrame, spec: TargetSpec) -> dict[str, Any]:
         }
         for h, part in rep.groupby("h", sort=True)
     }
+    overall = _all_methods(rep)
+    by_bucket = {
+        label: _all_methods(rep[rep["bucket"] == label]) for label in rep["bucket"].unique()
+    }
+    paired = {b: _paired(per_origin, b, block) for b in ("seasonal_naive", "ets")}
+    if with_last:
+        last_rows = rep.dropna(subset=[_LAST_PRICE_COL])
+        overall[LAST_PRICE] = _point_metrics(last_rows, _LAST_PRICE_COL)
+        for label, methods in by_bucket.items():
+            part = last_rows[last_rows["bucket"] == label]
+            if len(part):
+                methods[LAST_PRICE] = _point_metrics(part, _LAST_PRICE_COL)
+        for h, part in last_rows.groupby("h", sort=True):
+            by_horizon[str(h)][LAST_PRICE] = {
+                "mase": round(_point_metrics(part, _LAST_PRICE_COL)["mase"], 4)
+            }
+        paired[LAST_PRICE] = _paired(per_origin[["model", LAST_PRICE]].dropna(), LAST_PRICE, block)
     return {
         "horizon": spec.horizon,
         "n_origins": int(rep["origin"].nunique()),
@@ -332,13 +384,11 @@ def summarise(rows: pd.DataFrame, spec: TargetSpec) -> dict[str, Any]:
         "first_origin": str(pd.Timestamp(rep["origin"].min()).date()),
         "last_origin": str(pd.Timestamp(rep["origin"].max()).date()),
         "nominal_coverage": 0.8,
-        "overall": _all_methods(rep),
-        "by_bucket": {
-            label: _all_methods(rep[rep["bucket"] == label]) for label in rep["bucket"].unique()
-        },
+        "overall": overall,
+        "by_bucket": by_bucket,
         "by_horizon": by_horizon,
         "by_origin": per_origin_records,
-        "paired": {b: _paired(per_origin, b, block) for b in ("seasonal_naive", "ets")},
+        "paired": paired,
         "coverage": {
             "raw": _method_metrics(rep, "r")["coverage_p10_p90"],
             "calibrated": _method_metrics(rep[rep["calibrated"]], "m")["coverage_p10_p90"]

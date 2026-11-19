@@ -21,10 +21,12 @@ from voltia.models.backtest import (
     BacktestConfig,
     ModelConfig,
     anchored_origins,
+    backtest_target,
     block_bootstrap_ci,
     prepare,
     reference_offset,
     select_origins,
+    summarise,
     training_mask,
 )
 from voltia.models.gbm import GBMParams, fit_quantiles, predict_quantiles
@@ -185,3 +187,61 @@ def test_last_reference_survives_a_sparse_week(history: pd.DataFrame) -> None:
     assert feats["ref_log"].isna().all()  # fewer than 5 of 7 days observed
     offset = reference_offset(feats, model.reference)
     assert np.allclose(offset, np.log(sparse.loc["2024-06-12", "price_mean_cop_kwh"]))
+
+
+def test_train_reports_the_last_price_reference_for_the_price_only(trained: TrainResult) -> None:
+    price = trained.metrics["targets"]["price_mean_cop_kwh"]
+    last = price["overall"]["last_price"]
+    assert set(last) == {"mape", "smape", "mase"}  # a point has no band: no pinball, no coverage
+    assert all(np.isfinite(v) for v in last.values())
+    assert all("last_price" in m for m in price["by_bucket"].values())
+    assert all(set(m["last_price"]) == {"mase"} for m in price["by_horizon"].values())
+    assert all("last_price_mase" in record for record in price["by_origin"])
+    assert "last_price" in price["paired"]
+    interval = price["paired"]["last_price"]["mase_diff_ci95"]
+    assert interval is None or (len(interval) == 2 and interval[0] <= interval[1])
+    demand = trained.metrics["targets"]["demand_kwh"]
+    assert "last_price" not in demand["overall"]
+    assert all("last_price" not in m for m in demand["by_bucket"].values())
+    assert all("last_price_mase" not in record for record in demand["by_origin"])
+
+
+def test_last_price_is_the_settled_price_of_the_origin_day_and_never_looks_ahead(
+    history: pd.DataFrame,
+) -> None:
+    spec = TARGETS["price_mean_cop_kwh"]
+    model = ModelConfig(reference="last", params=FAST)
+    origins = [pd.Timestamp("2024-03-11"), pd.Timestamp("2024-04-01"), pd.Timestamp("2024-04-22")]
+
+    def run(frame: pd.DataFrame) -> pd.DataFrame:
+        return backtest_target(frame, prepare(frame, spec, model), origins, 1, model, SMALL)
+
+    rows = run(history)
+    settled = history["price_mean_cop_kwh"]
+    for origin, part in rows.groupby("origin"):
+        assert part["lp50"].nunique() == 1
+        assert part["lp50"].iloc[0] == pytest.approx(settled.loc[origin])
+    # Prices after the origin day (the outcomes being forecast) cannot change what is on hand then.
+    later = history.copy()
+    later.loc["2024-03-12":, "price_mean_cop_kwh"] *= 7
+    first = rows[rows["origin"] == origins[0]]["lp50"].to_numpy()
+    assert np.array_equal(run(later)[lambda r: r["origin"] == origins[0]]["lp50"].to_numpy(), first)
+    # The reported error is the plain mean of |actual - last price| / scale over the scored rows.
+    scored = rows[(~rows["warmup"]) & rows["y"].notna()]
+    expected = float(np.mean(np.abs(scored["y"] - scored["lp50"]) / scored["scale"]))
+    assert summarise(rows, spec)["overall"]["last_price"]["mase"] == pytest.approx(expected)
+    # An origin with no settled price is left out of the reference, not turned into a wrong number.
+    gap = rows.copy()
+    gap.loc[gap["origin"] == origins[2], "lp50"] = np.nan
+    partial = summarise(gap, spec)
+    assert partial["paired"]["last_price"]["origins"] == 1
+    by_origin = {record["origin"]: record for record in partial["by_origin"]}
+    assert np.isnan(by_origin[str(origins[2].date())]["last_price_mase"])
+    assert np.isfinite(by_origin[str(origins[1].date())]["last_price_mase"])
+    # The demand has no such reference.
+    demand_spec = TARGETS["demand_kwh"]
+    demand_model = ModelConfig(reference="level7", params=FAST)
+    demand_rows = backtest_target(
+        history, prepare(history, demand_spec, demand_model), origins, 1, demand_model, SMALL
+    )
+    assert "lp50" not in demand_rows.columns
