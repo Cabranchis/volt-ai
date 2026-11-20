@@ -59,7 +59,7 @@ A red `Train, backtest and forecast` step whose log has `::error::publication ga
 
 ## Watchdog and external monitor
 
-The `Watchdog` workflow reads `/api/v1/health` every day at 13:45 UTC (twice, ten minutes apart) and opens the issue "Platform: the health check is not ok" when the status is not `ok`; it comments on it while the problem lasts and closes it when the status is `ok` again. It also opens "Pipeline: the daily run failed" when a `Daily pipeline` run ends in failure. GitHub emails the issues to the repository owner. It reads a public URL and writes issues; it has no secret.
+The `Watchdog` workflow reads `/api/v1/health` every day at 13:45 UTC (twice, ten minutes apart) and opens the issue "Platform: the health check is not ok" when the status is not `ok`; it comments on it while the problem lasts and closes it when the status is `ok` again. It also opens "Pipeline: the daily run failed" when a `Daily pipeline` run ends in failure. GitHub emails the issues to the repository owner. It also reads the `liveRecord` field of the same endpoint and opens "Model: the live record is off target" when the P10 to P90 band stopped covering (see the section below); it comments while that lasts and closes it on recovery. It reads a public URL and writes issues; it has no secret.
 
 It does not cover GitHub itself: if scheduled workflows are disabled (no repository activity for 60 days) the watchdog stops too. Set up one outside monitor once:
 
@@ -68,6 +68,17 @@ It does not cover GitHub itself: if scheduled workflows are disabled (no reposit
 3. Add your email as the alert contact.
 
 The top-level status is the first key of the answer, so that keyword is absent for `stale` and `degraded` too: the monitor also tells you when the data or the forecast is old. An optional dataset (weather, ONI, market, contracts, regional) that fails once does not change the status; only a long silence does.
+
+## The live record is off target
+
+The issue "Model: the live record is off target" means that, over the 28 days ending on the last day XM has settled (days without a settled outcome are skipped; at least 21 are needed), the share of forecasts that fell inside their P10 to P90 band, averaged by day, is below 0.55 for demand or for price (the band is built for 0.80). `GET /api/v1/health` shows it under `liveRecord`: `verdict` is `ok`, `low` or `insufficient` (fewer than 21 settled days), or the whole field is `null` when it could not be read, with the coverage and the days it covers. It does not change the health `status` and the site keeps working.
+
+The limits are a judgement, set when the record had 26 days: its weekly coverage moved between 45 % and 100 % because of one atypical week (`docs/model-experiments.md`, "The live demand range"), so one bad week must not fire it and a bad month should. They live in `web/src/lib/live-watch.ts`; review them when the record has a year.
+
+1. Open the Models page, section of the live record, and read which horizons and which weeks miss. Misses on one side (all above P90, or all below P10) are a bias; misses on both sides are a band that is too narrow.
+2. Compare with the backtest coverage in `/api/v1/model`. A live record far under it for a month is the thing to investigate; a single week is not.
+3. Run `pipeline/research/run_live_demand.py` for the demand to see the coverage by week and by horizon. The answer is a recalibration or a change of the model, and both go through the pre-registered decision rules (`docs/model-experiments.md`), not through a quick edit.
+4. The issue closes itself when both targets are back at 0.55 or above. If a target goes to `insufficient` (fewer than 21 settled days) the issue stays open until it can be measured again.
 
 ## The site shows old data or an old forecast
 

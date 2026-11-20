@@ -99,7 +99,7 @@ export const openApiDocument = {
       get: {
         summary: "Data freshness",
         description:
-          "Whether the platform is ok, stale (the data or the forecast is older than the pipeline leaves it) or degraded (something failed now), with the reasons, the ages in days, the last successful load per dataset and the newest day of every series. Always HTTP 200: read the status word.",
+          "Whether the platform is ok, stale (the data or the forecast is older than the pipeline leaves it) or degraded (something failed now), with the reasons, the ages in days, the last successful load per dataset and the newest day of every series, plus `liveRecord`: whether the P10 to P90 band covered what happened over the 28 days ending on the last settled day (null when it could not be read). It does not change the status. Always HTTP 200: read the status word.",
         responses: { "200": { description: "Health", content: { "application/json": { schema: { type: "object" } } } } },
       },
     },

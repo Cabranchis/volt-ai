@@ -84,6 +84,45 @@ jobs:
           else
             gh issue create --title "$title" --label "$LABEL" --body-file body.md
           fi
+      - name: Read the live record (does the P10 to P90 band still cover what happened?)
+        # Advice, not a health status: the site is fine while a band misses. `low` is a month of
+        # settled days well under the nominal 80 % (limits in web/src/lib/live-watch.ts). It is `ok`
+        # only when both targets are `ok`. Missing, unreadable or `insufficient` data is "unknown" and
+        # changes nothing, so an old deployment, a blip or a gap in the outcomes does not open or
+        # close an issue.
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Model: the live record is off target"
+          body=$(curl -fsS --max-time 30 "$SITE_URL/api/v1/health?x=$RANDOM" 2>/dev/null || echo '{}')
+          verdict=$(jq -r '[.liveRecord.demand.verdict, .liveRecord.price.verdict] as $s
+            | if ($s | any(. == "low")) then "low"
+              elif ($s | all(. == "ok")) then "ok"
+              else "unknown" end' <<<"$body" 2>/dev/null || echo unknown)
+          echo "live record: $verdict"
+          jq -r '.liveRecord // {} | to_entries[] | "\(.key): \(.value.verdict), coverage \(.value.coverage // "n/a") over \(.value.scoredDays) settled days (\(.value.from) to \(.value.to))"' <<<"$body" 2>/dev/null || true
+          [ "$verdict" = "unknown" ] && exit 0
+          gh label create "$LABEL" --color B97400 --description "Raised by the watchdog workflow" --force >/dev/null
+          number=$(gh issue list --label "$LABEL" --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          {
+            jq -r '.liveRecord | to_entries[] | "- \(.key): \(.value.verdict), mean share of forecasts inside P10 to P90 = \(.value.coverage // "n/a") over \(.value.scoredDays) settled days (\(.value.from) to \(.value.to))"' <<<"$body"
+            echo
+            echo "The band is built for 0.80. The alert fires below 0.55 averaged over the 28 days ending on the last settled day (days without a settled outcome are skipped; at least 21 are needed)."
+            echo "Track record: $SITE_URL/en/models"
+            echo "Checked by: $RUN_URL"
+            echo
+            echo "What to do is in docs/runbook.md (\"The live record is off target\")."
+          } > live.md
+          if [ "$verdict" = "ok" ]; then
+            if [ -n "$number" ]; then
+              gh issue comment "$number" --body "The live record is back inside its limits ($RUN_URL). Closing."
+              gh issue close "$number"
+            fi
+          elif [ -n "$number" ]; then
+            gh issue comment "$number" --body-file live.md
+          else
+            gh issue create --title "$title" --label "$LABEL" --body-file live.md
+          fi
 
   pipeline:
     name: Pipeline run result
