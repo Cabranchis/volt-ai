@@ -32,6 +32,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - A hydrology or price level that really changed is held back for 3 days and then accepted (it used to wait about a week).
 
 ### Fixed
+- Open-Meteo answering 503 or 429 for a minute no longer loses the day's weather: the client waits 2, 4, 8, 16 and 32 seconds over six attempts (it gave up after 15 seconds; on 2026-11-20 that left the weather of the day unloaded until the next run).
 - Pooled database connections are pinged and recycled, so Neon closing idle connections no longer breaks long backfills.
 - Timestamps are read as UTC, so the web no longer shows them shifted by five hours.
 - The chat no longer receives an already-aborted request signal on Vercel, and an empty model stream is reported instead of shown as a blank answer.

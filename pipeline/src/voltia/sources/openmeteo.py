@@ -118,10 +118,13 @@ class OpenMeteoClient:
     def close(self) -> None:
         self._client.close()
 
+    # Open-Meteo answers 503 or 429 for a minute or more now and then (2026-11-20: five attempts
+    # over 15 seconds all got 503 and the day's weather was not stored). Waits of 2, 4, 8, 16 and
+    # 32 s give such an episode about a minute to pass; the next pipeline run retries anyway.
     @retry(
         retry=retry_if_exception_type(httpx.TransportError),
-        stop=stop_after_attempt(5),
-        wait=wait_exponential(multiplier=1, min=1, max=20),
+        stop=stop_after_attempt(6),
+        wait=wait_exponential(multiplier=2, min=2, max=60),
         reraise=True,
     )
     def _get(self, url: str, params: dict[str, Any]) -> Any:
