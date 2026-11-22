@@ -24,6 +24,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - GitHub Actions: CI for both sides and the daily pipeline workflow.
 
 ### Changed
+- An XM dataset has a time budget of 300 seconds per 31-day window of a normal update, retries included, so one hanging source fails early instead of using up the 45 minutes of the run (a backfill and the first load of a dataset have no limit). The `Watchdog` also reports a daily run that reached that limit, which GitHub calls `cancelled`.
 - The API cache is five minutes instead of an hour. Series requests are normalised (sorted, clamped to the history), limited to 8 series and refuse unknown parameters; `health`, `model`, `forecasts` and `openapi` have a per-client limit.
 - The chat counts an IPv6 client by its /64, has an hourly cap and answers from fixed summaries when its limiter is down; the request body is read with a byte cap.
 - Weather and the ONI no longer stop the pipeline when their source is down; the gate stops forecasts only when their stored data is too old. The anomaly step, the briefing and the site refresh still run when the gate refuses a forecast.

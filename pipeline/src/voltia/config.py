@@ -27,6 +27,13 @@ class Settings(BaseSettings):
 
     xm_base_url: str = "https://servapibi.xm.com.co"
     http_timeout_s: float = 120.0
+    xm_dataset_budget_s: float = Field(
+        default=300.0,
+        description=(
+            "Seconds one XM dataset may spend per 31-day window in a normal update, retries "
+            "included. A backfill and the first load of a dataset have no limit."
+        ),
+    )
     history_start: str = "2018-01-01"
     hourly_retention_days: int = 90
     revision_window_days: int = 7

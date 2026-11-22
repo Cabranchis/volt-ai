@@ -5,8 +5,9 @@ name: Watchdog
 # - Every day, after the morning pipeline run, it reads /api/v1/health. A status that is not `ok`
 #   (a dataset failed, or the data or the forecast is older than the pipeline leaves it) opens one
 #   issue, which GitHub emails; later checks add a comment to it, and it closes itself on recovery.
-# - When the daily pipeline run fails (for example the publication gate refused a bad forecast), it
-#   opens or updates a second issue with the link to the run.
+# - When the daily pipeline run fails (for example the publication gate refused a bad forecast) or
+#   reaches its time limit (GitHub calls that `cancelled`), it opens or updates a second issue with
+#   the link to the run.
 #
 # It only reads a public URL and writes issues. It never checks out code and never sees a secret, so
 # the permissions below are all it has. It does not replace an external monitor: GitHub disables
@@ -126,7 +127,7 @@ jobs:
 
   pipeline:
     name: Pipeline run result
-    if: ${{ github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'timed_out') }}
+    if: ${{ github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'timed_out' || github.event.workflow_run.conclusion == 'cancelled') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # One group per run, so a result that arrives while another is being handled is not dropped.
@@ -138,8 +139,22 @@ jobs:
         env:
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
+          STARTED: ${{ github.event.workflow_run.run_started_at }}
+          ENDED: ${{ github.event.workflow_run.updated_at }}
         run: |
           title="Pipeline: the daily run failed"
+          # GitHub reports a job that reaches its time limit (45 minutes) as `cancelled`, the same
+          # word as a run someone stopped by hand. A run that lasted at least 40 minutes is the
+          # limit; a shorter one was stopped on purpose and is not reported.
+          if [ "$CONCLUSION" = "cancelled" ]; then
+            seconds=$(( $(date -d "$ENDED" +%s) - $(date -d "$STARTED" +%s) ))
+            echo "cancelled after $seconds s"
+            if [ "$seconds" -lt 2400 ]; then
+              echo "Stopped by hand, not reported."
+              exit 0
+            fi
+            CONCLUSION=timed_out
+          fi
           gh label create "$LABEL" --color B97400 --description "Raised by the watchdog workflow" --force >/dev/null
           number=$(gh issue list --label "$LABEL" --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
           if [ "$CONCLUSION" = "success" ]; then

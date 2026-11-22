@@ -36,6 +36,7 @@ from voltia.ingest import (
     newest_day_of,
     plausible_hydrology,
     run_all,
+    run_dataset,
     settled_demand,
 )
 from voltia.schemas import DAILY_BOUNDS
@@ -200,6 +201,77 @@ def clients() -> Clients:
 @pytest.fixture
 def settings() -> Settings:
     return Settings(_env_file=None)  # type: ignore[call-arg]
+
+
+def _previous_load(engine: Engine) -> date:
+    """A dataset that has loaded before, so the next update is a normal one."""
+    last = TODAY - timedelta(days=3)
+    db.log_ingest(engine, "xm_daily", last, "ok", "seed")
+    return last
+
+
+TIMEOUTS = httpx.ReadTimeout("timed out")
+
+
+def test_a_dataset_that_exhausts_its_time_fails_without_calling_xm(
+    engine: Engine, clients: Clients
+) -> None:
+    last = _previous_load(engine)
+    budget_used_up = Settings(_env_file=None, xm_dataset_budget_s=-1.0)  # type: ignore[call-arg]
+    with respx.mock(assert_all_called=False) as router:
+        route = router.post(f"{BASE}/hourly").mock(side_effect=TIMEOUTS)
+        result = run_dataset(engine, clients, budget_used_up, "xm_daily", SINCE, TODAY, full=False)
+    assert not result.ok
+    assert "timed out" in result.detail
+    assert route.call_count == 0
+    assert db.get_last_day(engine, "xm_daily") == last  # nothing new stored
+
+
+def test_a_backfill_clears_a_budget_that_was_armed(
+    monkeypatch: pytest.MonkeyPatch, engine: Engine, clients: Clients
+) -> None:
+    monkeypatch.setattr(XMClient._post.retry, "sleep", lambda _s: None)  # type: ignore[attr-defined]
+    _previous_load(engine)
+    budget_used_up = Settings(_env_file=None, xm_dataset_budget_s=-1.0)  # type: ignore[call-arg]
+    with respx.mock(assert_all_called=False) as router:
+        route = router.post(f"{BASE}/hourly").mock(side_effect=TIMEOUTS)
+        run_dataset(engine, clients, budget_used_up, "xm_daily", SINCE, TODAY, full=False)
+        assert route.call_count == 0  # the budget was armed
+        result = run_dataset(engine, clients, budget_used_up, "xm_daily", SINCE, TODAY, full=True)
+    assert not result.ok
+    assert route.call_count > 0  # and the backfill removed it
+
+
+def test_the_first_load_of_a_dataset_has_no_time_limit(
+    monkeypatch: pytest.MonkeyPatch, engine: Engine, clients: Clients
+) -> None:
+    monkeypatch.setattr(XMClient._post.retry, "sleep", lambda _s: None)  # type: ignore[attr-defined]
+    budget_used_up = Settings(_env_file=None, xm_dataset_budget_s=-1.0)  # type: ignore[call-arg]
+    with respx.mock(assert_all_called=False) as router:
+        route = router.post(f"{BASE}/hourly").mock(side_effect=TIMEOUTS)
+        run_dataset(engine, clients, budget_used_up, "xm_daily", SINCE, TODAY, full=False)
+    assert route.call_count > 0  # no previous load: it reads years, so no limit
+
+
+def test_the_budget_grows_with_the_windows_a_gap_needs(
+    monkeypatch: pytest.MonkeyPatch, engine: Engine, clients: Clients
+) -> None:
+    monkeypatch.setattr(XMClient._post.retry, "sleep", lambda _s: None)  # type: ignore[attr-defined]
+    db.log_ingest(engine, "xm_daily", date(2026, 7, 1), "ok", "seed")
+    seen: list[float | None] = []
+    real = clients.xm.start_budget
+
+    def spy(seconds: float | None) -> None:
+        seen.append(seconds)
+        real(seconds)
+
+    monkeypatch.setattr(clients.xm, "start_budget", spy)
+    settings = Settings(_env_file=None, xm_dataset_budget_s=100.0)  # type: ignore[call-arg]
+    with respx.mock(assert_all_called=False) as router:
+        router.post(f"{BASE}/hourly").mock(side_effect=TIMEOUTS)
+        run_dataset(engine, clients, settings, "xm_daily", date(2026, 1, 1), TODAY, full=False)
+    # 2026-06-24 to 2026-10-21 is 120 days: four windows of at most 31 days.
+    assert seen == [400.0]
 
 
 def test_full_ingest_loads_every_dataset(
@@ -387,7 +459,12 @@ def test_settled_demand_drops_placeholder_and_unmatched_days() -> None:
     assert kept["day"].tolist() == list(days[:2])
 
 
-class _MarketXM:
+class _XMStub:
+    def start_budget(self, seconds: float | None) -> None:
+        return None
+
+
+class _MarketXM(_XMStub):
     """Three turbined days; spilling is listed for the first only."""
 
     def daily_system(self, metric: str, start: date, end: date) -> pd.DataFrame:
@@ -478,7 +555,7 @@ def test_other_series_pass_through_untouched() -> None:
     assert (kept["series"] == "demand_kwh").sum() == 4
 
 
-class _HydroXM:
+class _HydroXM(_XMStub):
     """XM answering `fetch_xm_daily` with the incident's hydrology and settled demand."""
 
     days = pd.date_range("2026-11-08", periods=4)
@@ -631,7 +708,7 @@ def test_last_values_gives_the_newest_recent_value_before_the_batch(engine: Engi
     assert db.last_values(engine, [], date(2026, 10, 3), 31) == {}
 
 
-class _PriceXM:
+class _PriceXM(_XMStub):
     """XM answering the hourly price with a good day and a newest day in the wrong unit."""
 
     def hourly_system(self, metric: str, start: date, end: date) -> pd.DataFrame:
@@ -652,7 +729,7 @@ def test_a_bad_newest_price_day_is_not_stored_and_the_good_ones_stay(
     assert (stored == 500.0).all()
 
 
-class _OverwriteXM:
+class _OverwriteXM(_XMStub):
     """A re-read whose days arrive in the wrong unit (20.5 still passes the price floor of 20)."""
 
     def hourly_system(self, metric: str, start: date, end: date) -> pd.DataFrame:

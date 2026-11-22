@@ -11,7 +11,7 @@ import pytest
 import respx
 
 from voltia.sources import xm
-from voltia.sources.xm import XMClient, XMError
+from voltia.sources.xm import XMBudgetExceededError, XMClient, XMError
 
 BASE = "https://servapibi.xm.com.co"
 
@@ -123,6 +123,48 @@ def test_does_not_retry_client_errors() -> None:
     with pytest.raises(XMError):
         XMClient().fetch("daily", "DemaSIN", "Sistema", date(2026, 10, 1), date(2026, 10, 2))
     assert route.call_count == 1
+
+
+@respx.mock
+def test_budget_stops_the_retries_of_a_dataset(monkeypatch: pytest.MonkeyPatch) -> None:
+    sleeps: list[float] = []
+    monkeypatch.setattr(XMClient._post.retry, "sleep", sleeps.append)  # type: ignore[attr-defined]
+    now = [1000.0]
+    monkeypatch.setattr(xm.time, "monotonic", lambda: now[0])
+
+    def slow(_request: httpx.Request) -> httpx.Response:
+        now[0] += 150.0  # each attempt "takes" 150 s
+        raise httpx.ReadTimeout("timed out")
+
+    route = respx.post(f"{BASE}/daily").mock(side_effect=slow)
+    client = XMClient()
+    client.start_budget(240.0)
+    with pytest.raises(XMBudgetExceededError, match="timed out"):
+        client.fetch("daily", "DemaSIN", "Sistema", date(2026, 10, 1), date(2026, 10, 2))
+    # Two attempts take 300 s, past the 240 s budget: the third is not made, so the five of the
+    # retry policy are never reached.
+    assert route.call_count == 2
+    # The waits happened after the two timeouts only: the budget error ended the retrying.
+    assert len(sleeps) == 2
+
+
+@respx.mock
+def test_a_used_up_budget_is_not_retried_and_can_be_removed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sleeps: list[float] = []
+    monkeypatch.setattr(XMClient._post.retry, "sleep", sleeps.append)  # type: ignore[attr-defined]
+    assert not issubclass(XMBudgetExceededError, xm.XMTransientError)
+    route = respx.post(f"{BASE}/daily").mock(side_effect=httpx.ReadTimeout("timed out"))
+    client = XMClient()
+    client.start_budget(-1.0)
+    with pytest.raises(XMBudgetExceededError):
+        client.fetch("daily", "DemaSIN", "Sistema", date(2026, 10, 1), date(2026, 10, 2))
+    assert (route.call_count, len(sleeps)) == (0, 0)  # no request and no retry wait
+    client.start_budget(None)  # an armed limit is cleared: the five attempts of the retry policy
+    with pytest.raises(httpx.ReadTimeout):
+        client.fetch("daily", "DemaSIN", "Sistema", date(2026, 10, 1), date(2026, 10, 2))
+    assert route.call_count == 5
 
 
 def test_rejects_window_longer_than_31_days() -> None:

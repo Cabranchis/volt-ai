@@ -21,7 +21,7 @@ from voltia.schemas import (
 )
 from voltia.sources.oni import OniClient
 from voltia.sources.openmeteo import OpenMeteoClient
-from voltia.sources.xm import XMClient
+from voltia.sources.xm import MAX_WINDOW_DAYS, XMClient
 
 log = structlog.get_logger()
 
@@ -521,6 +521,14 @@ def run_dataset(
         else max(since, last - timedelta(days=settings.revision_window_days))
     )
     end = today - timedelta(days=1)
+    # A normal update of a dataset takes seconds. If XM hangs, fail this dataset early so the others
+    # and the next run are not starved. The budget is per 31-day window, so a gap after an outage
+    # still fits; a backfill, and the first load of a dataset (which reads years), have no limit.
+    if full or last is None:
+        clients.xm.start_budget(None)
+    else:
+        windows = max(1, -(-((end - start).days + 1) // MAX_WINDOW_DAYS))
+        clients.xm.start_budget(settings.xm_dataset_budget_s * windows)
     try:
         batch = DATASETS[name](clients, settings, start, end, today)
         if batch.is_empty:

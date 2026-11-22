@@ -6,6 +6,7 @@ Parsers are pure functions over the decoded JSON so tests can run on recorded re
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterator
 from datetime import date, timedelta
 from typing import Any
@@ -42,6 +43,13 @@ class XMError(RuntimeError):
 
 class XMTransientError(XMError):
     """A server-side or network problem worth retrying."""
+
+
+class XMBudgetExceededError(XMError):
+    """The time given to one dataset is used up. Not retried: the next run tries again.
+
+    The text says "timed out" on purpose: the health endpoint reads it as an unreachable source.
+    """
 
 
 def windows(start: date, end: date, size: int = MAX_WINDOW_DAYS) -> Iterator[tuple[date, date]]:
@@ -164,6 +172,16 @@ class XMClient:
     ) -> None:
         self._base = base_url.rstrip("/")
         self._client = client or httpx.Client(timeout=timeout_s)
+        self._deadline: float | None = None
+
+    def start_budget(self, seconds: float | None) -> None:
+        """Give the requests that follow `seconds` in total, retries included (None: no limit).
+
+        Each request already has a timeout and five attempts, so one slow dataset could take longer
+        than the whole job. A request in flight is not interrupted: the limit is checked before
+        every attempt, so it can be overshot by one request timeout.
+        """
+        self._deadline = None if seconds is None else time.monotonic() + seconds
 
     def close(self) -> None:
         self._client.close()
@@ -175,6 +193,10 @@ class XMClient:
         reraise=True,
     )
     def _post(self, endpoint: str, body: dict[str, Any]) -> dict[str, Any]:
+        if self._deadline is not None and time.monotonic() > self._deadline:
+            raise XMBudgetExceededError(
+                f"{endpoint}: the time for this dataset is used up (timed out)"
+            )
         response = self._client.post(f"{self._base}/{endpoint}", json=body)
         if response.status_code >= 500 or response.status_code == 429:
             raise XMTransientError(f"{endpoint}: HTTP {response.status_code}")
