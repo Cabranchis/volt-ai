@@ -1,8 +1,8 @@
 """The dense backtest again, keeping the raw quantiles that the adaptive calibration needs.
 
 `run_dense_backtest.py` keeps only the calibrated band (m10, m50, m90), so a new calibration cannot be
-tried on it: that needs the quantiles before calibration (q10_log, q50_log, q90_log, in logs
-relative to the model's reference, plus the raw band r10..r90 in the units of the target). This runs
+tried on it: that needs the quantiles before calibration (q10_log, q50_log, q90_log, absolute logs of
+the price or the demand) plus the raw band r10..r90 in the units of the target. This runs
 the same production model and calibration (`backtest_target`) on origins every 7 days and saves the
 columns of every row. Price and demand.
 

@@ -69,7 +69,7 @@ def compare(name: str, block: str, data: pd.DataFrame, origins: list[pd.Timestam
         "experiment": name,
         "block": block,
         "reference": REFERENCE,
-        "origins": int(merged["origin"].nunique()),
+        "origins": int(merged.loc[~merged["warmup"].astype(bool), "origin"].nunique()),  # scored, not warm-up
         "model": {k: result["model"][k] for k in ("mase", "mape", "pinball_mean", "coverage")},
         "reference_model": {k: reference["model"][k] for k in ("mase", "mape", "pinball_mean", "coverage")},
         "paired_mase_new_minus_reference": paired_mase,

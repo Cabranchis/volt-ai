@@ -1,11 +1,29 @@
 {
   "target": "demand_kwh",
   "source": "dense_raw_demand.json",
-  "gammas": {
-    "production": 0.0,
-    "aci_005": 0.005,
-    "aci_020": 0.02
+  "variants_gamma_and_update": {
+    "production": [
+      0.0,
+      "row"
+    ],
+    "aci_005": [
+      0.005,
+      "row"
+    ],
+    "aci_020": [
+      0.02,
+      "row"
+    ],
+    "aci_005_mean": [
+      0.005,
+      "origin"
+    ],
+    "aci_020_mean": [
+      0.02,
+      "origin"
+    ]
   },
+  "gamma_zero_largest_relative_difference_from_production": 9.971363554515387e-07,
   "variants": {
     "production": {
       "origins": 149,
@@ -13,7 +31,8 @@
       "coverage_worst_quarter_of_windows": 0.6986111111111112,
       "coverage_lowest_window": 0.6083333333333333,
       "pinball_mean": 1376055.3580987803,
-      "relative_width": 0.06346693143269688
+      "relative_width": 0.06346693143269688,
+      "share_of_level_states_at_the_clip": 0.0
     },
     "aci_005": {
       "origins": 149,
@@ -22,6 +41,7 @@
       "coverage_lowest_window": 0.5458333333333333,
       "pinball_mean": 1407130.7187706316,
       "relative_width": 0.06606583028908168,
+      "share_of_level_states_at_the_clip": 0.0,
       "paired_pinball_vs_production": {
         "mean_diff": 31075.3607,
         "ci95_low": 9768.0033,
@@ -35,10 +55,39 @@
       "coverage_lowest_window": 0.49166666666666664,
       "pinball_mean": 1512962.9541967835,
       "relative_width": 0.06434243592064537,
+      "share_of_level_states_at_the_clip": 0.0296,
       "paired_pinball_vs_production": {
         "mean_diff": 136907.5961,
         "ci95_low": 79294.4198,
         "ci95_high": 191090.0303
+      }
+    },
+    "aci_005_mean": {
+      "origins": 149,
+      "coverage": 0.8098434004474273,
+      "coverage_worst_quarter_of_windows": 0.694675925925926,
+      "coverage_lowest_window": 0.5999999999999999,
+      "pinball_mean": 1379191.0290113303,
+      "relative_width": 0.06403708678989614,
+      "share_of_level_states_at_the_clip": 0.0,
+      "paired_pinball_vs_production": {
+        "mean_diff": 3135.6709,
+        "ci95_low": 705.4446,
+        "ci95_high": 6056.6917
+      }
+    },
+    "aci_020_mean": {
+      "origins": 149,
+      "coverage": 0.8085011185682327,
+      "coverage_worst_quarter_of_windows": 0.6881944444444446,
+      "coverage_lowest_window": 0.6041666666666666,
+      "pinball_mean": 1386216.120000514,
+      "relative_width": 0.0640086035131319,
+      "share_of_level_states_at_the_clip": 0.0,
+      "paired_pinball_vs_production": {
+        "mean_diff": 10160.7619,
+        "ci95_low": 958.8763,
+        "ci95_high": 18583.7736
       }
     }
   },
@@ -54,6 +103,22 @@
     "aci_020": {
       "checks": {
         "coverage_between_078_and_084": false,
+        "worst_windows_closer_to_080": false,
+        "pinball_not_clearly_worse": false
+      },
+      "candidate_for_production": false
+    },
+    "aci_005_mean": {
+      "checks": {
+        "coverage_between_078_and_084": true,
+        "worst_windows_closer_to_080": false,
+        "pinball_not_clearly_worse": false
+      },
+      "candidate_for_production": false
+    },
+    "aci_020_mean": {
+      "checks": {
+        "coverage_between_078_and_084": true,
         "worst_windows_closer_to_080": false,
         "pinball_not_clearly_worse": false
       },

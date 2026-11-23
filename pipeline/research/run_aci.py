@@ -19,6 +19,17 @@ Each past outcome updates the level once, in the order of the day it refers to, 
 issued with a calibrated band; it counts only from the day it is known (`day <= origin`, the rule
 production uses). The level is kept in [0.001, 0.5].
 
+Second look (written after the first run, before the second, and stated as such). The first run
+updated the level once per past row. At each origin 3 to 16 rows of a bucket become known at once (3,
+4 and 7 for the price; 7, 7 and 16 for the demand) and their misses are strongly correlated, so one
+bad origin moved the level 3 to 16 times `gamma`, up to the clip, which is not the step the method
+assumes. Two more candidates update once per origin and tail, with the mean miss of the rows that
+became known:
+    aci_005_mean  gamma = 0.005, one update per origin, bucket and tail
+    aci_020_mean  gamma = 0.02, the same
+The share of (origin, bucket, tail) states that sit at the clip is reported for every variant. The
+rule below is the same for the four candidates; four comparisons are made, not two.
+
 Decision rule, written before the first run, for each target and each `gamma`. The calibration is a
 candidate for production only if all three hold on the scored origins (after the warm-up):
   1. its overall coverage of the P10-P90 band is between 0.78 and 0.84;
@@ -57,18 +68,33 @@ LEVEL_RANGE = (0.001, 0.5)
 MIN_ORIGINS = 4  # BacktestConfig.min_calibration_origins
 WINDOW = 8  # origins per rolling window, about two months
 BLOCK = 6
-GAMMAS = {"production": 0.0, "aci_005": 0.005, "aci_020": 0.02}
+# label -> (gamma, how the known rows update the level: "row" once each, "origin" once with their mean)
+VARIANTS = {
+    "production": (0.0, "row"),
+    "aci_005": (0.005, "row"),
+    "aci_020": (0.02, "row"),
+    "aci_005_mean": (0.005, "origin"),
+    "aci_020_mean": (0.02, "origin"),
+}
 COVERAGE_RANGE = (0.78, 0.84)
 
 
 def calibrate_aci(
-    rows: pd.DataFrame, buckets: list[str], gamma: float, min_origins: int = MIN_ORIGINS
+    rows: pd.DataFrame,
+    buckets: list[str],
+    gamma: float,
+    min_origins: int = MIN_ORIGINS,
+    update: str = "row",
 ) -> pd.DataFrame:
     """Add `c10`, `c90` (the calibrated band, in the units of the target) and `calibrated`.
 
     `rows` has origin, day, bucket, y, q10_log, q50_log, q90_log. With gamma = 0 the band is the one of
-    `voltia.models.backtest.calibrate_online`.
+    `voltia.models.backtest.calibrate_online`. `update` is "row" (every known row moves the level once)
+    or "origin" (the rows of a bucket that become known at an origin move it once, by their mean miss).
+    `frame.attrs["share_at_clip"]` is the share of level states that sit at the bounds of LEVEL_RANGE.
     """
+    if update not in ("row", "origin"):
+        raise ValueError("update must be 'row' or 'origin'")
     rows = rows.sort_values(["origin", "h"]).reset_index(drop=True)
     y_log = np.log(rows["y"].to_numpy())
     q10, q50, q90 = (rows[c].to_numpy(dtype=float) for c in ("q10_log", "q50_log", "q90_log"))
@@ -76,6 +102,7 @@ def calibrate_aci(
     out_lo, out_hi = q10.copy(), q90.copy()
     calibrated = np.zeros(len(rows), dtype=bool)
     level = {(b, tail): NOMINAL for b in buckets for tail in ("lo", "hi")}
+    states = at_clip = 0
     pending: list[int] = []  # issued rows whose outcome has not updated the level yet
     origin_values = rows["origin"].to_numpy()
     day_values = rows["day"].to_numpy()
@@ -83,14 +110,29 @@ def calibrate_aci(
     for origin in sorted(rows["origin"].unique()):
         here = np.flatnonzero(origin_values == origin)
         known = [i for i in pending if day_values[i] <= origin]
-        for i in sorted(known, key=lambda j: (day_values[j], origin_values[j])):
-            b = bucket_values[i]
-            for tail, miss in (("lo", y_log[i] < out_lo[i]), ("hi", y_log[i] > out_hi[i])):
-                moved = level[(b, tail)] + gamma * (NOMINAL - float(miss))
-                level[(b, tail)] = float(np.clip(moved, *LEVEL_RANGE))
+        if update == "row":
+            for i in sorted(known, key=lambda j: (day_values[j], origin_values[j])):
+                b = bucket_values[i]
+                for tail, miss in (("lo", y_log[i] < out_lo[i]), ("hi", y_log[i] > out_hi[i])):
+                    moved = level[(b, tail)] + gamma * (NOMINAL - float(miss))
+                    level[(b, tail)] = float(np.clip(moved, *LEVEL_RANGE))
+        else:
+            for b in buckets:
+                mine_known = [i for i in known if bucket_values[i] == b]
+                if not mine_known:
+                    continue
+                for tail, missed in (
+                    ("lo", [y_log[i] < out_lo[i] for i in mine_known]),
+                    ("hi", [y_log[i] > out_hi[i] for i in mine_known]),
+                ):
+                    moved = level[(b, tail)] + gamma * (NOMINAL - float(np.mean(missed)))
+                    level[(b, tail)] = float(np.clip(moved, *LEVEL_RANGE))
         pending = [i for i in pending if day_values[i] > origin]
         past = np.flatnonzero((origin_values < origin) & (day_values <= origin))
         enough = len(np.unique(origin_values[past])) >= min_origins
+        if enough:
+            states += len(level)
+            at_clip += sum(1 for v in level.values() if v <= LEVEL_RANGE[0] or v >= LEVEL_RANGE[1])
         for b in buckets:
             sel = here[bucket_values[here] == b]
             if len(sel) == 0:
@@ -109,6 +151,7 @@ def calibrate_aci(
     rows = rows.copy()
     rows["c10"], rows["c90"] = np.exp(out_lo), np.exp(out_hi)
     rows["calibrated"] = calibrated
+    rows.attrs["share_at_clip"] = float(at_clip / states) if states else 0.0
     return rows
 
 
@@ -167,7 +210,7 @@ def main() -> None:
     rows = pd.DataFrame(json.loads(source.read_text()))
     rows["origin"], rows["day"] = pd.to_datetime(rows["origin"]), pd.to_datetime(rows["day"])
     buckets = [f"{lo}-{hi}" for lo, hi in TARGETS[name].buckets]
-    variants = {label: calibrate_aci(rows, buckets, g) for label, g in GAMMAS.items()}
+    variants = {label: calibrate_aci(rows, buckets, g, update=u) for label, (g, u) in VARIANTS.items()}
 
     # gamma = 0 must be the production calibration, which the file stores as m10 and m90
     base = variants["production"]
@@ -181,20 +224,30 @@ def main() -> None:
     print(f"gamma = 0 reproduces the production band (largest relative difference {worst:.2e})")
 
     scored_mask = ~base["warmup"].to_numpy()
-    out: dict[str, object] = {"target": name, "source": source.name, "gammas": GAMMAS, "variants": {}}
+    out: dict[str, object] = {
+        "target": name,
+        "source": source.name,
+        "variants_gamma_and_update": {k: list(v) for k, v in VARIANTS.items()},
+        "gamma_zero_largest_relative_difference_from_production": worst,
+        "variants": {},
+    }
     summaries: dict[str, dict[str, float]] = {}
     for label, frame in variants.items():
         scored = frame[scored_mask].copy()
         scored["m50"] = np.exp(scored["q50_log"])
         scored["origin"] = scored["origin"].astype(str)
         summaries[label] = summarise(scored, "c10", "c90")
-        out["variants"][label] = {"origins": int(scored["origin"].nunique()), **summaries[label]}  # type: ignore[index]
+        out["variants"][label] = {  # type: ignore[index]
+            "origins": int(scored["origin"].nunique()),
+            **summaries[label],
+            "share_of_level_states_at_the_clip": round(variants[label].attrs["share_at_clip"], 4),
+        }
     base_scored = base[scored_mask].copy()
     base_scored["m50"] = np.exp(base_scored["q50_log"])
     base_scored["origin"] = base_scored["origin"].astype(str)
     base_loss = pinball_mean(base_scored, "c10", "c90").sort_index()
     out["decision"] = {}
-    for label in ("aci_005", "aci_020"):
+    for label in ("aci_005", "aci_020", "aci_005_mean", "aci_020_mean"):
         scored = variants[label][scored_mask].copy()
         scored["m50"] = np.exp(scored["q50_log"])
         scored["origin"] = scored["origin"].astype(str)

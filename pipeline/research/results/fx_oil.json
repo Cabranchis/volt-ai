@@ -3,7 +3,7 @@
     "experiment": "fb_fx",
     "block": "fx",
     "reference": "dispatch+contracts+hydro",
-    "origins": 45,
+    "origins": 37,
     "model": {
       "mase": 1.5104,
       "mape": 21.6691,
@@ -61,7 +61,7 @@
     "experiment": "fb_oil",
     "block": "oil",
     "reference": "dispatch+contracts+hydro",
-    "origins": 45,
+    "origins": 37,
     "model": {
       "mase": 1.5342,
       "mape": 21.8867,

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from run_aci import calibrate_aci, decide, window_coverage, worst_quarter
+from run_aci import LEVEL_RANGE, NOMINAL, calibrate_aci, decide, window_coverage, worst_quarter
 from voltia.features import TARGETS
 from voltia.models.backtest import calibrate_online
 
@@ -102,3 +102,38 @@ def test_the_rule_needs_all_three_checks() -> None:
     assert decide(wide, base, -0.1)["candidate_for_production"] is False  # overall coverage too high
     no_help = {**good, "coverage_worst_quarter_of_windows": 0.69}
     assert decide(no_help, base, -0.1)["candidate_for_production"] is False  # worst windows no closer
+
+
+def test_the_per_row_update_moves_the_level_once_per_known_row() -> None:
+    """One origin with every outcome above the band: the level of the upper tail of a bucket falls by
+    gamma * 0.1 for every row of that bucket that became known (per-row), or once (per-origin)."""
+    rows = _rows(n_origins=8, shock_from=7)  # only the last origin misses, every horizon, above
+    gamma = 0.001
+    by_row = calibrate_aci(rows, BUCKETS, gamma, update="row")
+    by_origin = calibrate_aci(rows, BUCKETS, gamma, update="origin")
+    last = rows["origin"].max()
+    # the rows of the last origin become known after it; nothing after it in this file updates them,
+    # so the bands that differ are none: the effect shows only in a longer record
+    assert (by_row.loc[by_row["origin"] == last, "c90"].to_numpy() > 0).all()
+    longer = _rows(n_origins=30, shock_from=7)
+    a = calibrate_aci(longer, BUCKETS, gamma, update="row")
+    b = calibrate_aci(longer, BUCKETS, gamma, update="origin")
+    # per-row steps are larger when several rows of a bucket become known together, so after a run of
+    # misses the per-row upper band is at least as wide as the per-origin one
+    late = a["origin"] > longer["origin"].min() + pd.Timedelta(days=7 * 12)
+    assert (a.loc[late, "c90"] >= b.loc[late, "c90"] - 1e-9).all()
+    assert (a.loc[late, "c90"] > b.loc[late, "c90"] + 1e-6).any()
+    assert 0.0 <= a.attrs["share_at_clip"] <= 1.0
+    assert LEVEL_RANGE[0] < NOMINAL < LEVEL_RANGE[1]
+    assert by_origin.attrs["share_at_clip"] <= 1.0
+
+
+def test_an_origin_update_uses_the_mean_miss_of_the_rows() -> None:
+    """With gamma 0 both updates give the same band; with gamma > 0 and no misses at all they also agree
+    in direction (the level rises, the band narrows or stays)."""
+    rows = _rows(n_origins=20)
+    zero_row = calibrate_aci(rows, BUCKETS, 0.0, update="row")
+    zero_origin = calibrate_aci(rows, BUCKETS, 0.0, update="origin")
+    pd.testing.assert_frame_equal(zero_row.drop(columns=[]), zero_origin, check_like=True)
+    with pytest.raises(ValueError, match="update must be"):
+        calibrate_aci(rows, BUCKETS, 0.01, update="other")
