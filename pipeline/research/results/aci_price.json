@@ -1,0 +1,63 @@
+{
+  "target": "price_mean_cop_kwh",
+  "source": "dense_raw_price.json",
+  "gammas": {
+    "production": 0.0,
+    "aci_005": 0.005,
+    "aci_020": 0.02
+  },
+  "variants": {
+    "production": {
+      "origins": 151,
+      "coverage": 0.847682119205298,
+      "coverage_worst_quarter_of_windows": 0.7415674603174602,
+      "coverage_lowest_window": 0.625,
+      "pinball_mean": 34.77464888740084,
+      "relative_width": 0.9091741643444131
+    },
+    "aci_005": {
+      "origins": 151,
+      "coverage": 0.8273415326395459,
+      "coverage_worst_quarter_of_windows": 0.7194940476190479,
+      "coverage_lowest_window": 0.6071428571428571,
+      "pinball_mean": 35.193892899875856,
+      "relative_width": 0.8683420773110918,
+      "paired_pinball_vs_production": {
+        "mean_diff": 0.4192,
+        "ci95_low": -0.1957,
+        "ci95_high": 1.4067
+      }
+    },
+    "aci_020": {
+      "origins": 151,
+      "coverage": 0.804162724692526,
+      "coverage_worst_quarter_of_windows": 0.6961805555555555,
+      "coverage_lowest_window": 0.5714285714285714,
+      "pinball_mean": 37.376126861722994,
+      "relative_width": 0.9098014915138145,
+      "paired_pinball_vs_production": {
+        "mean_diff": 2.6015,
+        "ci95_low": 0.4032,
+        "ci95_high": 5.5428
+      }
+    }
+  },
+  "decision": {
+    "aci_005": {
+      "checks": {
+        "coverage_between_078_and_084": true,
+        "worst_windows_closer_to_080": false,
+        "pinball_not_clearly_worse": true
+      },
+      "candidate_for_production": false
+    },
+    "aci_020": {
+      "checks": {
+        "coverage_between_078_and_084": true,
+        "worst_windows_closer_to_080": false,
+        "pinball_not_clearly_worse": false
+      },
+      "candidate_for_production": false
+    }
+  }
+}

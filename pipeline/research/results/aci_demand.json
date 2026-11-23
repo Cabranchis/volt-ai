@@ -1,0 +1,63 @@
+{
+  "target": "demand_kwh",
+  "source": "dense_raw_demand.json",
+  "gammas": {
+    "production": 0.0,
+    "aci_005": 0.005,
+    "aci_020": 0.02
+  },
+  "variants": {
+    "production": {
+      "origins": 149,
+      "coverage": 0.8093959731543624,
+      "coverage_worst_quarter_of_windows": 0.6986111111111112,
+      "coverage_lowest_window": 0.6083333333333333,
+      "pinball_mean": 1376055.3580987803,
+      "relative_width": 0.06346693143269688
+    },
+    "aci_005": {
+      "origins": 149,
+      "coverage": 0.8067114093959732,
+      "coverage_worst_quarter_of_windows": 0.6891203703703703,
+      "coverage_lowest_window": 0.5458333333333333,
+      "pinball_mean": 1407130.7187706316,
+      "relative_width": 0.06606583028908168,
+      "paired_pinball_vs_production": {
+        "mean_diff": 31075.3607,
+        "ci95_low": 9768.0033,
+        "ci95_high": 53157.8327
+      }
+    },
+    "aci_020": {
+      "origins": 149,
+      "coverage": 0.7357941834451902,
+      "coverage_worst_quarter_of_windows": 0.6113425925925927,
+      "coverage_lowest_window": 0.49166666666666664,
+      "pinball_mean": 1512962.9541967835,
+      "relative_width": 0.06434243592064537,
+      "paired_pinball_vs_production": {
+        "mean_diff": 136907.5961,
+        "ci95_low": 79294.4198,
+        "ci95_high": 191090.0303
+      }
+    }
+  },
+  "decision": {
+    "aci_005": {
+      "checks": {
+        "coverage_between_078_and_084": true,
+        "worst_windows_closer_to_080": false,
+        "pinball_not_clearly_worse": false
+      },
+      "candidate_for_production": false
+    },
+    "aci_020": {
+      "checks": {
+        "coverage_between_078_and_084": false,
+        "worst_windows_closer_to_080": false,
+        "pinball_not_clearly_worse": false
+      },
+      "candidate_for_production": false
+    }
+  }
+}
