@@ -1,0 +1,263 @@
+{
+  "source": "dense_backtest.json",
+  "block_length": 6,
+  "weights": {
+    "C1": {
+      "model": 0.3333333333333333,
+      "ets": 0.3333333333333333,
+      "last_price": 0.3333333333333333
+    },
+    "C2": {
+      "model": 0.5,
+      "last_price": 0.5
+    }
+  },
+  "slices": {
+    "all horizons": {
+      "origins": 151,
+      "methods": {
+        "C1": {
+          "mase": 1.5243,
+          "diff_vs_model": 0.004,
+          "ci95_low": -0.1156,
+          "ci95_high": 0.1124,
+          "origins_won": 62
+        },
+        "C2": {
+          "mase": 1.5197,
+          "diff_vs_model": -0.0007,
+          "ci95_low": -0.0907,
+          "ci95_high": 0.0814,
+          "origins_won": 65
+        },
+        "ets": {
+          "mase": 1.5724,
+          "diff_vs_model": 0.052,
+          "ci95_low": -0.1247,
+          "ci95_high": 0.206,
+          "origins_won": 60
+        },
+        "last_price": {
+          "mase": 1.6008,
+          "diff_vs_model": 0.0805,
+          "ci95_low": -0.0867,
+          "ci95_high": 0.2373,
+          "origins_won": 54
+        },
+        "model": {
+          "mase": 1.5204
+        }
+      }
+    },
+    "1-3 days": {
+      "origins": 151,
+      "methods": {
+        "C1": {
+          "mase": 0.7477,
+          "diff_vs_model": 0.0407,
+          "ci95_low": -0.0338,
+          "ci95_high": 0.0944,
+          "origins_won": 75
+        },
+        "C2": {
+          "mase": 0.7164,
+          "diff_vs_model": 0.0094,
+          "ci95_low": -0.0483,
+          "ci95_high": 0.0512,
+          "origins_won": 77
+        },
+        "ets": {
+          "mase": 0.8442,
+          "diff_vs_model": 0.1372,
+          "ci95_low": 0.0343,
+          "ci95_high": 0.2117,
+          "origins_won": 62
+        },
+        "last_price": {
+          "mase": 0.8491,
+          "diff_vs_model": 0.1421,
+          "ci95_low": 0.0383,
+          "ci95_high": 0.221,
+          "origins_won": 62
+        },
+        "model": {
+          "mase": 0.707
+        }
+      }
+    },
+    "4-7 days": {
+      "origins": 151,
+      "methods": {
+        "C1": {
+          "mase": 1.3407,
+          "diff_vs_model": 0.0489,
+          "ci95_low": -0.0424,
+          "ci95_high": 0.1498,
+          "origins_won": 57
+        },
+        "C2": {
+          "mase": 1.3357,
+          "diff_vs_model": 0.044,
+          "ci95_low": -0.0255,
+          "ci95_high": 0.1214,
+          "origins_won": 55
+        },
+        "ets": {
+          "mase": 1.4099,
+          "diff_vs_model": 0.1181,
+          "ci95_low": -0.0124,
+          "ci95_high": 0.2571,
+          "origins_won": 57
+        },
+        "last_price": {
+          "mase": 1.4594,
+          "diff_vs_model": 0.1676,
+          "ci95_low": 0.0428,
+          "ci95_high": 0.3116,
+          "origins_won": 50
+        },
+        "model": {
+          "mase": 1.2918
+        }
+      }
+    },
+    "8-14 days": {
+      "origins": 151,
+      "methods": {
+        "C1": {
+          "mase": 1.9621,
+          "diff_vs_model": -0.0375,
+          "ci95_low": -0.212,
+          "ci95_high": 0.1156,
+          "origins_won": 71
+        },
+        "C2": {
+          "mase": 1.9691,
+          "diff_vs_model": -0.0305,
+          "ci95_low": -0.1581,
+          "ci95_high": 0.083,
+          "origins_won": 71
+        },
+        "ets": {
+          "mase": 1.9773,
+          "diff_vs_model": -0.0223,
+          "ci95_low": -0.2847,
+          "ci95_high": 0.2025,
+          "origins_won": 70
+        },
+        "last_price": {
+          "mase": 2.0038,
+          "diff_vs_model": 0.0042,
+          "ci95_low": -0.2397,
+          "ci95_high": 0.2238,
+          "origins_won": 65
+        },
+        "model": {
+          "mase": 1.9996
+        }
+      }
+    }
+  },
+  "mcs": {
+    "all horizons": {
+      "C2": {
+        "p_value": 1.0,
+        "in_set": true
+      },
+      "model": {
+        "p_value": 0.9878,
+        "in_set": true
+      },
+      "C1": {
+        "p_value": 0.9046,
+        "in_set": true
+      },
+      "ets": {
+        "p_value": 0.1632,
+        "in_set": true
+      },
+      "last_price": {
+        "p_value": 0.0158,
+        "in_set": false
+      }
+    },
+    "1-3 days": {
+      "model": {
+        "p_value": 1.0,
+        "in_set": true
+      },
+      "C2": {
+        "p_value": 0.7202,
+        "in_set": true
+      },
+      "C1": {
+        "p_value": 0.0004,
+        "in_set": false
+      },
+      "ets": {
+        "p_value": 0.0,
+        "in_set": false
+      },
+      "last_price": {
+        "p_value": 0.0,
+        "in_set": false
+      }
+    },
+    "4-7 days": {
+      "model": {
+        "p_value": 1.0,
+        "in_set": true
+      },
+      "C1": {
+        "p_value": 0.3812,
+        "in_set": true
+      },
+      "C2": {
+        "p_value": 0.3812,
+        "in_set": true
+      },
+      "ets": {
+        "p_value": 0.0306,
+        "in_set": false
+      },
+      "last_price": {
+        "p_value": 0.0,
+        "in_set": false
+      }
+    },
+    "8-14 days": {
+      "C1": {
+        "p_value": 1.0,
+        "in_set": true
+      },
+      "C2": {
+        "p_value": 0.7578,
+        "in_set": true
+      },
+      "ets": {
+        "p_value": 0.7564,
+        "in_set": true
+      },
+      "model": {
+        "p_value": 0.7528,
+        "in_set": true
+      },
+      "last_price": {
+        "p_value": 0.5044,
+        "in_set": true
+      }
+    }
+  },
+  "decision": {
+    "C1": {
+      "i_clearly_better_overall": false,
+      "ii_buckets_clearly_worse": [],
+      "candidate_for_production": false
+    },
+    "C2": {
+      "i_clearly_better_overall": false,
+      "ii_buckets_clearly_worse": [],
+      "candidate_for_production": false
+    }
+  }
+}

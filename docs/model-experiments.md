@@ -275,3 +275,17 @@ What it says:
 - The days coincide with a dry and slightly warmer spell (national rain 0.0 to 2.8 mm a day from 9 November against 1.5 to 12.4 mm before, mean temperature 22.7 to 22.9 °C against 21.1 to 22.5 °C). The coincidence is not shown to be the cause.
 - The backtest does not point the same way: on 51 dates the misses at 1 to 7 days fall mostly below P10 (15 % against 7 % above), the opposite of the live direction. There is no consistent bias to correct.
 - Conclusion: the evidence does not justify recalibrating the demand range. The honest reading of the Models page is "one atypical week moved the live figures"; it should be read again with more weeks. A demand surprise of this kind is what a weather forecast as an input could anticipate: the rain and temperature forecasts are archived (`weather_forecast_log`) and their evaluation is scheduled for 15 February 2027.
+
+## A fixed-weight combination of the price forecasts (2026-11-22)
+
+Question: does an average of the model's P50 with ETS and with "repeat the last price" have a lower error than the model alone? A blend with ETS whose weight per horizon bucket was learned only from earlier origins was worse (`fb_blend_lgb`, +0.055 with an interval above zero), probably because learned weights add variance, and "repeat the last price" was never in a blend. `research/run_p50_combo.py` tests two blends with fixed weights, chosen before the first run (geometric means, because the model works on the log price): `C1` one third each of the model, ETS and last price; `C2` one half each of the model and last price. The decision rule was written before the run: a candidate for production only if its mean MASE over the whole horizon is lower than the model's with the 95 % block interval of the paired difference entirely below zero, and in no bucket worse with an interval entirely above zero. It reads the saved dense backtest (151 dates 7 days apart, no database); only the centre of the forecast is scored.
+
+| Method | MASE all | 1-3 days | 4-7 days | 8-14 days | Paired difference vs the model, all horizons [95 %] |
+| --- | --- | --- | --- | --- | --- |
+| model | 1.520 | 0.707 | 1.292 | 2.000 | |
+| `C1` model + ETS + last price | 1.524 | 0.748 | 1.341 | 1.962 | +0.004 [-0.116, +0.112] |
+| `C2` model + last price | 1.520 | 0.716 | 1.336 | 1.969 | -0.001 [-0.091, +0.081] |
+| ETS | 1.572 | 0.844 | 1.410 | 1.977 | +0.052 [-0.125, +0.206] |
+| last price | 1.601 | 0.849 | 1.459 | 2.004 | +0.081 [-0.087, +0.237] |
+
+Result: negative, production does not change. Neither blend is better over the whole horizon (+0.004 and -0.001). Where the model is clearly best (1 to 3 days) every blend is worse (+0.041 and +0.009, no interval excludes zero for the blends, but ETS and last price are clearly worse than the model with intervals above zero: +0.137 and +0.142). At 8 to 14 days the blends are a little better (-0.038 and -0.031) with intervals that include zero, and at that horizon the model, ETS, last price and both blends are all in the Model Confidence Set, so there is nothing to choose between them. At 4 to 7 days only the model and the two blends are in the set. A fixed average does not capture an advantage that the model does not already have: its errors and those of the references move together more than they differ. The weights were not searched on these dates.
