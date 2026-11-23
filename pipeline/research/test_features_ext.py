@@ -47,7 +47,9 @@ def _scramble_after_publication(data: pd.DataFrame, origin: pd.Timestamp, seed: 
     return mutated
 
 
-@pytest.mark.parametrize("block", (*features_ext.BLOCKS, *features_ext.PHASE_B_BLOCKS))
+@pytest.mark.parametrize(
+    "block", (*features_ext.BLOCKS, *features_ext.PHASE_B_BLOCKS, *features_ext.MACRO_BLOCKS)
+)
 @pytest.mark.parametrize("origin", ORIGINS)
 def test_block_ignores_values_after_publication(
     data: pd.DataFrame, block: str, origin: pd.Timestamp
@@ -76,6 +78,8 @@ def test_scrambling_actually_changes_something(data: pd.DataFrame) -> None:
         ("profile", "price_peak"),
         ("restrictions", "restr_plain_cop"),
         ("availability", "dispo_real_thermal"),
+        ("fx", "trm"),
+        ("oil", "brent"),
     ],
 )
 def test_phase_b_scrambling_one_day_early_moves_the_block(data: pd.DataFrame, block: str, column: str) -> None:

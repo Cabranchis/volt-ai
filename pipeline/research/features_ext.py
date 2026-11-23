@@ -17,6 +17,7 @@ from voltia.features import log_positive
 BLOCKS = ("dispatch", "offers", "contracts", "hydro_now", "trade", "nowcast")
 PHASE_B_BLOCKS = ("regional", "profile", "restrictions", "availability")
 PHYSICAL_BLOCKS = ("hydro_ode",)
+MACRO_BLOCKS = ("fx", "oil")
 
 FEATURES: dict[str, list[str]] = {
     "dispatch": [
@@ -68,6 +69,10 @@ FEATURES: dict[str, list[str]] = {
     # historical mean and the net outflow stays as it was (the water balance as a differential
     # equation, see hydro_ode_projection): share of the capacity, and its change from today.
     "hydro_ode": ["res_proj_target", "res_proj_chg"],
+    # Cost of imported fuel for the thermal plants: the exchange rate and Brent, each as the last week
+    # against its own 90-day mean and as the change over the last 7 days (logs).
+    "fx": ["trm_rel90", "trm_chg7"],
+    "oil": ["brent_rel90", "brent_chg7"],
 }
 
 
@@ -149,6 +154,7 @@ def origin_blocks(data: pd.DataFrame, lags: dict[str, int] | None = None) -> pd.
 
     _regional_blocks(data, out, lags)
     _profile_blocks(data, out, lags, price)
+    _macro_blocks(data, out, lags)
 
     frame = pd.DataFrame(out, index=data.index)
     frame["_ref"] = ref
@@ -219,6 +225,14 @@ def _profile_blocks(
     )
     out["restr_plain_rel90"] = _roll(plain, 7, "restr_plain_cop", lags) - _roll(plain, 90, "restr_plain_cop", lags)
     out["restr_relief_rel90"] = _roll(relief, 7, "restr_relief_cop", lags) - _roll(relief, 90, "restr_relief_cop", lags)
+
+
+def _macro_blocks(data: pd.DataFrame, out: dict[str, pd.Series], lags: dict[str, int]) -> None:
+    for name, column in (("trm", "trm"), ("brent", "brent")):
+        level = log_positive(_col(data, column))
+        out[f"{name}_rel90"] = _roll(level, 7, column, lags) - _roll(level, 90, column, lags)
+        latest = _latest(level, column, lags)
+        out[f"{name}_chg7"] = latest - latest.shift(7)
 
 
 def add_blocks(

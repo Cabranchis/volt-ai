@@ -45,6 +45,10 @@ N_WARMUP = 8
 PUBLICATION_LAG: dict[str, int] = {
     "price_mean_cop_kwh": 3,
     "demand_kwh": 3,
+    # Exchange rate and oil (fetch_fx_oil.py). The TRM of a day is announced the business day before;
+    # one day is the conservative reading. FRED publishes Brent about five days late; six is safe.
+    "trm": 1,
+    "brent": 6,
     "max_offer": 3,
     "max_offer_max": 3,
     "price_tx1": 3,
@@ -116,6 +120,9 @@ def load_data() -> pd.DataFrame:
         wide = table.pivot_table(index="day", columns=["metric", "region"], values="value", aggfunc="sum")
         wide.columns = [f"reg_{metric}_{region}" for metric, region in wide.columns]
         merged = merged.join(wide, how="outer")
+    fx_oil = DATA / "blocks_fx_oil.csv"
+    if fx_oil.exists():
+        merged = merged.join(pd.read_csv(fx_oil, index_col="day", parse_dates=True), how="outer")
     availability = DATA / "blocks_availability.csv"
     if availability.exists():
         avail = pd.read_csv(availability, index_col="day", parse_dates=True)
