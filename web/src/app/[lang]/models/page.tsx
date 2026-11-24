@@ -172,7 +172,14 @@ export default async function ModelsPage() {
                           model={series.model}
                           seasonalNaive={series.seasonalNaive}
                           ets={series.ets}
-                          labels={{ model: m.rowModel, seasonalNaive: m.baselineNaive, ets: m.baselineEts, dayAhead: m.dayAhead }}
+                          lastPrice={series.lastPrice}
+                          labels={{
+                            model: m.rowModel,
+                            seasonalNaive: m.baselineNaive,
+                            ets: m.baselineEts,
+                            lastPrice: m.baselineLastPrice,
+                            dayAhead: m.dayAhead,
+                          }}
                           color={color}
                           ariaLabel={`${m.horizonTitle}: ${title}`}
                         />

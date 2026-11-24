@@ -14,15 +14,18 @@ interface Props {
   model: (number | null)[];
   seasonalNaive: (number | null)[];
   ets: (number | null)[];
-  labels: { model: string; seasonalNaive: string; ets: string; dayAhead: string };
+  /** Only the price has this reference; the series is drawn when it has any value. */
+  lastPrice?: (number | null)[];
+  labels: { model: string; seasonalNaive: string; ets: string; lastPrice: string; dayAhead: string };
   color: "demand" | "price";
   ariaLabel: string;
 }
 
 const CSS = { demand: "var(--c-demand)", price: "var(--c-price)" } as const;
 
-/** Backtest error by days ahead, for the model and both baselines. */
-export function HorizonChart({ locale, days, model, seasonalNaive, ets, labels, color, ariaLabel }: Props) {
+/** Backtest error by days ahead, for the model and its baselines. */
+export function HorizonChart({ locale, days, model, seasonalNaive, ets, lastPrice, labels, color, ariaLabel }: Props) {
+  const hasLastPrice = lastPrice?.some((v) => v !== null) ?? false;
   const build = useCallback(
     (tokens: ChartTokens, reducedMotion: boolean) => ({
       ...baseOption(tokens, reducedMotion),
@@ -36,6 +39,7 @@ export function HorizonChart({ locale, days, model, seasonalNaive, ets, labels, 
             { color: tokens[color], label: labels.model, value: fmt(model[i]) },
             { color: tokens.ref, label: labels.seasonalNaive, value: fmt(seasonalNaive[i]) },
             { color: tokens.text, label: labels.ets, value: fmt(ets[i]) },
+            ...(hasLastPrice ? [{ color: tokens.water, label: labels.lastPrice, value: fmt(lastPrice?.[i]) }] : []),
           ]);
         },
       },
@@ -62,10 +66,13 @@ export function HorizonChart({ locale, days, model, seasonalNaive, ets, labels, 
       series: [
         { name: labels.seasonalNaive, type: "line", data: seasonalNaive, showSymbol: false, emphasis: { disabled: true }, lineStyle: { width: 2, color: tokens.ref, type: [6, 4] }, itemStyle: { color: tokens.ref } },
         { name: labels.ets, type: "line", data: ets, showSymbol: false, emphasis: { disabled: true }, lineStyle: { width: 2, color: tokens.text, type: [2, 3] }, itemStyle: { color: tokens.text } },
+        ...(hasLastPrice
+          ? [{ name: labels.lastPrice, type: "line", data: lastPrice, showSymbol: false, emphasis: { disabled: true }, lineStyle: { width: 2, color: tokens.water, type: [8, 3, 2, 3] }, itemStyle: { color: tokens.water } }]
+          : []),
         { name: labels.model, type: "line", data: model, showSymbol: false, emphasis: { disabled: true }, z: 3, lineStyle: { width: 2, color: tokens[color], cap: "round", join: "round" }, itemStyle: { color: tokens[color] } },
       ],
     }),
-    [locale, days, model, seasonalNaive, ets, labels, color],
+    [locale, days, model, seasonalNaive, ets, lastPrice, hasLastPrice, labels, color],
   );
 
   return (
@@ -75,6 +82,7 @@ export function HorizonChart({ locale, days, model, seasonalNaive, ets, labels, 
           { label: labels.model, color: CSS[color], kind: "line" },
           { label: labels.seasonalNaive, color: "var(--c-ref)", kind: "dashed" },
           { label: labels.ets, color: "var(--text)", kind: "dotted" },
+          ...(hasLastPrice ? [{ label: labels.lastPrice, color: "var(--c-water)", kind: "dashdot" as const }] : []),
         ]}
       />
       <EChart build={build} height={260} label={ariaLabel} />

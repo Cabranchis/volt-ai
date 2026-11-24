@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- The chart of the error by days ahead on the Models page draws "repeat the last price" too (price only), as a dash-dot line with its legend entry.
 - Three more price and demand experiments, all negative and recorded in `docs/model-experiments.md` (production is unchanged): a fixed-weight blend of the model, ETS and the last price (whole-horizon MASE +0.004 and -0.001 against the model, intervals that include zero), the exchange rate and Brent as features (+0.006 and +0.030 against 1.504), and adaptive conformal inference for the band (no variant improves the weak windows). XM has no maintenance or forecast metrics and wholesale gas has no daily machine-readable source.
 - A live-record alert: `/api/v1/health` reports `liveRecord` (a `verdict` and the share of forecasts inside P10 to P90 over the 28 days ending on the last settled day, per target; it does not change `status`) and the `Watchdog` workflow opens an issue when it stays under 0.55 (`docs/runbook.md`, "The live record is off target").
 - The reference "repeat the last price" in the production backtest of the price (error figures and a paired comparison with its interval, no band) and on the Models and For business pages. The verdicts now say "no se distingue" / "no clear difference" when the interval of the paired MASE difference includes zero, instead of "beats". The publication gate is unchanged.

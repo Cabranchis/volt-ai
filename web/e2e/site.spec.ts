@@ -123,6 +123,8 @@ test.describe("data honesty", () => {
     await page.goto("/en/models");
     await expect(page.getByRole("row", { name: /Repeat the last price/ })).toBeVisible();
     await expect(page.getByText(/Against repeating the last price, the difference is not conclusive/)).toBeVisible();
+    // The horizon chart draws it for the price only, with its own legend entry.
+    await expect(page.getByRole("listitem").filter({ hasText: /^Repeat the last price$/ })).toHaveCount(1);
     await page.goto("/es/models");
     await expect(page.getByRole("row", { name: /Repetir el último precio/ })).toBeVisible();
     await expect(page.getByText(/Comparado con repetir el último precio, la diferencia no es concluyente/)).toBeVisible();

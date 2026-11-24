@@ -2,7 +2,7 @@ export interface LegendItem {
   label: string;
   /** CSS colour (a token such as var(--c-demand)). */
   color: string;
-  kind: "line" | "dashed" | "dotted" | "area" | "bar";
+  kind: "line" | "dashed" | "dotted" | "dashdot" | "area" | "bar";
 }
 
 /**
@@ -46,6 +46,17 @@ function Key({ item }: { item: LegendItem }) {
         className="h-0.5 w-5"
         style={{
           backgroundImage: `repeating-linear-gradient(90deg, ${item.color} 0 2px, transparent 2px 5px)`,
+        }}
+      />
+    );
+  }
+  if (item.kind === "dashdot") {
+    return (
+      <span
+        aria-hidden="true"
+        className="h-0.5 w-5"
+        style={{
+          backgroundImage: `repeating-linear-gradient(90deg, ${item.color} 0 6px, transparent 6px 8px, ${item.color} 8px 10px, transparent 10px 12px)`,
         }}
       />
     );
