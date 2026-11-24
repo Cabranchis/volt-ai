@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from voltia.sources.oni import parse_oni
-from voltia.sources.openmeteo import parse_forecast, parse_weather
+from voltia.sources.openmeteo import FORECAST_DAYS, parse_forecast, parse_weather
 
 
 def test_parse_oni_uses_central_month(read_text: Callable[[str], str]) -> None:
@@ -79,3 +79,47 @@ def test_parse_forecast_refuses_an_incomplete_forecast(place: dict[str, Any]) ->
 def test_parse_forecast_rejects_a_payload_for_other_locations() -> None:
     with pytest.raises(ValueError, match="expected 2 locations"):
         parse_forecast([_place(date(2026, 10, 22))], ["a", "b"], date(2026, 10, 22))
+
+
+def _forecast_payload(places: int, holes: dict[tuple[int, int], str]) -> list[dict[str, Any]]:
+    """`places` locations with FORECAST_DAYS days from 2026-11-24.
+
+    `holes` maps (place, lead day) to the variable that comes back empty.
+    """
+    out = []
+    for p in range(places):
+        days = [
+            str(date(2026, 11, 24) + pd.Timedelta(days=d).to_pytimedelta())
+            for d in range(FORECAST_DAYS)
+        ]
+        out.append(
+            {
+                "daily": {
+                    "time": days,
+                    "precipitation_sum": [
+                        None if holes.get((p, d)) == "precip" else 1.0 for d in range(FORECAST_DAYS)
+                    ],
+                    "temperature_2m_mean": [
+                        None if holes.get((p, d)) == "temp" else 20.0 for d in range(FORECAST_DAYS)
+                    ],
+                }
+            }
+        )
+    return out
+
+
+def test_a_forecast_with_holes_is_refused_and_says_where() -> None:
+    names = ["a", "b"]
+    payload = _forecast_payload(2, {(1, 15): "temp", (0, 14): "precip"})
+    with pytest.raises(ValueError, match="missing values") as caught:
+        parse_forecast(payload, names, date(2026, 11, 24))
+    message = str(caught.value)
+    assert "2 of 32 location-days" in message
+    assert "lead days [14, 15]" in message
+    assert "locations a, b" in message
+
+
+def test_a_complete_forecast_is_kept() -> None:
+    frame = parse_forecast(_forecast_payload(2, {}), ["a", "b"], date(2026, 11, 24))
+    assert len(frame) == 2 * FORECAST_DAYS
+    assert frame["lead_days"].max() == FORECAST_DAYS - 1

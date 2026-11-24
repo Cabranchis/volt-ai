@@ -80,8 +80,16 @@ def parse_forecast(
             raise ValueError(
                 f"{place}: the forecast does not cover the {FORECAST_DAYS} days from {issued}"
             )
-    if stacked[["precip_mm", "temp_c"]].isna().any().any():
-        raise ValueError("the forecast has missing values")
+    holes = stacked[stacked[["precip_mm", "temp_c"]].isna().any(axis=1)]
+    if not holes.empty:
+        # Say where the holes are: the runs of the first hours of a Bogota day have failed this way
+        # (2026-11-23 and 24) while the later ones of the same day were complete.
+        where = ", ".join(sorted(set(holes["location"])))
+        leads = sorted({int(v) for v in holes["lead_days"]})
+        raise ValueError(
+            f"the forecast has missing values: {len(holes)} of {len(stacked)} location-days, "
+            f"lead days {leads}, locations {where}"
+        )
     stacked["model"] = FORECAST_MODEL
     return stacked[FORECAST_COLUMNS].reset_index(drop=True)
 
